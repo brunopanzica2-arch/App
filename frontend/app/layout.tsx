@@ -5,7 +5,8 @@ export const metadata: Metadata = {
   title: "Rota Santos — Roteirização de correspondências",
   description: "Importação, geocodificação, otimização (perfil pedestre, operação de bicicleta) e execução de entregas.",
   manifest: "/manifest.webmanifest",
-  icons: { icon: "/icons/icon.svg", apple: "/icons/icon.svg" },
+  icons: { icon: "/icons/icon.svg", apple: "/icons/apple-touch-icon.png" },
+  appleWebApp: { capable: true, title: "Rota Santos", statusBarStyle: "black-translucent" },
 };
 
 export const viewport: Viewport = {
