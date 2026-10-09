@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Rota Santos</string>
+    <string name="title_activity_main">Rota Santos</string>
+    <string name="package_name">br.santos.rota</string>
+    <string name="custom_url_scheme">br.santos.rota</string>
+</resources>

@@ -9,6 +9,8 @@ Sistema full-stack para importar, geocodificar, agrupar, otimizar, mapear e acom
 - Escadas, acessos privados e barreiras são **sinalizados**. Para cada tipo existe uma política: permitir, penalizar ou evitar.
 - Objetivo da otimização: **menor tempo total**, somando deslocamento e atendimento. Em caso de empate, vale a menor distância. Rota **aberta** por padrão; circular ou com destino fixo são opcionais.
 
+> **App Android offline (sem servidor):** veja [`mobile/README.md`](mobile/README.md). O APK pronto está em [`releases/rota-santos-1.0.apk`](releases/rota-santos-1.0.apk).
+
 A arquitetura, as decisões técnicas e os riscos estão em [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md). Os benchmarks medidos estão em [`docs/benchmarks.md`](docs/benchmarks.md) e as capturas do E2E em [`docs/screenshots/`](docs/screenshots).
 
 ## Estrutura

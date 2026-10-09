@@ -10,3 +10,12 @@ frontend/out/
 .venv/
 frontend/public/maplibre-gl-worker.mjs
 *.tsbuildinfo
+mobile/node_modules/
+mobile/dist/
+mobile/public/maplibre-gl-worker.mjs
+mobile/android/app/build/
+mobile/android/build/
+mobile/android/.gradle/
+mobile/android/local.properties
+mobile/android/app/src/main/assets/public/
+mobile/android/capacitor-cordova-android-plugins/build/
