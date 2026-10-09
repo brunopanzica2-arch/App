@@ -1,0 +1,12 @@
+{
+  "name": "Rota Santos — Roteirização de correspondências",
+  "short_name": "Rota Santos",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b0b12",
+  "theme_color": "#7c3aed",
+  "lang": "pt-BR",
+  "icons": [
+    { "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

@@ -277,3 +277,21 @@ def test_login_rejects_bad_password(client, auth, org, bad):
     _, users = org
     r = client.post("/api/auth/login", json={"email": users["admin"].email, "password": bad})
     assert r.status_code == 401
+
+
+def test_concurrent_duplicate_sync_is_idempotent(client, auth):
+    """Dois envios simultâneos do mesmo evento offline não geram erro nem duplicata."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    h = auth["dispatcher"]
+    _, r = upload(client, h, CSV.replace("OBJ0", "CON0"), ref="Concorrência")
+    bid = r.json()["batch"]["id"]
+    cid = client.get(f"/api/batches/{bid}/correspondences", headers=h).json()["items"][0]["id"]
+    body = {"client_id": "x", "events": [{"client_event_id": f"same-{cid}", "kind": "delivery_event",
+                                          "correspondence_id": cid, "status": "delivered",
+                                          "occurred_at": datetime.now(timezone.utc).isoformat()}]}
+    with ThreadPoolExecutor(4) as ex:
+        resps = list(ex.map(lambda _: client.post("/api/sync", json=body, headers=auth["courier"]), range(4)))
+    assert all(x.status_code == 200 for x in resps), [x.text for x in resps]
+    evs = client.get(f"/api/correspondences/{cid}/events", headers=h).json()
+    assert len(evs) == 1

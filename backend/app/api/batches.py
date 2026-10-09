@@ -7,6 +7,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..core.audit import audit
@@ -359,10 +360,17 @@ def post_event(corr_id: uuid.UUID, body: EventIn, db: Session = Depends(get_db),
         occurred = datetime.fromisoformat(body.occurred_at) if body.occurred_at else None
         res = record_event(db, user, corr_id, body.status, body.reason, body.notes, occurred,
                            body.client_event_id, body.route_id, body.corrects_event_id)
+        db.commit()
     except (EventError, ValueError) as exc:
         db.rollback()
         raise HTTPException(422, str(exc))
-    db.commit()
+    except IntegrityError:
+        db.rollback()  # mesmo client_event_id enviado em paralelo: idempotente
+        prev = db.scalar(select(DeliveryEvent).where(DeliveryEvent.client_event_id == body.client_event_id))
+        if prev is None or prev.org_id != user.org_id:
+            raise HTTPException(409, "Evento em conflito.")
+        return {"event": event_out(prev), "applied": False, "duplicate": True, "conflict": False,
+                "correspondence": corr_out(db.get(Correspondence, corr_id), user)}
     c = db.get(Correspondence, corr_id)
     return {"event": event_out(res.event), "applied": res.applied, "duplicate": res.duplicate,
             "conflict": res.conflict, "correspondence": corr_out(c, user)}

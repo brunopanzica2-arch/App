@@ -8,3 +8,4 @@ frontend/.next/
 frontend/out/
 *.log
 .venv/
+frontend/public/maplibre-gl-worker.mjs

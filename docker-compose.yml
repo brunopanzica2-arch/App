@@ -1,0 +1,70 @@
+# Stack completa: PostGIS + Redis + API + worker + PWA.
+# Opcional (perfil "valhalla"): servidor Valhalla próprio para o motor alternativo.
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: rota
+      POSTGRES_USER: rota
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+    volumes: [dbdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rota"]
+      interval: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: [redisdata:/data]
+
+  api:
+    build: ./backend
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://rota:${POSTGRES_PASSWORD}@db:5432/rota
+      REDIS_URL: redis://redis:6379/0
+      DATA_DIR: /data
+    volumes: [appdata:/data]
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_started }
+    ports: ["127.0.0.1:8000:8000"]
+
+  worker:
+    build: ./backend
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://rota:${POSTGRES_PASSWORD}@db:5432/rota
+      REDIS_URL: redis://redis:6379/0
+      DATA_DIR: /data
+    volumes: [appdata:/data]
+    command: ["rq", "worker", "--url", "redis://redis:6379/0", "roteirizacao"]
+    depends_on: [api]
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        BACKEND_URL: http://api:8000
+        NEXT_PUBLIC_MAP_STYLE: ${NEXT_PUBLIC_MAP_STYLE:-https://tiles.openfreemap.org/styles/liberty}
+    depends_on: [api]
+    ports: ["127.0.0.1:3000:3000"]
+
+  valhalla:
+    profiles: ["valhalla"]
+    image: ghcr.io/valhalla/valhalla-scripted:latest
+    environment:
+      tile_urls: ${VALHALLA_PBF_URL:-https://download.geofabrik.de/south-america/brazil/sudeste-latest.osm.pbf}
+      use_tiles_ignore_pbf: "True"
+      build_elevation: "False"
+      build_admins: "True"
+      build_time_zones: "True"
+    volumes: [valhalla:/custom_files]
+    ports: ["127.0.0.1:8002:8002"]
+
+volumes:
+  dbdata: {}
+  redisdata: {}
+  appdata: {}
+  valhalla: {}

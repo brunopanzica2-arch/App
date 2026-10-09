@@ -6,6 +6,7 @@ from datetime import date, datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from roteamento.config import TravelProfile
@@ -148,7 +149,8 @@ def get_route(route_id: uuid.UUID, db: Session = Depends(get_db), user: User = D
 
 
 @router.post("/routes/{route_id}/activate")
-def activate_route(route_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(dispatcher)):
+def activate_route(route_id: uuid.UUID, db: Session = Depends(get_db),
+                   user: User = Depends(require_role("admin", "dispatcher", "courier"))):
     r = get_owned(db, Route, route_id, user)
     activate(db, r)
     audit(db, user.org_id, user.id, "activate_route", "route", r.id, {"version": r.version})
@@ -273,19 +275,28 @@ def sync(body: SyncIn, db: Session = Depends(get_db), user: User = Depends(curre
                         "duplicate": True})
             continue
         try:
-            res = record_event(db, user, it.correspondence_id, it.status, it.reason, it.notes,
-                               datetime.fromisoformat(it.occurred_at), it.client_event_id, it.route_id,
-                               source="offline")
-            c = db.get(Correspondence, it.correspondence_id)
-            status = "conflict" if res.conflict else "applied"
-            result = {"event_id": str(res.event.id), "server_status": c.status}
-        except (EventError, ValueError) as exc:
+            try:
+                res = record_event(db, user, it.correspondence_id, it.status, it.reason, it.notes,
+                                   datetime.fromisoformat(it.occurred_at), it.client_event_id, it.route_id,
+                                   source="offline")
+                c = db.get(Correspondence, it.correspondence_id)
+                status = "conflict" if res.conflict else "applied"
+                result = {"event_id": str(res.event.id), "server_status": c.status}
+            except (EventError, ValueError) as exc:
+                db.rollback()
+                status, result = "rejected", {"error": str(exc)}
+            db.add(SyncEvent(org_id=user.org_id, user_id=user.id, client_id=body.client_id,
+                             client_event_id=it.client_event_id, kind=it.kind,
+                             payload=it.model_dump(mode="json"), status=status, result=result))
+            db.commit()
+        except IntegrityError:
+            # envio concorrente do mesmo evento: outro pedido já o registrou (idempotente)
             db.rollback()
-            status, result = "rejected", {"error": str(exc)}
-        db.add(SyncEvent(org_id=user.org_id, user_id=user.id, client_id=body.client_id,
-                         client_event_id=it.client_event_id, kind=it.kind, payload=it.model_dump(mode="json"),
-                         status=status, result=result))
-        db.commit()
+            prev = db.scalar(select(SyncEvent).where(SyncEvent.user_id == user.id,
+                                                     SyncEvent.client_event_id == it.client_event_id))
+            out.append({"client_event_id": it.client_event_id, "status": prev.status if prev else "applied",
+                        "result": prev.result if prev else {}, "duplicate": True})
+            continue
         out.append({"client_event_id": it.client_event_id, "status": status, "result": result, "duplicate": False})
     return {"results": out, "server_time": datetime.now(timezone.utc).isoformat()}
 
