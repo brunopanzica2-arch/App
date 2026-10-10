@@ -1,0 +1,70 @@
+{
+  "UX-01 mapa na tela inicial": {
+    "ok": true,
+    "detail": "tela inicial é o mapa com ação Importar"
+  },
+  "IMP-01 linha sem cabeçalho reconhecida": {
+    "ok": true,
+    "detail": "Colunas reconhecidas automaticamente (confiança 90%): Logradouro, Número, Bairro, Município, UF. Sem cabeçalho."
+  },
+  "IMP-02 prévia 300 linhas": {
+    "ok": true,
+    "detail": "Linhas: 300"
+  },
+  "IMP-03 inseridas=300 duplicadas=0": {
+    "ok": true,
+    "detail": "Inseridas: 300 · com erro: 0 · duplicadas: 0"
+  },
+  "UX-02 rota em um toque + contadores": {
+    "ok": true,
+    "detail": "300 cartas 150 paradas 0 não loc. 0 concluídas 300 pendentes"
+  },
+  "UX-03 próxima parada exibida": {
+    "ok": true,
+    "detail": "Avenida Senador Feijo, 104"
+  },
+  "UX-04 botões sem texto cortado": {
+    "ok": true,
+    "detail": "[\"Entregue:64\",\"Não consegui:64\",\"Pular:56\",\"Detalhes:56\",\"Iniciar navegação:56\",\"Desfazer:44\",\"Todas as entregas:44\"]"
+  },
+  "DEL-01 entrega avança para a próxima parada": {
+    "ok": true,
+    "detail": "Avenida Senador Feijo, 104 → Rua Braz Cubas, 20"
+  },
+  "DEL-02 desfazer volta à parada": {
+    "ok": true,
+    "detail": "Avenida Senador Feijo, 104"
+  },
+  "DEL-03 motivos de não entrega": {
+    "ok": true,
+    "detail": "Por que não conseguiu entregar? Destinatário ausente Recusado Endereço inexisten"
+  },
+  "NAV-01 navegação inicia no navegador (substituto)": {
+    "ok": true,
+    "detail": "botões Pausar/Encerrar visíveis; HUD de manobras e voz exigem o app Android"
+  },
+  "BUS-01 busca global": {
+    "ok": true,
+    "detail": "1 resultado(s)"
+  },
+  "UX-05 quatro abas": {
+    "ok": true,
+    "detail": "Mapa Entregas Histórico Ajustes"
+  },
+  "IMP-04 desfazer importação (lote do Itororó permanece)": {
+    "ok": true,
+    "detail": "Importação “Lote 10/10/2026” desfeita."
+  },
+  "A11Y-01 axe sem violações nas 4 telas": {
+    "ok": true,
+    "detail": "[{\"name\":\"Mapa\",\"v\":[]},{\"name\":\"Entregas\",\"v\":[]},{\"name\":\"Ajustes\",\"v\":[]},{\"name\":\"Importar\",\"v\":[]}]"
+  },
+  "NET-01 Nominatim não consultado": {
+    "ok": true,
+    "detail": "0 requisições"
+  },
+  "ERR-01 sem erros de página": {
+    "ok": true,
+    "detail": "nenhum"
+  }
+}
