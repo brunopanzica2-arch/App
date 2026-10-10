@@ -1,6 +1,7 @@
 /** Regras de negócio do app (dados locais). */
 import { Capacitor } from "@capacitor/core";
 import { type Address, db, type DeliveryEvent, type Letter, type LetterStatus, type Route, type Settings, uid } from "./db";
+import { routePoint, trustOf, type Trust } from "./address";
 import { QuotaError, resolve, setDailyQuota } from "./geocode";
 import { parseText } from "./importer";
 import { normalizeAddress } from "./normalize";
@@ -88,6 +89,7 @@ export interface StopView {
   letters: Letter[];
   status: "pending" | "partial" | "completed" | "postponed" | "problem";
   uncertain: boolean;
+  trust: Trust;
 }
 
 export function stopStatus(ls: Letter[]): StopView["status"] {
@@ -101,6 +103,7 @@ export function stopStatus(ls: Letter[]): StopView["status"] {
 export async function stopsOf(batchId: string) {
   const letters = await db.letters.where("batchId").equals(batchId).toArray();
   const keys = [...new Set(letters.map((l) => l.addressKey).filter(Boolean) as string[])];
+  const block = (await getSettings()).approxPolicy === "block";
   const addrs = new Map((await db.addresses.bulkGet(keys)).filter(Boolean).map((a) => [a!.key, a!]));
   const stops: StopView[] = [];
   const unlocated: Letter[] = [];
@@ -108,12 +111,13 @@ export async function stopsOf(batchId: string) {
   for (const l of letters) {
     if (l.excluded) continue;
     const a = l.addressKey ? addrs.get(l.addressKey) : undefined;
-    if (!a || a.lat == null || !ROUTABLE.includes(a.precision)) { unlocated.push(l); continue; }
+    if (!a || !routePoint(a) || !ROUTABLE.includes(a.precision) && !a.entrance) { unlocated.push(l); continue; }
+    if (block && trustOf(a).code !== "test" && ["street", "interpolated"].includes(a.precision) && !a.entrance) { unlocated.push(l); continue; }
     byKey.set(a.key, [...(byKey.get(a.key) || []), l]);
   }
   for (const [k, ls] of byKey) {
     const a = addrs.get(k)!;
-    stops.push({ key: k, address: a, letters: ls.sort((x, y) => x.row - y.row), status: stopStatus(ls), uncertain: !["exact", "manual", "interpolated"].includes(a.precision) });
+    stops.push({ key: k, address: a, letters: ls.sort((x, y) => x.row - y.row), status: stopStatus(ls), uncertain: trustOf(a).approximate, trust: trustOf(a) });
   }
   return { stops, unlocated, letters, addresses: [...addrs.values()] };
 }
@@ -178,7 +182,7 @@ export async function planBatch(batchId: string, o: PlanOptions, onProgress?: (s
     stops: remaining.map((st) => {
       const pend = st.letters.filter(isPending).length;
       return {
-        key: st.key, lat: st.address.lat!, lon: st.address.lon!, label: st.address.display,
+        key: st.key, lat: routePoint(st.address)!.lat, lon: routePoint(st.address)!.lon, label: st.address.display,
         importRow: Math.min(...st.letters.map((l) => l.row)),
         service: s.serviceTime + s.perLetterService * Math.max(pend - 1, 0), sector: (st.address.neighborhood || "?").toUpperCase(),
       };
@@ -247,7 +251,8 @@ export async function lastServedPoint(route: Route) {
   if (!evs.length) return null;
   const l = await db.letters.get(evs[0].letterId);
   const a = l?.addressKey ? await db.addresses.get(l.addressKey) : null;
-  return a && a.lat != null ? { label: `Última parada atendida: ${a.display}`, lat: a.lat, lon: a.lon! } : null;
+  const pt = a ? routePoint(a) : null;
+  return a && pt ? { label: `Última parada atendida: ${a.display}`, lat: pt.lat, lon: pt.lon } : null;
 }
 
 // ------------------------------------------------------------ relatórios e backup

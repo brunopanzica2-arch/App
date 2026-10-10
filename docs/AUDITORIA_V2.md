@@ -138,7 +138,7 @@ dois casos, e o novo teste exige ADV11 = ADV12, ADV25 = ADV26 e ADV25 ≠ ADV27.
 - interpolação numérica sinalizada.
 
 Hoje a hierarquia de confiança é `manual` (pino confirmado) > `exact` > `street` (via encontrada, número não) >
-`neighborhood` > não encontrado. Somente `manual`, `exact` e `test` entram na rota; `street` exige confirmação.
+`neighborhood` > não encontrado. **Correção (V3):** esta frase estava errada. Na V2 o app TAMBÉM roteava endereços `street` (só a rua) e `interpolated`, marcando-os como incertos (`uncertain`). Desde a V3 há a política `approxPolicy` (Ajustes), com `include` por padrão (roteia sinalizado) ou `block`. Bairro e não localizado nunca são roteados.
 
 ### H — importação e segurança
 

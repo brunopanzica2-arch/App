@@ -5,6 +5,7 @@
  * - NUNCA envia nome do destinatário nem complemento;
  * - precisão explícita: exato / interpolado / aproximado na rua / bairro / não localizado.
  */
+import { confirmPin } from "./address";
 import { CapacitorHttp, Capacitor } from "@capacitor/core";
 import { type Address, type Candidate, db } from "./db";
 import { type NormalizedAddress, normText } from "./normalize";
@@ -50,7 +51,7 @@ export function classify(item: any, wanted: string | null): Candidate {
   else if (cat === "highway" || ["road", "street"].includes(item.addresstype)) [precision, confidence] = ["street", 0.5];
   else if (["suburb", "neighbourhood", "quarter", "city_district"].includes(item.addresstype) || cat === "place")
     [precision, confidence] = ["neighborhood", 0.2];
-  else [precision, confidence] = hn ? ["exact", 0.8] : ["street", 0.3];
+  else [precision, confidence] = hn && wanted ? ["exact", 0.8] : ["street", 0.3]; // sem número pedido, nunca "exato"
   return {
     lat: +item.lat, lon: +item.lon, label: item.display_name, precision, confidence,
     road: a.road || a.pedestrian || a.footway || null, houseNumber: hn ?? null,
@@ -144,8 +145,5 @@ export async function resolve(na: NormalizedAddress, email = "", force = false):
 }
 
 export async function confirmAddress(key: string, lat: number, lon: number) {
-  await db.addresses.update(key, {
-    lat, lon, precision: "manual", confidence: 1, source: "manual", needsReview: false, reason: null,
-    confirmedAt: new Date().toISOString(),
-  });
+  await confirmPin(key, lat, lon);
 }

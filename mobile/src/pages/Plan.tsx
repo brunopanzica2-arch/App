@@ -1,3 +1,4 @@
+import { routePoint } from "../core/address";
 import { Play, Zap } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { Nav } from "../App";
@@ -43,7 +44,7 @@ export function PlanPage({ batchId, nav }: { batchId: string; nav: Nav }) {
   const statusByKey = useMemo(() => new Map(stops?.stops.map((s) => [s.key, s]) ?? []), [stops]);
   const mapStops = useMemo(() => (sel?.stops || []).map((s) => {
     const st = statusByKey.get(s.key);
-    return { id: s.key, lat: st?.address.lat ?? 0, lon: st?.address.lon ?? 0, seq: s.seq, status: st?.status ?? "pending", uncertain: st?.uncertain };
+    return { id: s.key, lat: st ? routePoint(st.address)!.lat : 0, lon: st ? routePoint(st.address)!.lon : 0, seq: s.seq, status: st?.status ?? "pending", uncertain: st?.uncertain };
   }), [sel, statusByKey]);
 
   const p = settings?.profile;

@@ -84,6 +84,11 @@ export function SettingsPage() {
         <div><Label htmlFor="svc2">+ por carta extra (s)</Label><Input id="svc2" type="number" value={s.perLetterService} onChange={num("perLetterService")} /></div>
         <div><Label htmlFor="ride">Pedalando (km/h)</Label><Input id="ride" type="number" step="0.5" value={s.profile.ride_speed_kmh} onChange={(e) => setS({ ...s, profile: { ...s.profile, ride_speed_kmh: +e.target.value } })} /></div>
         <div><Label htmlFor="walk">A pé c/ bicicleta (km/h)</Label><Input id="walk" type="number" step="0.5" value={s.profile.walk_speed_kmh} onChange={(e) => setS({ ...s, profile: { ...s.profile, walk_speed_kmh: +e.target.value } })} /></div>
+        <div className="col-span-2"><Label htmlFor="approx">Endereços aproximados (só a rua / interpolados)</Label>
+          <Select id="approx" value={s.approxPolicy ?? "include"} onChange={(e) => setS({ ...s, approxPolicy: e.target.value as "include" | "block" })}>
+            <option value="include">Incluir na rota, sinalizados como aproximados</option>
+            <option value="block">Só rotear depois de confirmar no mapa</option>
+          </Select></div>
         <div className="col-span-2"><Label htmlFor="quota">Cota diária de consultas ao Nominatim público (usadas hoje: {quotaUsed()})</Label>
           <Input id="quota" type="number" value={s.geocodeDailyQuota ?? 250} onChange={num("geocodeDailyQuota")} /></div>
         <div className="col-span-2"><Label htmlFor="mail">E-mail de contato p/ o Nominatim (recomendado)</Label><Input id="mail" type="email" value={s.nominatimEmail} onChange={(e) => setS({ ...s, nominatimEmail: e.target.value })} /></div>

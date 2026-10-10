@@ -1,7 +1,8 @@
 import { CheckCircle2, RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
+import { confirmEntrance, confirmPin, invalidateConfirmation, isStale, revertLast, trustOf } from "../core/address";
 import { type Address, db } from "../core/db";
-import { confirmAddress, resolve } from "../core/geocode";
+import { resolve } from "../core/geocode";
 import { normalizeAddress } from "../core/normalize";
 import { geocodeBatch, getSettings, importPositions, stopsOf } from "../core/service";
 import { Button } from "../ui/button";
@@ -19,6 +20,7 @@ export function AddressesPage({ batchId }: { batchId: string }) {
   const [pin, setPin] = useState<{ lat: number; lon: number } | null>(null);
   const [msg, setMsg] = useState<{ kind: "ok" | "error" | "info"; text: string } | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
+  const [note, setNote] = useState("");
 
   const counts = useMemo(() => {
     const m = new Map<string, number>();
@@ -64,13 +66,38 @@ export function AddressesPage({ batchId }: { batchId: string }) {
     }
   }
 
-  async function confirm() {
+  /** Confirma e já abre o próximo endereço a conferir (sequência rápida; nunca confirma sozinho). */
+  async function confirm(asEntrance: boolean) {
     if (!sel || !pin) return;
     if (sel.precision === "pending") await db.addresses.put({ ...sel, lat: pin.lat, lon: pin.lon });
-    await confirmAddress(sel.key, pin.lat, pin.lon);
-    setMsg({ kind: "ok", text: `Posição confirmada: ${sel.display}. Fica salva para as próximas jornadas.` });
-    setSel(null);
+    if (asEntrance) await confirmEntrance(sel.key, pin.lat, pin.lon, note.trim() || null);
+    else await confirmPin(sel.key, pin.lat, pin.lon);
+    setMsg({ kind: "ok", text: `${asEntrance ? "Portaria" : "Posição"} confirmada: ${sel.display}. Fica salva para as próximas jornadas (dá para reverter).` });
+    const idx = list.findIndex((x) => x.key === sel.key);
+    const next = filter === "review" ? list.slice(idx + 1).find((x) => x.key !== sel.key) : undefined;
+    setNote("");
+    if (next) open(next);
+    else setSel(null);
     reload();
+  }
+
+  function open(a: Address) {
+    setSel(a);
+    setNote(a.entrance?.note ?? "");
+    const pt = a.entrance ?? (a.lat != null ? { lat: a.lat, lon: a.lon! } : null);
+    setPin(pt ? { lat: pt.lat, lon: pt.lon } : { lat: -23.962, lon: -46.333 });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function undo(fn: () => Promise<Address>, text: string) {
+    try {
+      const a = await fn();
+      setSel(a);
+      setMsg({ kind: "info", text });
+      reload();
+    } catch (e) {
+      setMsg({ kind: "error", text: (e as Error).message });
+    }
   }
 
   if (!data) return <Spinner />;
@@ -104,21 +131,29 @@ export function AddressesPage({ batchId }: { batchId: string }) {
           <div className="font-semibold">{sel.display}</div>
           <div className="text-xs muted">Original: {sel.original}</div>
           {candidates.length > 1 && <div className="text-xs">{candidates.map((c, i) => <div key={i}>{String.fromCharCode(65 + i)} — {c.label}</div>)}</div>}
-          <Alert kind="info">Arraste o pino roxo até a entrada do imóvel e confirme.</Alert>
+          <div className="text-xs">Confiança atual: <b>{trustOf(sel).label}</b>{isStale(sel) && <b className="text-amber-700"> · confirmação antiga (mais de 1 ano)</b>}</div>
+          <Alert kind="info">Arraste o pino roxo até a <b>portaria</b> do imóvel. "Confirmar portaria" só quando o ponto for a entrada real; senão use "Confirmar posição".</Alert>
+          <label className="block text-xs">Observação da entrada (opcional, ex.: portão azul, interfone 12)
+            <input className="mt-1 w-full rounded-xl border border-app bg-transparent px-3 py-2 text-base" value={note} maxLength={120} onChange={(e) => setNote(e.target.value)} />
+          </label>
           <div className="grid grid-cols-2 gap-2">
-            <Button onClick={confirm}><CheckCircle2 className="h-5 w-5" /> Confirmar</Button>
+            <Button onClick={() => confirm(true)}><CheckCircle2 className="h-5 w-5" /> Confirmar portaria</Button>
+            <Button variant="secondary" onClick={() => confirm(false)}>Confirmar posição</Button>
             <Button variant="secondary" onClick={() => retry(sel)}>Consultar de novo</Button>
+            <Button variant="secondary" disabled={!sel.history?.length} onClick={() => undo(() => revertLast(sel.key), "Última alteração revertida.")}>Reverter última alteração</Button>
+            {(sel.confirmedAt || sel.entrance) && <Button variant="secondary" className="col-span-2" onClick={() => undo(() => invalidateConfirmation(sel.key), "Confirmação invalidada: o endereço voltou para revisão.")}>Invalidar confirmação</Button>}
           </div>
         </Card>
       )}
       <div className="space-y-2">
         {list.length === 0 && <Card>Nenhum endereço {filter === "review" ? "pendente de revisão" : ""}.</Card>}
         {list.map((a) => (
-          <button key={a.key} onClick={() => { setSel(a); setPin(a.lat != null ? { lat: a.lat, lon: a.lon! } : { lat: -23.962, lon: -46.333 }); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+          <button key={a.key} onClick={() => open(a)}
             className={`card w-full p-3 text-left ${sel?.key === a.key ? "!border-brand" : ""}`}>
             <div className="font-semibold">{a.display}</div>
             <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
-              <Badge color={PCOLOR[a.precision]}>{PRECISION_LABEL[a.precision]}</Badge>
+              <Badge color={a.entrance ? "#15803d" : PCOLOR[a.precision]}>{trustOf(a).label}</Badge>
+              {isStale(a) && <Badge color="#b45309">confirmação antiga</Badge>}
               <span className="muted">confiança {Math.round(a.confidence * 100)}% · {counts.get(a.key) || 0} carta(s)</span>
             </div>
             {a.reason && <div className="mt-1 text-xs text-amber-700 dark:text-amber-400">{a.reason}</div>}

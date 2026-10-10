@@ -69,6 +69,17 @@ export interface Address {
   reason: string | null;
   verifiedAt: string | null;
   confirmedAt: string | null;
+  /** portaria/entrada confirmada pelo entregador (V3); `lat/lon` continuam sendo a posição do endereço */
+  entrance?: { lat: number; lon: number; note: string | null; confirmedAt: string; by: string } | null;
+  /** histórico de alterações de posição (para reverter); máx. 20 */
+  history?: {
+    at: string; by: string; action: "confirm_pin" | "set_entrance" | "clear_entrance" | "invalidate";
+    before: {
+      lat: number | null; lon: number | null; precision: Precision; confidence: number; source: string | null;
+      needsReview: boolean; reason: string | null; confirmedAt: string | null;
+      entrance: { lat: number; lon: number; note: string | null; confirmedAt: string; by: string } | null;
+    };
+  }[];
 }
 
 export interface RouteStop {
@@ -128,6 +139,8 @@ export interface Settings {
   routeMode: "open" | "circular";
   nominatimEmail: string;
   geocodeDailyQuota?: number; // consultas públicas por dia (padrão 250)
+  /** endereços aproximados (só a rua / interpolados): "include" = roteia sinalizando; "block" = só depois de confirmar */
+  approxPolicy?: "include" | "block";
   currentBatch: string | null;
 }
 

@@ -1,3 +1,4 @@
+import { routePoint } from "../core/address";
 import { ChevronDown, ChevronUp, Crosshair, ExternalLink, ListOrdered, Pin, RotateCcw, Search, SkipForward, Undo2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { Nav } from "../App";
@@ -52,7 +53,7 @@ export function RoutePage({ routeId, nav }: { routeId?: string; nav: Nav }) {
   const sel = items.find((x) => x.key === (selKey ?? next?.key));
   const following = sel ? items[items.indexOf(sel) + 1] : null;
   const mapStops = useMemo(() => items.map((x) => ({
-    id: x.key, lat: x.stop!.address.lat!, lon: x.stop!.address.lon!, seq: x.seq, status: x.stop!.status,
+    id: x.key, lat: routePoint(x.stop!.address)!.lat, lon: routePoint(x.stop!.address)!.lon, seq: x.seq, status: x.stop!.status,
     uncertain: x.stop!.uncertain || x.confidence === "baixa", isNext: x.key === next?.key,
   })), [items, next]);
   const filtered = useMemo(() => {
@@ -148,7 +149,7 @@ export function RoutePage({ routeId, nav }: { routeId?: string; nav: Nav }) {
     );
   }
 
-  const navUrl = sel ? `https://www.google.com/maps/dir/?api=1&destination=${sel.stop!.address.lat},${sel.stop!.address.lon}&travelmode=bicycling` : "#";
+  const navUrl = sel ? `https://www.google.com/maps/dir/?api=1&destination=${routePoint(sel.stop!.address)!.lat},${routePoint(sel.stop!.address)!.lon}&travelmode=bicycling` : "#";
   const addr = (x: typeof items[number]) => x.stop!.address.display.split(" - ")[0];
 
   return (
@@ -182,7 +183,7 @@ export function RoutePage({ routeId, nav }: { routeId?: string; nav: Nav }) {
 
       <div className="relative">
         <RouteMap className="h-[55dvh] w-full overflow-hidden rounded-2xl" stops={mapStops} route={route.geojson} start={route.start} me={me}
-          onBaseMap={setBaseMap} onStopClick={(k) => { setSelKey(k); setOpen(true); }} focus={sel ? { lat: sel.stop!.address.lat!, lon: sel.stop!.address.lon! } : null} />
+          onBaseMap={setBaseMap} onStopClick={(k) => { setSelKey(k); setOpen(true); }} focus={sel ? { lat: routePoint(sel.stop!.address)!.lat, lon: routePoint(sel.stop!.address)!.lon } : null} />
         <div className="absolute left-2 top-2 flex gap-2">
           <Button size="sm" variant="secondary" onClick={() => setList(!list)} aria-label="Lista de paradas"><ListOrdered className="h-4 w-4" /> Lista</Button>
           <Button size="sm" variant="secondary" aria-label="Minha localização" onClick={locate}><Crosshair className="h-4 w-4" /></Button>

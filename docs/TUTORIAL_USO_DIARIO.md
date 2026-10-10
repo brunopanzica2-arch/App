@@ -45,7 +45,7 @@ O Painel mostra **"N cartas / N imóveis / N bairros"** e o cartão **Endereços
 - Toque num endereço, **arraste o pino roxo até a entrada do imóvel** e toque em **Confirmar**. Um endereço
   confirmado fica salvo e é reaproveitado nos próximos dias.
 - **Localizar** consulta o mapa na internet. Há um limite diário (Ajustes, 250 por padrão), e endereços
-  "só a rua" **não** entram na rota até serem confirmados.
+  "só a rua" entram na rota **marcados como aproximados**. Em Ajustes dá para exigir confirmação antes de rotear.
 
 ![revisão](EVIDENCIAS_E2E_V2/04-revisao-posicoes-teste.png)
 

@@ -1,5 +1,6 @@
 import { AlertTriangle, MapPinned, Route as RouteIcon, Upload } from "lucide-react";
 import type { Nav } from "../App";
+import { trustSummary } from "../core/address";
 import { db } from "../core/db";
 import { getSettings, stopsOf, TERMINAL } from "../core/service";
 import { Button } from "../ui/button";
@@ -51,7 +52,14 @@ export function Dashboard({ nav }: { nav: Nav }) {
           <button onClick={() => nav(`/enderecos/${batchId}`)} className="card w-full p-3 text-left">
             <div className="text-xs font-semibold uppercase muted">Endereços a conferir</div>
             <div className="text-xl font-bold">{review + new Set(data.unlocated.map((l) => l.addressKey)).size} pendência(s)</div>
-            <div className="text-xs muted">{data.addresses.filter((a) => a.precision === "test").length} posição(ões) de TESTE · {data.addresses.filter((a) => a.precision === "manual").length} confirmada(s) no mapa</div>
+            {(() => {
+              const t = trustSummary(data.addresses);
+              return (
+                <div className="mt-1 text-xs muted" data-testid="trust-summary">
+                  Portaria {t.entrance} · pino confirmado {t.pin} · número na fonte {t.verified} · aproximados {t.interpolated + t.street} · TESTE {t.test} · sem posição {t.unlocated + new Set(data.unlocated.map((l) => l.addressKey)).size}
+                </div>
+              );
+            })()}
           </button>
           <div className="grid grid-cols-2 gap-3">
             <Stat label="Cartas" value={total} hint={`${data.letters.filter((l) => l.status === "delivered").length} entregues`} />
