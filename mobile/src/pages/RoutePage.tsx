@@ -11,6 +11,16 @@ import { Alert, Badge, Card, Input, Select, Spinner } from "../ui/misc";
 import RouteMap, { MapLegend } from "../ui/RouteMap";
 import { PRECISION_LABEL, REASON_LABEL, STATUS_LABEL, STOP_STATUS_LABEL, fmtDist, fmtTime } from "../ui/utils";
 
+/** GPS com limite próprio: sem resposta (permissão pendente/negada, sem sinal) => erro em 15 s. */
+function getPosition(): Promise<GeolocationPosition> {
+  return new Promise((ok, fail) => {
+    if (!("geolocation" in navigator)) return fail(new Error("GPS não disponível neste aparelho"));
+    const t = setTimeout(() => fail(new Error("sem resposta do GPS em 15 s")), 15000);
+    navigator.geolocation.getCurrentPosition((p) => { clearTimeout(t); ok(p); }, (e) => { clearTimeout(t); fail(new Error(e.message || "permissão negada")); },
+      { enableHighAccuracy: true, timeout: 15000 });
+  });
+}
+
 const CONF_COLOR: Record<string, string> = { alta: "#16a34a", boa: "#16a34a", media: "#b45309", baixa: "#dc2626" };
 
 export function RoutePage({ routeId, nav }: { routeId?: string; nav: Nav }) {
@@ -34,6 +44,7 @@ export function RoutePage({ routeId, nav }: { routeId?: string; nav: Nav }) {
   const [msg, setMsg] = useState<{ kind: "ok" | "error" | "info" | "warn"; text: string } | null>(null);
   const [reason, setReason] = useState("ausente");
   const [busy, setBusy] = useState<string | null>(null);
+  const [saving, setSaving] = useState<Record<string, LetterStatus>>({}); // atualização otimista
 
   const byKey = useMemo(() => new Map(stopsData?.stops.map((s) => [s.key, s]) ?? []), [stopsData]);
   const items = useMemo(() => (route?.stops || []).map((rs) => ({ ...rs, stop: byKey.get(rs.key) })).filter((x) => x.stop), [route, byKey]);
@@ -63,9 +74,16 @@ export function RoutePage({ routeId, nav }: { routeId?: string; nav: Nav }) {
   const partial = route.metrics.status === "partial";
 
   async function mark(l: Letter, status: LetterStatus) {
-    await recordEvent(l.id, status, route!.id, ["not_delivered", "returned", "address_not_found"].includes(status) ? reason : null);
-    setMsg({ kind: "ok", text: `${l.externalId || "Carta"}: ${STATUS_LABEL[status]}. Use "Desfazer" se foi engano.` });
+    if (saving[l.id]) return; // evita toque duplo enquanto grava
+    setSaving((s) => ({ ...s, [l.id]: status }));
+    try {
+      await recordEvent(l.id, status, route!.id, ["not_delivered", "returned", "address_not_found"].includes(status) ? reason : null);
+      setMsg({ kind: "ok", text: `${l.externalId || "Carta"}: ${STATUS_LABEL[status]}. Use "Desfazer" se foi engano.` });
+    } catch (e) {
+      setMsg({ kind: "error", text: `Não foi possível gravar: ${(e as Error).message}` });
+    }
     reload();
+    setTimeout(() => setSaving((s) => { const n = { ...s }; delete n[l.id]; return n; }), 400);
   }
 
   async function bulk(status: LetterStatus, label: string) {
@@ -89,20 +107,31 @@ export function RoutePage({ routeId, nav }: { routeId?: string; nav: Nav }) {
       if (origin === "here") {
         if (!confirm("Usar sua localização atual como origem do recálculo? Ela fica só no aparelho.")) return;
         try {
-          const pos = await new Promise<GeolocationPosition>((ok, err) => navigator.geolocation.getCurrentPosition(ok, err, { enableHighAccuracy: true, timeout: 15000 }));
+          const pos = await getPosition();
           start = { label: "Localização atual", lat: pos.coords.latitude, lon: pos.coords.longitude };
         } catch (e) {
           // GPS negado/indisponível: segue da última parada concluída
-          setMsg({ kind: "warn", text: `GPS indisponível (${(e as GeolocationPositionError).message || "sem permissão"}). Recalculando a partir da última parada atendida.` });
+          setMsg({ kind: "warn", text: `GPS indisponível (${(e as Error).message}). Recalculando a partir da última parada atendida.` });
         }
       }
       start ??= route!.start;
       setBusy("Recalculando paradas restantes…");
       const mode = route!.params.mode as any;
-      const r = await planBatch(route!.batchId, {
-        mode: mode === "circular" ? "fixed_end" : mode, strategy: route!.params.strategy as any, start,
+      const opts = (st: { label: string; lat: number; lon: number }) => ({
+        mode: mode === "circular" ? "fixed_end" : mode, strategy: route!.params.strategy as any, start: st,
         end: mode === "circular" ? route!.start : route!.end, timeLimitMs: 8000, reason: `reotimização:${origin}`, fixedFirst,
-      }, (st, p) => setBusy(`${st} ${Math.round(p * 100)}%`));
+      });
+      const prog = (st: string, p: number) => setBusy(`${st} ${Math.round(p * 100)}%`);
+      let r;
+      try {
+        r = await planBatch(route!.batchId, opts(start), prog);
+      } catch (e) {
+        if (origin !== "here" || !/fora da malha/.test((e as Error).message)) throw e;
+        // posição do GPS desviada/fora da malha de Santos: segue da última parada atendida
+        const fallback = (await lastServedPoint(route!)) ?? route!.start;
+        setMsg({ kind: "warn", text: `Sua posição está fora da malha de pedestres (${(e as Error).message}). Recalculado a partir de: ${fallback.label}.` });
+        r = await planBatch(route!.batchId, opts(fallback), prog);
+      }
       await activateRoute(r);
       setBusy(null);
       nav(`/rota/${r.id}`);
@@ -113,10 +142,9 @@ export function RoutePage({ routeId, nav }: { routeId?: string; nav: Nav }) {
   }
 
   function locate() {
-    navigator.geolocation.getCurrentPosition(
+    getPosition().then(
       (p) => setMe({ lat: p.coords.latitude, lon: p.coords.longitude }),
-      (e) => setMsg({ kind: "warn", text: `GPS indisponível: ${e.message || "permissão negada"}. O app continua funcionando sem localização.` }),
-      { timeout: 15000 },
+      (e) => setMsg({ kind: "warn", text: `GPS indisponível: ${e.message}. O app continua funcionando sem localização.` }),
     );
   }
 
@@ -208,21 +236,21 @@ export function RoutePage({ routeId, nav }: { routeId?: string; nav: Nav }) {
                 {(sel.flags || []).includes("via_mais_proxima_desconectada") && <Badge color="#dc2626">Via mais próxima não conectada</Badge>}
                 {following && <Badge color="#7c3aed">Próximo: {fmtDist(following.legDistance)} · {fmtTime(following.legTime)}</Badge>}
               </div>
-              {sel.stop!.letters.map((l) => (
-                <div key={l.id} className="rounded-xl border border-app p-2">
+              {sel.stop!.letters.map((l0) => { const l = saving[l0.id] ? { ...l0, status: saving[l0.id] } : l0; return (
+                <div key={l.id} className="rounded-xl border border-app p-2" data-letter={l.id} data-status={l.status}>
                   <div className="flex items-center justify-between gap-2 text-sm">
                     <span><b>{l.externalId || `linha ${l.row}`}</b>{l.complement ? ` · ${l.complement}` : ""}{l.recipient ? ` · ${l.recipient}` : ""}</span>
                     <Badge color={l.status === "delivered" ? "#16a34a" : TERMINAL.includes(l.status) ? "#dc2626" : l.status === "postponed" ? "#6b7280" : "#7c3aed"}>{STATUS_LABEL[l.status]}</Badge>
                   </div>
                   {l.notes && <div className="text-xs muted">Obs.: {l.notes}</div>}
                   <div className="mt-2 grid grid-cols-2 gap-2">
-                    <Button variant="success" onClick={() => mark(l, "delivered")}>Entregue</Button>
-                    <Button variant="danger" onClick={() => mark(l, "not_delivered")}>Não entregue</Button>
+                    <Button variant="success" disabled={!!saving[l.id] || l.status === "delivered"} onClick={() => mark(l, "delivered")}>Entregue</Button>
+                    <Button variant="danger" disabled={!!saving[l.id]} onClick={() => mark(l, "not_delivered")}>Não entregue</Button>
                     <Button variant="secondary" size="sm" onClick={() => mark(l, "postponed")}>Adiar</Button>
                     <Button variant="secondary" size="sm" onClick={() => mark(l, "address_not_found")}>Endereço errado</Button>
                   </div>
                 </div>
-              ))}
+              ); })}
               <div className="grid grid-cols-2 gap-2">
                 <Select aria-label="Motivo da ocorrência" value={reason} onChange={(e) => setReason(e.target.value)}>
                   {Object.entries(REASON_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}

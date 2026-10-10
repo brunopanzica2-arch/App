@@ -229,6 +229,7 @@ export async function activateRoute(route: Route) {
 export async function recordEvent(letterId: string, status: LetterStatus, routeId: string | null, reason: string | null = null, notes: string | null = null) {
   const l = await db.letters.get(letterId);
   if (!l) throw new Error("Carta não encontrada.");
+  if (l.status === status) return null; // toque repetido: nenhum evento duplicado
   const ev: DeliveryEvent = {
     id: uid(), letterId, batchId: l.batchId, routeId, status, previousStatus: l.status,
     reason: ["not_delivered", "returned", "address_not_found"].includes(status) ? reason || "outro" : null,

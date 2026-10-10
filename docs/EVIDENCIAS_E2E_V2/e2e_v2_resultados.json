@@ -1,0 +1,63 @@
+{
+ "E2E-01": {
+  "ok": true,
+  "detail": "prévia 300 linhas / 150 imóveis; 300 inseridas"
+ },
+ "E2E-06": {
+  "ok": true,
+  "detail": "consultas ao Nominatim durante a importação de 150 imóveis: 0"
+ },
+ "E2E-04": {
+  "ok": true,
+  "detail": "aviso: \"Este conteúdo já foi importado no lote \"Lote 10/10/2026\" (2026-10-10).\"; segunda importação: 0 inseridas, 300 duplicadas"
+ },
+ "E2E-05": {
+  "ok": true,
+  "detail": "30 lidas = 28 inseridas + 2 duplicadas (1 no arquivo + 1 já existente); 1 com erro (sem logradouro)"
+ },
+ "E2E-16": {
+  "ok": true,
+  "detail": "após cancelar: 0 versão(ões) gravada(s)"
+ },
+ "E2E-07": {
+  "ok": true,
+  "detail": "150 paradas, 15,0 km, 3 h 20 min, cálculo no navegador 8.8 s, status completa"
+ },
+ "E2E-08": {
+  "ok": true,
+  "detail": "modo aberto: termina na última parada (sem trecho de retorno)"
+ },
+ "E2E-09": {
+  "ok": true,
+  "detail": "versão circular: v2 · planned · 16,7 km · 3 h 27 min"
+ },
+ "E2E-11": {
+  "ok": true,
+  "detail": "parada com 4 cartas após 1 entrega: \"4 carta(s) · Parcial\""
+ },
+ "E2E-12a": {
+  "ok": true,
+  "detail": "antes 50/300 · depois de recarregar 50/300"
+ },
+ "E2E-12b": {
+  "ok": true,
+  "detail": "v3 visita 126 paradas = 126 imóveis com cartas pendentes; inclui concluída? false"
+ },
+ "E2E-13": {
+  "ok": true,
+  "detail": "offline 80/300 · após voltar a rede e recarregar 80/300"
+ },
+ "J-mapa-offline": {
+  "ok": true,
+  "detail": "estilo de contingência exibido; rota e paradas numeradas continuam visíveis (ver captura 12)"
+ },
+ "E2E-14": {
+  "ok": true,
+  "detail": "GPS negado: aviso exibido, app segue; posição desviada (São Paulo): \"GPS indisponível: sem resposta do GPS em 15 s. O app continua funcionando sem localização.\""
+ },
+ "E2E-20": {
+  "ok": true,
+  "detail": "300 cartas exportadas, 80 entregues, sha256 b528903b43b3b9dd…"
+ },
+ "errosDePagina": []
+}

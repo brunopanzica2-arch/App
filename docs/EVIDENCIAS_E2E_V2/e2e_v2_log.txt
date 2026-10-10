@@ -1,0 +1,32 @@
+▶ Ajustes: ponto de partida TESTE (1 consulta ao Nominatim)
+   Resultado: Aproximado na rua. O número não foi confirmado — arraste o pino até a entrada do imóvel.
+▶ E2E-01/06: importar 300 cartas (CSV UTF-8 com BOM, ';', CRLF) sem geocodificação massiva
+   PASSOU E2E-01: prévia 300 linhas / 150 imóveis; 300 inseridas
+   PASSOU E2E-06: consultas ao Nominatim durante a importação de 150 imóveis: 0
+▶ E2E-04: reimportar o mesmo arquivo
+   PASSOU E2E-04: aviso: "Este conteúdo já foi importado no lote "Lote 10/10/2026" (2026-10-10)."; segunda importação: 0 inseridas, 300 duplicadas
+▶ E2E-05: 30 casos adversariais
+   PASSOU E2E-05: 30 lidas = 28 inseridas + 2 duplicadas (1 no arquivo + 1 já existente); 1 com erro (sem logradouro)
+▶ Importar 150 POSIÇÕES TESTE (nós OSM) — não são portas
+   Coordenadas: 0 atualizadas, 150 novas, 0 inválidas.
+   2026-10-10 · Lote 10/10/2026 (28 cartas) | 2026-10-10 · Lote 10/10/2026 (0 cartas) | 2026-10-10 · Lote 10/10/2026 (300 cartas) | 300 cartas / 150 imóveis / 3 bairros | 150 paradas localizadas · 0 carta(s) aguardando localização | ENDEREÇOS A CONFERIR
+▶ E2E-16: cancelar no meio da otimização não altera versões
+   PASSOU E2E-16: após cancelar: 0 versão(ões) gravada(s)
+▶ E2E-07/08: rota aberta com 150 paradas na malha OSM real
+   PASSOU E2E-07: 150 paradas, 15,0 km, 3 h 20 min, cálculo no navegador 8.8 s, status completa
+   PASSOU E2E-08: modo aberto: termina na última parada (sem trecho de retorno)
+▶ E2E-09: rota circular
+   PASSOU E2E-09: versão circular: v2 · planned · 16,7 km · 3 h 27 min
+▶ E2E-11: concluir 1 carta de uma parada com 4
+   PASSOU E2E-11: parada com 4 cartas após 1 entrega: "4 carta(s) · Parcial"
+▶ E2E-12: concluir 50 cartas, recarregar, conferir persistência e recálculo só de pendentes
+   PASSOU E2E-12a: antes 50/300 · depois de recarregar 50/300
+   PASSOU E2E-12b: v3 visita 126 paradas = 126 imóveis com cartas pendentes; inclui concluída? false
+▶ E2E-13: modo avião — concluir 30, voltar a rede, conferir persistência; mapa-base offline
+   PASSOU E2E-13: offline 80/300 · após voltar a rede e recarregar 80/300
+   PASSOU J-mapa-offline: estilo de contingência exibido; rota e paradas numeradas continuam visíveis (ver captura 12)
+▶ E2E-14: GPS negado e coordenada desviada — sem travar
+   GPS indisponível: sem resposta do GPS em 15 s. O app continua funcionando sem localização.
+   PASSOU E2E-14: GPS negado: aviso exibido, app segue; posição desviada (São Paulo): "GPS indisponível: sem resposta do GPS em 15 s. O app continua funcionando sem localização."
+▶ E2E-20: exportar relatório CSV e conferir contagem/checksum
+   PASSOU E2E-20: 300 cartas exportadas, 80 entregues, sha256 b528903b43b3b9dd…
