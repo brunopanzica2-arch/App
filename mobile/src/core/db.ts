@@ -129,6 +129,18 @@ export interface DeliveryEvent {
   undoneAt?: string | null; // desfeito pelo usuário (o evento permanece no histórico)
 }
 
+/** Fila de geocodificação em lote (V3 §5): persistente, retomável, uma entrada por endereço ÚNICO. */
+export interface GeoJob {
+  key: string; // addressKey
+  batchId: string;
+  state: "pending" | "running" | "done" | "failed" | "skipped";
+  attempts: number;
+  nextAt: number; // epoch ms (backoff)
+  error: string | null;
+  updatedAt: string;
+}
+export interface GeoUsage { id: string; date: string; provider: string; queries: number; errors: number }
+
 export interface Settings {
   key: "main";
   start: { label: string; lat: number; lon: number; confirmed: boolean } | null;
@@ -141,6 +153,9 @@ export interface Settings {
   geocodeDailyQuota?: number; // consultas públicas por dia (padrão 250)
   /** endereços aproximados (só a rua / interpolados): "include" = roteia sinalizando; "block" = só depois de confirmar */
   approxPolicy?: "include" | "block";
+  /** provedor de geocodificação em lote: instância própria/contratada compatível com a API de busca do Nominatim.
+   *  Vazio = Nominatim PÚBLICO (só uso pontual; lote limitado). A chave NÃO entra no backup. */
+  geocoder?: { baseUrl: string; apiKey?: string; minIntervalMs?: number; costPerQueryBRL?: number } | null;
   currentBatch: string | null;
 }
 
@@ -153,6 +168,8 @@ class RotaDB extends Dexie {
   events!: Table<DeliveryEvent, string>;
   settings!: Table<Settings, string>;
   snapshots!: Table<{ id: string; at: string; reason: string; json: string }, string>;
+  geojobs!: Table<GeoJob, string>;
+  geousage!: Table<GeoUsage, string>;
 
   constructor() {
     super("rota-santos");
@@ -173,6 +190,11 @@ class RotaDB extends Dexie {
       snapshots: "id, at",
     }).upgrade(async (tx) => {
       await tx.table("events").toCollection().modify((e: any) => { if (e.undoneAt === undefined) e.undoneAt = null; });
+    });
+    // v3: fila de geocodificação e consumo por provedor. Só adiciona tabelas (nenhum dado existente muda).
+    this.version(3).stores({
+      geojobs: "key, batchId, state, nextAt",
+      geousage: "id, date",
     });
   }
 }

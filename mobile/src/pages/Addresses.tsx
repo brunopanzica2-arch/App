@@ -4,7 +4,7 @@ import { confirmEntrance, confirmPin, invalidateConfirmation, isStale, revertLas
 import { type Address, db } from "../core/db";
 import { resolve } from "../core/geocode";
 import { normalizeAddress } from "../core/normalize";
-import { geocodeBatch, getSettings, importPositions, stopsOf } from "../core/service";
+import { cancelGeocode, geocodeBatch, getSettings, importPositions, stopsOf } from "../core/service";
 import { Button } from "../ui/button";
 import { useAsync } from "../ui/hooks";
 import { Alert, Badge, Card, Progress, Select, Spinner } from "../ui/misc";
@@ -46,9 +46,10 @@ export function AddressesPage({ batchId }: { batchId: string }) {
 
   async function geocodeAll() {
     setProgress(0);
-    const r = await geocodeBatch(batchId, (d, t) => setProgress(d / t));
+    const r = await geocodeBatch(batchId, (d, t) => setProgress(t ? d / t : 1));
     setProgress(null);
-    setMsg({ kind: r.errors.length ? "error" : "ok", text: `${r.addresses} imóveis verificados${r.errors.length ? ` · ${r.errors.length} falha(s): ${r.errors[0]}` : ""}` });
+    const bad = r.errors.length ? ` · ${r.failed} falha(s): ${r.errors[0]}` : "";
+    setMsg({ kind: r.stopped === "completed" && !r.failed ? "ok" : r.stopped === "completed" ? "info" : "error", text: `${r.message}${bad}` });
     reload();
   }
 
@@ -108,7 +109,9 @@ export function AddressesPage({ batchId }: { batchId: string }) {
           <option value="review">Precisam de revisão</option>
           <option value="all">Todos</option>
         </Select>
-        <Button variant="secondary" onClick={geocodeAll} disabled={progress !== null}><RefreshCw className="h-4 w-4" /> Localizar</Button>
+        {progress === null
+          ? <Button variant="secondary" onClick={geocodeAll}><RefreshCw className="h-4 w-4" /> Localizar</Button>
+          : <Button variant="secondary" onClick={cancelGeocode}>Cancelar ({Math.round(progress * 100)}%)</Button>}
       </div>
       <label className="block text-sm">
         Importar coordenadas (CSV: logradouro;numero;lat;lon[;aviso]):{" "}

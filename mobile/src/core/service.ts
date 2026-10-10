@@ -2,7 +2,8 @@
 import { Capacitor } from "@capacitor/core";
 import { type Address, db, type DeliveryEvent, type Letter, type LetterStatus, type Route, type Settings, uid } from "./db";
 import { routePoint, trustOf, type Trust } from "./address";
-import { QuotaError, resolve, setDailyQuota } from "./geocode";
+import { QuotaError, resolve, setDailyQuota, setProvider } from "./geocode";
+import { runQueue } from "./geoqueue";
 import { parseText } from "./importer";
 import { normalizeAddress } from "./normalize";
 import type { PlanRequest, PlanResult } from "./plan";
@@ -13,11 +14,13 @@ export const TERMINAL: LetterStatus[] = ["delivered", "not_delivered", "returned
 
 export async function getSettings(): Promise<Settings> {
   const s = await db.settings.get("main");
-  return {
+  const out: Settings = {
     key: "main", start: null, startAddress: "Rua Joaquim Távora, 480, Santos/SP", profile: { ...DEFAULT_PROFILE },
     serviceTime: 45, perLetterService: 10, routeMode: "open", nominatimEmail: "", currentBatch: null,
     ...(s || {}),
   };
+  setProvider(out.geocoder); // toda consulta (lote, pontual, ponto de partida) usa o provedor configurado
+  return out;
 }
 
 export async function saveSettings(patch: Partial<Settings>) {
@@ -26,26 +29,22 @@ export async function saveSettings(patch: Partial<Settings>) {
 
 // ------------------------------------------------------------ geocodificação
 
+let geoSignal: { aborted: boolean } | null = null;
+/** Cancela a geocodificação em lote em andamento (o que já foi resolvido é mantido). */
+export function cancelGeocode() { if (geoSignal) geoSignal.aborted = true; }
+
+/** Geocodifica os endereços ÚNICOS ainda sem posição, em fila persistente (ver geoqueue.ts). */
 export async function geocodeBatch(batchId: string, onProgress?: (done: number, total: number) => void) {
   const s = await getSettings();
   setDailyQuota(s.geocodeDailyQuota ?? 250);
-  const letters = await db.letters.where("batchId").equals(batchId).toArray();
-  const groups = new Map<string, Letter[]>();
-  for (const l of letters) if (l.addressKey && !l.excluded) groups.set(l.addressKey, [...(groups.get(l.addressKey) || []), l]);
-  let i = 0;
-  const errors: string[] = [];
-  for (const [, ls] of groups) {
-    const l = ls[0];
-    const na = normalizeAddress(l.street, l.number, l.neighborhood, l.city, l.cep);
-    try {
-      await resolve(na, s.nominatimEmail);
-    } catch (e) {
-      if (e instanceof QuotaError) { errors.push(e.message); break; }
-      errors.push(`${na.display}: ${(e as Error).message}`);
-    }
-    onProgress?.(++i, groups.size);
+  setProvider(s.geocoder);
+  geoSignal = { aborted: false };
+  try {
+    const r = await runQueue(batchId, { email: s.nominatimEmail, signal: geoSignal, onProgress });
+    return { addresses: r.total, errors: r.errors, stopped: r.stopped, message: r.message, remaining: r.remaining, failed: r.failed };
+  } finally {
+    geoSignal = null;
   }
-  return { addresses: groups.size, errors };
 }
 
 /**
@@ -318,6 +317,9 @@ const TABLES = ["batches", "letters", "addresses", "routes", "events", "settings
 async function snapshotJson() {
   const data: Record<string, unknown> = { app: "rota-santos", version: 2, exportedAt: new Date().toISOString() };
   for (const t of TABLES) data[t] = await (db as any)[t].toArray();
+  // a chave do provedor de geocodificação é segredo: nunca vai para o arquivo de backup
+  const st = data.settings as { geocoder?: { apiKey?: string } | null }[] | undefined;
+  if (Array.isArray(st)) for (const x of st) if (x.geocoder?.apiKey) x.geocoder = { ...x.geocoder, apiKey: undefined };
   return JSON.stringify(data);
 }
 

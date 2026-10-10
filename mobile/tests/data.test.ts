@@ -107,7 +107,7 @@ describe("E2E-20: exportação", () => {
   });
 });
 
-describe("migração IndexedDB v1 -> v2", () => {
+describe("migração IndexedDB v1 -> v3 e v2 -> v3", () => {
   it("dados da versão anterior permanecem", async () => {
     db.close();
     await Dexie.delete("rota-santos");
@@ -123,9 +123,30 @@ describe("migração IndexedDB v1 -> v2", () => {
     await v1.table("events").put({ id: "e1", letterId: "l1", batchId: "b1", at: "2026-10-09T10:00:00Z", status: "delivered", previousStatus: "pending" });
     v1.close();
     await db.open();
-    expect(db.verno).toBe(2);
+    expect(db.verno).toBe(3);
+    expect(await db.geojobs.count()).toBe(0); // tabelas novas da v3 nascem vazias
     expect((await db.letters.get("l1"))!.status).toBe("delivered");
     expect((await db.events.get("e1"))!.undoneAt).toBeNull();
     expect(await verifyIntegrity()).toEqual([]);
+  });
+
+  it("v2 -> v3: nada some e endereços/histórico de posição seguem legíveis", async () => {
+    db.close();
+    await Dexie.delete("rota-santos");
+    const v2 = new Dexie("rota-santos");
+    v2.version(1).stores({
+      batches: "id, date, createdAt", letters: "id, batchId, externalId, addressKey, status",
+      addresses: "key, needsReview, precision", geocache: "q", routes: "id, batchId, version, status",
+      events: "id, letterId, batchId, at", settings: "key",
+    });
+    v2.version(2).stores({ batches: "id, date, createdAt, importHash", events: "id, letterId, batchId, at", snapshots: "id, at" });
+    await v2.open();
+    await v2.table("addresses").put({ key: "k", precision: "manual", lat: -23.9, lon: -46.3, confidence: 1, needsReview: false });
+    await v2.table("letters").put({ id: "l2", batchId: "b2", row: 2, status: "pending", addressKey: "k" });
+    v2.close();
+    await db.open();
+    expect(db.verno).toBe(3);
+    expect((await db.addresses.get("k"))!.precision).toBe("manual");
+    expect((await db.letters.get("l2"))!.addressKey).toBe("k");
   });
 });

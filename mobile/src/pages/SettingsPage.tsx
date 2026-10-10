@@ -5,6 +5,7 @@ import { queryFor, search } from "../core/geocode";
 import { normalizeAddress, parseAddressLine } from "../core/normalize";
 import { backupJson, getSettings, restoreJson, saveSettings, shareFile, undoRestore, verifyIntegrity } from "../core/service";
 import { quotaUsed } from "../core/geocode";
+import { usageReport } from "../core/geoqueue";
 import { Button } from "../ui/button";
 import { Alert, Card, Input, Label, Select, Spinner } from "../ui/misc";
 import RouteMap from "../ui/RouteMap";
@@ -17,9 +18,10 @@ export function SettingsPage() {
   const [msg, setMsg] = useState<{ kind: "ok" | "error" | "warn" | "info"; text: string } | null>(null);
   const [pwd, setPwd] = useState("");
   const [mode, setMode] = useState<"merge" | "replace">("merge");
+  const [usage, setUsage] = useState<Awaited<ReturnType<typeof usageReport>> | null>(null);
 
   useEffect(() => {
-    getSettings().then((x) => { setS(x); if (x.start) setPin({ lat: x.start.lat, lon: x.start.lon }); });
+    getSettings().then((x) => { setS(x); if (x.start) setPin({ lat: x.start.lat, lon: x.start.lon }); usageReport(x.geocoder?.costPerQueryBRL).then(setUsage); });
   }, []);
   const candidates = useMemo(() => cands, [cands]);
   if (!s) return <Spinner />;
@@ -89,6 +91,24 @@ export function SettingsPage() {
             <option value="include">Incluir na rota, sinalizados como aproximados</option>
             <option value="block">Só rotear depois de confirmar no mapa</option>
           </Select></div>
+        <div className="col-span-2 font-semibold">Geocodificação em lote</div>
+        <div className="col-span-2 text-xs muted">
+          O Nominatim público (padrão) serve só para consultas pontuais: no máximo 30 endereços por execução e a cota diária abaixo.
+          Para centenas de endereços, informe uma instância própria ou contratada compatível com a busca do Nominatim.
+          Só o endereço é enviado, nunca o nome do destinatário. A chave fica só neste aparelho e não entra no backup.
+        </div>
+        <div className="col-span-2"><Label htmlFor="gurl">URL de busca do provedor (vazio = Nominatim público)</Label>
+          <Input id="gurl" type="url" inputMode="url" placeholder="https://geocoder.minha-empresa.com.br/search" value={s.geocoder?.baseUrl ?? ""}
+            onChange={(e) => setS({ ...s, geocoder: e.target.value ? { ...s.geocoder, baseUrl: e.target.value } : null })} /></div>
+        {s.geocoder && <>
+          <div><Label htmlFor="gkey">Chave de acesso (opcional)</Label>
+            <Input id="gkey" type="password" autoComplete="off" value={s.geocoder.apiKey ?? ""} onChange={(e) => setS({ ...s, geocoder: { ...s.geocoder!, apiKey: e.target.value || undefined } })} /></div>
+          <div><Label htmlFor="gcost">Preço por consulta (R$, opcional)</Label>
+            <Input id="gcost" type="number" step="0.0001" value={s.geocoder.costPerQueryBRL ?? ""} onChange={(e) => setS({ ...s, geocoder: { ...s.geocoder!, costPerQueryBRL: e.target.value ? +e.target.value : undefined } })} /></div>
+        </>}
+        {usage && usage.length > 0 && <div className="col-span-2 text-xs" data-testid="geo-usage">
+          Consumo: {usage.slice(0, 5).map((u) => `${u.date} ${u.provider}: ${u.queries} consulta(s)${u.errors ? `, ${u.errors} erro(s)` : ""}${u.costBRL != null ? `, R$ ${u.costBRL.toFixed(2)}` : ""}`).join(" · ")}
+        </div>}
         <div className="col-span-2"><Label htmlFor="quota">Cota diária de consultas ao Nominatim público (usadas hoje: {quotaUsed()})</Label>
           <Input id="quota" type="number" value={s.geocodeDailyQuota ?? 250} onChange={num("geocodeDailyQuota")} /></div>
         <div className="col-span-2"><Label htmlFor="mail">E-mail de contato p/ o Nominatim (recomendado)</Label><Input id="mail" type="email" value={s.nominatimEmail} onChange={(e) => setS({ ...s, nominatimEmail: e.target.value })} /></div>

@@ -10,11 +10,20 @@ import { CapacitorHttp, Capacitor } from "@capacitor/core";
 import { type Address, type Candidate, db } from "./db";
 import { type NormalizedAddress, normText } from "./normalize";
 
-const URL_BASE = "https://nominatim.openstreetmap.org/search";
+const PUBLIC_URL = "https://nominatim.openstreetmap.org/search";
+export interface GeoProviderCfg { baseUrl: string; apiKey?: string; minIntervalMs?: number }
+let cfg: GeoProviderCfg = { baseUrl: PUBLIC_URL };
 let last = 0;
 let dailyQuota = 250;
 export function setDailyQuota(n: number) { dailyQuota = n; }
 export class QuotaError extends Error {}
+
+/** Configura o provedor. Vazio/indefinido = Nominatim público. */
+export function setProvider(c?: GeoProviderCfg | null) { cfg = c && c.baseUrl ? c : { baseUrl: PUBLIC_URL }; }
+export function providerId(): string { try { return new URL(cfg.baseUrl).host; } catch { return cfg.baseUrl; } }
+/** Nominatim público: política de uso proíbe lote/volume. Só consultas pontuais + cota diária. */
+export function isPublicProvider(): boolean { try { return new URL(cfg.baseUrl).host.endsWith("openstreetmap.org"); } catch { return false; } }
+
 function quotaKey() { return `rota.geocode.${new Date().toISOString().slice(0, 10)}`; }
 export function quotaUsed(): number {
   try { return +(localStorage.getItem(quotaKey()) || 0); } catch { return 0; }
@@ -22,21 +31,43 @@ export function quotaUsed(): number {
 function countQuery() {
   try { localStorage.setItem(quotaKey(), String(quotaUsed() + 1)); } catch { /* sem localStorage */ }
 }
+async function logUsage(error: boolean) {
+  const date = new Date().toISOString().slice(0, 10), id = `${date}|${providerId()}`;
+  await db.transaction("rw", db.geousage, async () => {
+    const u = (await db.geousage.get(id)) ?? { id, date, provider: providerId(), queries: 0, errors: 0 };
+    u.queries += 1;
+    if (error) u.errors += 1;
+    await db.geousage.put(u);
+  });
+}
 
 async function http(params: Record<string, string>): Promise<any[]> {
-  if (quotaUsed() >= dailyQuota) throw new QuotaError(`Cota diária de ${dailyQuota} consultas ao Nominatim público atingida. Confirme os demais no mapa ou importe coordenadas.`);
-  countQuery();
-  const wait = 1100 - (Date.now() - last);
+  const pub = isPublicProvider();
+  if (pub && quotaUsed() >= dailyQuota) throw new QuotaError(`Cota diária de ${dailyQuota} consultas ao Nominatim público atingida. Confirme os demais no mapa, importe coordenadas ou configure um provedor próprio em Ajustes.`);
+  if (pub) countQuery();
+  const gap = pub ? 1100 : (cfg.minIntervalMs ?? 150);
+  const wait = gap - (Date.now() - last);
   if (wait > 0) await new Promise((r) => setTimeout(r, wait));
   last = Date.now();
-  if (Capacitor.isNativePlatform()) {
-    const r = await CapacitorHttp.get({ url: URL_BASE, params, headers: { "User-Agent": "RotaSantos/1.0 (app pessoal de entregas)" } });
-    if (r.status >= 400) throw new Error(`Nominatim HTTP ${r.status}`);
-    return typeof r.data === "string" ? JSON.parse(r.data) : r.data;
+  const headers: Record<string, string> = { "User-Agent": "RotaSantos/1.1 (app pessoal de entregas)" };
+  if (cfg.apiKey) headers.Authorization = `Bearer ${cfg.apiKey}`;
+  try {
+    let data: any[];
+    if (Capacitor.isNativePlatform()) {
+      const r = await CapacitorHttp.get({ url: cfg.baseUrl, params, headers });
+      if (r.status >= 400) throw new Error(`Geocodificador HTTP ${r.status}`);
+      data = typeof r.data === "string" ? JSON.parse(r.data) : r.data;
+    } else {
+      const r = await fetch(`${cfg.baseUrl}?${new URLSearchParams(params)}`, cfg.apiKey ? { headers: { Authorization: headers.Authorization } } : undefined);
+      if (!r.ok) throw new Error(`Geocodificador HTTP ${r.status}`);
+      data = await r.json();
+    }
+    await logUsage(false);
+    return data;
+  } catch (e) {
+    await logUsage(true);
+    throw e;
   }
-  const r = await fetch(`${URL_BASE}?${new URLSearchParams(params)}`);
-  if (!r.ok) throw new Error(`Nominatim HTTP ${r.status}`);
-  return r.json();
 }
 
 export function classify(item: any, wanted: string | null): Candidate {
@@ -60,7 +91,7 @@ export function classify(item: any, wanted: string | null): Candidate {
 }
 
 export async function search(q: Record<string, string>, email = ""): Promise<Candidate[]> {
-  const key = JSON.stringify(q);
+  const key = providerId() + "|" + JSON.stringify(q);
   const cached = await db.geocache.get(key);
   if (cached) return cached.result;
   const params: Record<string, string> = { ...q, format: "jsonv2", addressdetails: "1", limit: "5", countrycodes: "br", "accept-language": "pt-BR" };
