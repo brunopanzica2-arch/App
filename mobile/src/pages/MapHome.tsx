@@ -194,7 +194,7 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
       </div>
 
       {toast && (
-        <div role="status" className="absolute inset-x-2 flex items-center gap-2 rounded-xl bg-neutral-900 p-3 text-sm text-white shadow-xl" style={{ bottom: navigating ? "17rem" : "10rem" }}>
+        <div role="status" className="absolute inset-x-2 z-30 flex items-center gap-2 rounded-xl bg-neutral-900 p-3 text-sm text-white shadow-xl" style={{ top: navigating ? "calc(env(safe-area-inset-top) + 7.5rem)" : "calc(env(safe-area-inset-top) + 4.75rem)" }}>
           <span className="flex-1">{toast.text}</span>
           {toast.undo && <button className="font-bold underline" onClick={() => { setToast(null); void undo(); }}>Desfazer</button>}
           <button aria-label="Fechar aviso" onClick={() => setToast(null)}><X className="h-5 w-5" /></button>
