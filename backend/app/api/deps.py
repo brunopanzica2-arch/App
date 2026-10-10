@@ -6,6 +6,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from ..models import Address, Correspondence, DeliveryBatch, Route, Stop, User
+from ..services.locations import is_stale, trust_of
 
 
 def get_owned(db: Session, model, obj_id: uuid.UUID, user: User):
@@ -46,6 +47,10 @@ def address_out(a: Address) -> dict:
         "candidates": a.candidates, "geocode_query": a.geocode_query,
         "verified_at": a.verified_at.isoformat() if a.verified_at else None,
         "confirmed_at": a.confirmed_at.isoformat() if a.confirmed_at else None,
+        "entrance": ({"lat": a.entrance_lat, "lon": a.entrance_lon, "note": a.entrance_note,
+                      "confirmed_at": a.entrance_confirmed_at.isoformat() if a.entrance_confirmed_at else None}
+                     if a.entrance_lat is not None else None),
+        "trust": trust_of(a), "stale_confirmation": is_stale(a),
     }
 
 

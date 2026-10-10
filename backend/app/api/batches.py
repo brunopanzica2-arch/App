@@ -15,9 +15,9 @@ from ..core.config import get_settings
 from ..core.db import get_db
 from ..core.security import current_user, rate_limit, require_role
 from ..models import (
-    Address, Correspondence, DeliveryBatch, DeliveryEvent, Job, Stop, StopCorrespondence, User,
+    Address, AddressLocationHistory, Correspondence, DeliveryBatch, DeliveryEvent, Job, Stop, StopCorrespondence, User,
 )
-from ..services import importer
+from ..services import importer, locations
 from ..services.consolidation import consolidate
 from ..services.events import REASONS, EventError, record_event
 from ..services.geocoding.providers import ProviderError
@@ -262,16 +262,77 @@ class ConfirmIn(BaseModel):
 @router.post("/addresses/{address_id}/confirm")
 def confirm_address(address_id: uuid.UUID, body: ConfirmIn, db: Session = Depends(get_db),
                     user: User = Depends(require_role("admin", "dispatcher", "courier"))):
+    """Confirma a POSIÇÃO do endereço (pino). Não afirma portaria: use /entrance."""
     a = get_owned(db, Address, address_id, user)
     old = {"lat": a.lat, "lon": a.lon, "precision": a.precision}
-    Geocoder(db, get_settings(), provider()).confirm(a, body.lat, body.lon, user.id)
-    # reflete nas paradas que usam este endereço
-    for s in db.scalars(select(Stop).where(Stop.address_id == a.id)):
-        s.lat, s.lon = a.lat, a.lon
-        s.geom = a.geom
+    try:
+        locations.confirm_pin(db, a, body.lat, body.lon, user.id)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc))
     audit(db, user.org_id, user.id, "confirm_address", "address", a.id, {"before": old, "after": body.model_dump()})
     db.commit()
     return address_out(a)
+
+
+class EntranceIn(ConfirmIn):
+    note: str | None = Field(default=None, max_length=200)
+
+
+@router.put("/addresses/{address_id}/entrance")
+def set_entrance(address_id: uuid.UUID, body: EntranceIn, db: Session = Depends(get_db),
+                 user: User = Depends(require_role("admin", "dispatcher", "courier"))):
+    """Confirma a PORTARIA/entrada do imóvel (ponto de acesso), separada da localização postal."""
+    a = get_owned(db, Address, address_id, user)
+    try:
+        locations.confirm_entrance(db, a, body.lat, body.lon, body.note, user.id)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc))
+    audit(db, user.org_id, user.id, "set_entrance", "address", a.id, {"lat": body.lat, "lon": body.lon})
+    db.commit()
+    return address_out(a)
+
+
+@router.delete("/addresses/{address_id}/entrance")
+def delete_entrance(address_id: uuid.UUID, db: Session = Depends(get_db),
+                    user: User = Depends(require_role("admin", "dispatcher", "courier"))):
+    a = get_owned(db, Address, address_id, user)
+    locations.clear_entrance(db, a, user.id)
+    audit(db, user.org_id, user.id, "clear_entrance", "address", a.id, {})
+    db.commit()
+    return address_out(a)
+
+
+@router.post("/addresses/{address_id}/invalidate")
+def invalidate_address(address_id: uuid.UUID, db: Session = Depends(get_db),
+                       user: User = Depends(require_role("admin", "dispatcher", "courier"))):
+    """Invalida uma confirmação antiga/duvidosa: o endereço volta para a fila de revisão."""
+    a = get_owned(db, Address, address_id, user)
+    locations.invalidate(db, a, user.id)
+    audit(db, user.org_id, user.id, "invalidate_address", "address", a.id, {})
+    db.commit()
+    return address_out(a)
+
+
+@router.post("/addresses/{address_id}/revert")
+def revert_address(address_id: uuid.UUID, db: Session = Depends(get_db),
+                   user: User = Depends(require_role("admin", "dispatcher", "courier"))):
+    """Desfaz a última alteração de posição/portaria."""
+    a = get_owned(db, Address, address_id, user)
+    try:
+        locations.revert_last(db, a)
+    except ValueError as exc:
+        raise HTTPException(409, str(exc))
+    audit(db, user.org_id, user.id, "revert_address", "address", a.id, {})
+    db.commit()
+    return address_out(a)
+
+
+@router.get("/addresses/{address_id}/history")
+def address_history(address_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    a = get_owned(db, Address, address_id, user)
+    rows = db.scalars(select(AddressLocationHistory).where(AddressLocationHistory.address_id == a.id)
+                      .order_by(AddressLocationHistory.created_at.desc())).all()
+    return [{"id": str(h.id), "action": h.action, "at": h.created_at.isoformat(), "before": h.before} for h in rows]
 
 
 @router.post("/addresses/{address_id}/regeocode", dependencies=[Depends(rate_limit("geocode", 30))])

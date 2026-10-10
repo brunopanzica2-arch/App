@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from ..models import Address, Correspondence, Stop, StopCorrespondence
 from .geocoding.service import ROUTABLE, point
+from .locations import route_point
 
 TERMINAL = {"delivered", "not_delivered", "returned", "address_not_found"}
 PROBLEM = {"not_delivered", "address_not_found", "returned"}
@@ -65,7 +66,8 @@ def consolidate(db: Session, org_id: uuid.UUID, batch_id: uuid.UUID,
         if s is None:
             s = Stop(org_id=org_id, batch_id=batch_id, address_id=addr_id, lat=a.lat, lon=a.lon)
             db.add(s)
-        s.lat, s.lon, s.geom = a.lat, a.lon, point(a.lat, a.lon)
+        rp = route_point(a)  # portaria confirmada, se houver; senão a posição do endereço
+        s.lat, s.lon, s.geom = rp[0], rp[1], point(*rp)
         s.excluded = False
         db.flush()
         db.add_all(StopCorrespondence(stop_id=s.id, correspondence_id=c.id) for c in items)

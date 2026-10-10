@@ -114,6 +114,24 @@ class Address(Base, TimestampMixin):
     verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     confirmed_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # V3: portaria/entrada confirmada (separada da localização postal lat/lon acima)
+    entrance_lat: Mapped[float | None] = mapped_column(Float)
+    entrance_lon: Mapped[float | None] = mapped_column(Float)
+    entrance_note: Mapped[str | None] = mapped_column(String(200))
+    entrance_confirmed_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    entrance_confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AddressLocationHistory(Base):
+    """Histórico de alterações de posição/entrada de um endereço (permite reverter e auditar)."""
+    __tablename__ = "address_location_history"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uid)
+    org_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("organizations.id"), index=True, nullable=False)
+    address_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("addresses.id", ondelete="CASCADE"), index=True, nullable=False)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    action: Mapped[str] = mapped_column(String(30), nullable=False)  # confirm_pin|set_entrance|clear_entrance|invalidate
+    before: Mapped[dict] = mapped_column(JSONType, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, nullable=False)
 
 
 class Correspondence(Base, TimestampMixin):
