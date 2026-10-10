@@ -1,6 +1,6 @@
 /** Cálculo completo de uma rota (roda no Web Worker; testável em Node). */
 import type { Graph } from "./graph";
-import { evaluate, feasibility, solve, validateRoute } from "./optimizer";
+import { evaluate, feasibility, penalties, solve, validateRoute } from "./optimizer";
 import { type LegFeature, type Profile, Router, type Snap, SnapError } from "./router";
 
 export interface PlanStop {
@@ -38,6 +38,8 @@ export interface PlanResult {
   travelTime: number;
   serviceTime: number;
   accessTime: number;
+  /** V3 §7.1: ETA = deslocamento + serviço + acesso; penalidades só no objetivo generalizado */
+  timeBreakdown: { travel: number; service: number; access: number; estimatedDuration: number; priorityPenalty: number; sectorPenalty: number; generalizedObjective: number };
   totalDistance: number;
   byMode: Record<string, number>;
   flags: Record<string, number>;
@@ -149,6 +151,7 @@ export function computePlan(g: Graph, req: PlanRequest, progress?: (stage: strin
   const out: PlanResult = {
     status: excluded.length ? "partial" : "complete", feasible: true,
     order: [], excluded, snapReview, features: [], totalTime: 0, travelTime: 0, serviceTime: 0, accessTime: 0, totalDistance: 0,
+    timeBreakdown: { travel: 0, service: 0, access: 0, estimatedDuration: 0, priorityPenalty: 0, sectorPenalty: 0, generalizedObjective: 0 },
     byMode: {}, flags: {}, candidates: res.candidates.map(({ order: _o, ...c }) => c), strategy: res.best.strategy,
     timings: {}, warnings, originFlags: origin.snap.flags,
   };
@@ -167,7 +170,7 @@ export function computePlan(g: Graph, req: PlanRequest, progress?: (stage: strin
       out.order.push({ key: st.key, seq: out.order.length + 1, eta: clock, legDistance: leg.distance, legTime: leg.time,
         snapDistance: sn.distance, access: access(b), confidence: sn.confidence, flags: sn.flags });
       clock += service[b];
-      out.serviceTime += service[b];
+      out.serviceTime += service[b] - access(b);
       out.accessTime += access(b);
     }
   }
@@ -175,6 +178,9 @@ export function computePlan(g: Graph, req: PlanRequest, progress?: (stage: strin
   // ETA acumulado == avaliação do objetivo (alerta E)
   const ev = evaluate(order, { T, D, start: 0, end, service });
   if (Math.abs(ev.time - clock) > 1 + 1e-3 * clock) throw new PlanError(`Inconsistência interna: ETA ${clock.toFixed(1)} s x ${ev.time.toFixed(1)} s.`);
+  const pen = penalties(order, { T, D, start: 0, stops: order, end, service, priority, sector });
+  out.timeBreakdown = { travel: out.travelTime, service: out.serviceTime, access: out.accessTime, estimatedDuration: clock,
+    priorityPenalty: pen.priority, sectorPenalty: pen.sector, generalizedObjective: clock + pen.priority + pen.sector };
   for (const [f, m] of Object.entries(out.flags))
     if (["escada", "acesso_privado", "barreira", "portao_privado", "proibido_pedalar", "travessia_de_praca"].includes(f))
       warnings.push(`Trecho sinalizado no percurso: ${f.replace(/_/g, " ")} (${Math.round(m)} m). Verifique no local.`);

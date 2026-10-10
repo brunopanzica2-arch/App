@@ -200,7 +200,7 @@ export async function planBatch(batchId: string, o: PlanOptions, onProgress?: (s
       letters: remaining.filter((st) => !excludedKeys.has(st.key)).reduce((a, st) => a + st.letters.filter(isPending).length, 0),
       status: res.status === "partial" || notRouted > 0 ? "partial" : "complete", notRoutedLetters: notRouted,
       pendingStops: remaining.length, byMode: res.byMode, flags: res.flags, strategy: res.strategy, excluded: res.excluded,
-      snapReview: res.snapReview, accessTime: res.accessTime, originFlags: res.originFlags,
+      snapReview: res.snapReview, accessTime: res.accessTime, timeBreakdown: res.timeBreakdown, originFlags: res.originFlags,
       objectiveRule: "factibilidade > cobertura > tempo+penalidades > distância",
       note: "Tempos e distâncias são ESTIMATIVAS pela malha OSM de pedestres; não verificados em campo.",
     },

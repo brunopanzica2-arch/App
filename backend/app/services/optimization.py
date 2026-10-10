@@ -65,6 +65,8 @@ class Feasibility:
     kept: list[int]                       # paradas que formam uma sequência possível
     excluded: dict[int, str]              # parada -> motivo
     comp_rank: dict[int, int]             # ordem topológica obrigatória entre componentes
+    exact: bool = True                    # True: cobertura máxima provada (matriz fechada ou DP exato)
+    method: str = "scc_chain"             # scc_chain | exact_dp
 
 
 def evaluate(order, T, D, start, end, service) -> tuple[float, float]:
@@ -150,6 +152,45 @@ def _scc(nodes: list[int], reach) -> list[list[int]]:
     return out
 
 
+EXACT_DP_MAX = 16
+
+
+def is_closed(T: np.ndarray, nodes: list[int], tol: float = 1e-6) -> bool:
+    """T[a,c] <= T[a,b] + T[b,c] para todo trio de `nodes` (matriz de caminhos mínimos é sempre fechada)."""
+    idx = np.array(nodes)
+    S = T[np.ix_(idx, idx)]
+    with np.errstate(invalid="ignore"):
+        for k in range(len(idx)):
+            if np.any(S > S[:, [k]] + S[[k], :] + tol):
+                return False
+    return True
+
+
+def _exact_cover(T, start, cand, end):
+    """DP exato (máscaras): maior subconjunto de `cand` numa sequência de arcos finitos. Devolve a ordem testemunha."""
+    m = len(cand)
+    fin = lambda a, b: math.isfinite(T[a, b])  # noqa: E731
+    parent: dict[tuple[int, int], tuple[int, int] | None] = {}
+    for i in range(m):
+        if fin(start, cand[i]):
+            parent[(1 << i, i)] = None
+    best, best_key = 0, None
+    for mask in range(1, 1 << m):
+        for last in range(m):
+            if (mask, last) not in parent:
+                continue
+            if (end is None or fin(cand[last], end)) and bin(mask).count("1") > best:
+                best, best_key = bin(mask).count("1"), (mask, last)
+            for nx in range(m):
+                if not mask >> nx & 1 and fin(cand[last], cand[nx]) and (mask | 1 << nx, nx) not in parent:
+                    parent[(mask | 1 << nx, nx)] = (mask, last)
+    order, key = [], best_key
+    while key is not None:
+        order.append(cand[key[1]])
+        key = parent[key]
+    return order[::-1]
+
+
 def feasibility(T: np.ndarray, start: int, stops: list[int], end: int | None) -> Feasibility:
     """Escolhe o MAIOR conjunto de paradas visitáveis numa única sequência.
 
@@ -168,6 +209,31 @@ def feasibility(T: np.ndarray, start: int, stops: list[int], end: int | None) ->
                            else "Sem caminho até o destino final.")
         else:
             cand.append(i)
+    nodes = [start, *cand] + ([end] if end is not None and end != start else [])
+    if cand and not is_closed(T, nodes):
+        # Matriz que NÃO é de caminhos mínimos: a cadeia de SCCs deixa de ser exata (e até de ser segura).
+        if len(cand) <= EXACT_DP_MAX:
+            order = _exact_cover(T, start, cand, end)
+            for v in cand:
+                if v not in order:
+                    excluded[v] = "Fora da maior sequência visitável (busca exata, matriz sem fecho transitivo)."
+            return Feasibility(kept=order, excluded=excluded, comp_rank={v: r for r, v in enumerate(order)},
+                               exact=True, method="exact_dp")
+        # grande demais para busca exata: cadeia de SCCs + garantia posterior pelo validate() do chamador
+        chain = _chain(T, cand, fin)
+        for v in cand:
+            if v not in chain.comp_rank:
+                excluded[v] = "Sem caminho de pedestre que permita visitá-la na mesma sequência das demais."
+        return Feasibility(kept=chain.kept, excluded=excluded, comp_rank=chain.comp_rank, exact=False, method="scc_chain")
+    chain = _chain(T, cand, fin)
+    for v in cand:
+        if v not in chain.comp_rank:
+            excluded[v] = ("Sem caminho de pedestre que permita visitá-la na mesma sequência das demais "
+                           "(trecho de sentido único ou sem saída).")
+    return Feasibility(kept=chain.kept, excluded=excluded, comp_rank=chain.comp_rank)
+
+
+def _chain(T, cand, fin) -> Feasibility:
     comps = _scc(cand, fin)
     cid = {v: k for k, c in enumerate(comps) for v in c}
     nc = len(comps)
@@ -196,11 +262,7 @@ def feasibility(T: np.ndarray, start: int, stops: list[int], end: int | None) ->
             kept.extend(comps[k])
             r += 1
             k = nxt[k]
-    for v in cand:
-        if v not in rank:
-            excluded[v] = ("Sem caminho de pedestre que permita visitá-la na mesma sequência das demais "
-                           "(trecho de sentido único ou sem saída).")
-    return Feasibility(kept=kept, excluded=excluded, comp_rank=rank)
+    return Feasibility(kept=kept, excluded={}, comp_rank=rank)
 
 
 def repair(order: list[int], rank: dict[int, int]) -> list[int]:

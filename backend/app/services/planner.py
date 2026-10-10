@@ -21,6 +21,7 @@ from ..models import (
     Address, Correspondence, DeliveryEvent, Route, RouteMatrixMetadata, RouteStop, Stop,
     StopCorrespondence,
 )
+from .optimization import cost as objective_cost
 from .optimization import evaluate, feasibility, solve, validate
 from .routing.engines import RoutingEngine, profile_hash
 
@@ -242,13 +243,23 @@ def plan(db: Session, settings: Settings, engine: RoutingEngine, org_id: uuid.UU
                 locked=b in fixed, status_at_plan=s.status,
             ))
             clock += svc[b]
-            service_total += svc[b]
+            service_total += svc[b] - access_s.get(b, 0.0)
             access_total += access_s.get(b, 0.0)
     timings["geometry_ms"] = int((time.perf_counter() - t0) * 1000)
     # ETA acumulado == objetivo avaliado (alerta E)
     t_eval, _ = evaluate(order, T, D, 0, end_for_solver, svc)
     if abs(t_eval - clock) > 1.0 + 1e-3 * clock:
         raise PlanError(f"Inconsistência interna: ETA {clock:.1f} s x avaliação {t_eval:.1f} s.")
+    # decomposição do tempo (V3 §7.1): o ETA é tempo FÍSICO; penalidades só existem no objetivo do solver
+    gen_obj, _ = objective_cost(order, T, D, 0, end_for_solver, svc, prio, sector)
+    pen_prio = objective_cost(order, T, D, 0, end_for_solver, svc, prio, None)[0] - t_eval
+    pen_sector = objective_cost(order, T, D, 0, end_for_solver, svc, None, sector)[0] - t_eval
+    time_breakdown = {
+        "travel_s": round(travel, 1), "service_s": round(service_total, 1), "access_s": round(access_total, 1),
+        "estimated_duration_s": round(clock, 1), "priority_penalty_s": round(pen_prio, 1),
+        "sector_penalty_s": round(pen_sector, 1), "generalized_objective_s": round(gen_obj, 1),
+        "identity": "estimated_duration = travel + service + access; generalized_objective = estimated_duration + penalties",
+    }
     for f, m in flags.items():
         if f in ("escada", "acesso_privado", "barreira", "portao_privado", "proibido_pedalar", "travessia_de_praca"):
             warnings.append(f"Trecho sinalizado no percurso: {f.replace('_', ' ')} ({m:.0f} m). Verifique no local.")
@@ -279,7 +290,7 @@ def plan(db: Session, settings: Settings, engine: RoutingEngine, org_id: uuid.UU
         metrics={"timings_ms": timings, "stops": len(route_stops), "correspondences": n_letters,
                  "status": status, "feasible": True,
                  "pending_stops_total": len(stops), "excluded_stops": excluded,
-                 "access_time_s": round(access_total, 1), "snap_review": snap_review,
+                 "access_time_s": round(access_total, 1), "time_breakdown": time_breakdown, "snap_review": snap_review,
                  "distance_by_mode_m": {k: round(v, 1) for k, v in by_mode.items()},
                  "flagged_distance_m": {k: round(v, 1) for k, v in flags.items()},
                  "chosen_strategy": result.best.strategy, "objective": [round(result.best.cost_s, 1),

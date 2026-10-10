@@ -169,7 +169,8 @@ def test_C_access_time_included_in_eta(db, org):
     b = make_batch(db, o.id, [(D + 0.0002, D + 0.0005, "~22 m da via")])
     route = run_plan(db, o.id, b, net, (0, 0.0001))
     acc = route.metrics["access_time_s"]
-    assert acc > 0 and route.service_time_s == pytest.approx(acc, abs=0.5)
+    assert acc > 0 and route.service_time_s == pytest.approx(0, abs=0.5)  # V3: acesso não é mais somado ao serviço
+    assert route.total_time_s == pytest.approx(route.travel_time_s + route.service_time_s + acc, abs=1.0)
 
 
 # ----------------------------------------------------------------- [D] CSV RFC 4180

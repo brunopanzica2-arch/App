@@ -39,7 +39,7 @@ export function ReportsPage() {
         <div className="font-semibold">Planejado (estimativa)</div>
         {r ? <ul className="mt-1">
           <li>Distância: <b>{fmtDist(r.totalDistance)}</b></li>
-          <li>Deslocamento: <b>{fmtTime(r.travelTime)}</b> · atendimento: <b>{fmtTime(r.serviceTime)}</b></li>
+          <li>Deslocamento: <b>{fmtTime(r.travelTime)}</b> · atendimento: <b>{fmtTime(r.serviceTime)}</b> · acesso às portas: <b>{fmtTime(r.metrics?.accessTime ?? 0)}</b></li>
           <li>Total: <b>{fmtTime(r.totalTime)}</b> (versão {r.version})</li>
         </ul> : <p className="muted">Sem rota.</p>}
         <div className="mt-3 font-semibold">Registrado</div>

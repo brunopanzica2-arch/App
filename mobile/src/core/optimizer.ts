@@ -42,6 +42,47 @@ export interface Feasibility {
   kept: number[];
   excluded: Record<number, string>;
   compRank: Record<number, number>;
+  /** true: cobertura máxima provada (matriz fechada → cadeia exata; ou busca exata) */
+  exact?: boolean;
+  method?: "scc_chain" | "exact_dp";
+}
+
+const EXACT_DP_MAX = 16;
+
+/** T[a][c] <= T[a][b] + T[b][c] (caminhos mínimos sempre satisfazem). */
+export function isClosed(T: number[][], nodes: number[], tol = 1e-6): boolean {
+  for (const b of nodes)
+    for (const a of nodes) {
+      const ab = T[a][b];
+      if (!isFinite(ab)) continue;
+      for (const c of nodes) if (T[a][c] > ab + T[b][c] + tol) return false;
+    }
+  return true;
+}
+
+/** DP exato por máscaras: maior subconjunto de `cand` visitável numa sequência de arcos finitos. */
+function exactCover(T: number[][], start: number, cand: number[], end: number | null): number[] {
+  const m = cand.length, fin = (a: number, b: number) => isFinite(T[a][b]);
+  const parent = new Map<number, number>(); // chave = mask*32+last → chave anterior (-1 = início)
+  const key = (mask: number, last: number) => mask * 32 + last;
+  for (let i = 0; i < m; i++) if (fin(start, cand[i])) parent.set(key(1 << i, i), -1);
+  let best = 0, bestKey = -1;
+  for (let mask = 1; mask < 1 << m; mask++) {
+    let pop = 0;
+    for (let x = mask; x; x &= x - 1) pop++;
+    for (let last = 0; last < m; last++) {
+      if (!parent.has(key(mask, last))) continue;
+      if ((end == null || fin(cand[last], end)) && pop > best) { best = pop; bestKey = key(mask, last); }
+      for (let nx = 0; nx < m; nx++) {
+        if (mask >> nx & 1 || !fin(cand[last], cand[nx])) continue;
+        const k2 = key(mask | 1 << nx, nx);
+        if (!parent.has(k2)) parent.set(k2, key(mask, last));
+      }
+    }
+  }
+  const order: number[] = [];
+  for (let k = bestKey; k !== -1 && k !== undefined; k = parent.get(k)!) order.push(cand[k % 32]);
+  return order.reverse();
 }
 
 const SECTOR_SWITCH_S = 300;
@@ -126,6 +167,27 @@ export function feasibility(T: number[][], start: number, stops: number[], end: 
     else if (end != null && !fin(i, end)) excluded[i] = end === start ? "Sem caminho de volta à origem (circular)." : "Sem caminho até o destino final.";
     else cand.push(i);
   }
+  const nodes = [start, ...cand, ...(end != null && end !== start ? [end] : [])];
+  if (cand.length && !isClosed(T, nodes)) {
+    // matriz sem fecho transitivo (não é o caso do motor): a cadeia de SCCs deixa de ser exata/segura
+    if (cand.length <= EXACT_DP_MAX) {
+      const order = exactCover(T, start, cand, end);
+      const rank: Record<number, number> = {};
+      order.forEach((v, r) => (rank[v] = r));
+      for (const v of cand) if (!(v in rank)) excluded[v] = "Fora da maior sequência visitável (busca exata, matriz sem fecho transitivo).";
+      return { kept: order, excluded, compRank: rank, exact: true, method: "exact_dp" };
+    }
+    const ch = chain(T, cand, fin);
+    for (const v of cand) if (!(v in ch.compRank)) excluded[v] = "Sem caminho de pedestre que permita visitá-la na mesma sequência das demais.";
+    return { ...ch, excluded, exact: false, method: "scc_chain" };
+  }
+  const ch = chain(T, cand, fin);
+  for (const v of cand)
+    if (!(v in ch.compRank)) excluded[v] = "Sem caminho de pedestre que permita visitá-la na mesma sequência das demais (trecho de sentido único ou sem saída).";
+  return { ...ch, excluded, exact: true, method: "scc_chain" };
+}
+
+function chain(T: number[][], cand: number[], fin: (a: number, b: number) => boolean): Feasibility {
   const comps = scc(cand, fin); // ordem topológica reversa
   const cid = new Map<number, number>();
   comps.forEach((c, k) => c.forEach((v) => cid.set(v, k)));
@@ -141,9 +203,16 @@ export function feasibility(T: number[][], start: number, stops: number[], end: 
     let r = 0;
     while (k !== -1) { for (const v of comps[k]) { compRank[v] = r; kept.push(v); } r++; k = next[k]; }
   }
-  for (const v of cand)
-    if (!(v in compRank)) excluded[v] = "Sem caminho de pedestre que permita visitá-la na mesma sequência das demais (trecho de sentido único ou sem saída).";
-  return { kept, excluded, compRank };
+  return { kept, excluded: {}, compRank };
+}
+
+/** Penalidades do objetivo generalizado (NÃO são tempo físico): prioridade e troca de setor. */
+export function penalties(order: number[], inp: SolveInput): { priority: number; sector: number } {
+  const prio = inp.priority || {}, start = inp.start, svc = (i: number) => inp.service?.[i] ?? 0;
+  let priority = 0, sector = 0, clock = 0, prev = start;
+  for (const i of order) { clock += inp.T[prev][i]; priority += (prio[i] || 0) * clock; clock += svc(i); prev = i; }
+  if (inp.sector) { const seq = [start, ...order]; for (let k = 2; k < seq.length; k++) if (inp.sector[seq[k - 1]] !== inp.sector[seq[k]]) sector += SECTOR_SWITCH_S; }
+  return { priority, sector };
 }
 
 export function solve(inp: SolveInput): { order: number[]; best: Candidate; candidates: Candidate[] } {
