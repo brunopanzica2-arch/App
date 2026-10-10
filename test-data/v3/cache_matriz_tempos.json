@@ -1,0 +1,9 @@
+{
+ "ambiente": "Node v22.22.0 (desktop; NÃO é celular)",
+ "paradas": 150,
+ "matriz_completa_150_ms": 338.8,
+ "status_so_pendentes_100_sem_cache_ms": 217.8,
+ "status_so_pendentes_100_com_cache_ms": 35,
+ "uma_portaria_movida_150_com_cache_ms": 175.8,
+ "nota": "inclui snap + montagem do grafo virtual (build) em todas as medidas; mediana de 5"
+}
