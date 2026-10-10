@@ -65,10 +65,7 @@ export function PlanPage({ batchId, nav }: { batchId: string; nav: Nav }) {
               <option value="global">Global</option><option value="sectors">Por bairros</option>
             </Select></div>
           {p && <>
-            <div><Label htmlFor="ride">Pedalando (km/h)</Label><Input id="ride" type="number" step="0.5" value={p.ride_speed_kmh} onChange={(e) => setP("ride_speed_kmh", +e.target.value)} /></div>
-            <div><Label htmlFor="walk">A pé c/ bicicleta (km/h)</Label><Input id="walk" type="number" step="0.5" value={p.walk_speed_kmh} onChange={(e) => setP("walk_speed_kmh", +e.target.value)} /></div>
-            <div><Label htmlFor="sw">Calçadas</Label>
-              <Select id="sw" value={p.sidewalk_mode} onChange={(e) => setP("sidewalk_mode", e.target.value)}><option value="walk">Conduzir a pé</option><option value="ride">Pedalável</option></Select></div>
+            <div><Label htmlFor="walk">Velocidade de caminhada (km/h)</Label><Input id="walk" type="number" step="0.5" value={p.walk_speed_kmh} onChange={(e) => setP("walk_speed_kmh", +e.target.value)} /></div>
             <div><Label htmlFor="tl">Tempo de cálculo (s)</Label><Input id="tl" type="number" value={limit} onChange={(e) => setLimit(+e.target.value)} /></div>
             {(["steps_policy", "private_policy", "barrier_policy"] as const).map((k) => (
               <div key={k}><Label htmlFor={k}>{{ steps_policy: "Escadas", private_policy: "Acessos privados", barrier_policy: "Barreiras" }[k]}</Label>

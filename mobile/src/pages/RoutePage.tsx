@@ -153,7 +153,7 @@ export function RoutePage({ routeId, nav }: { routeId?: string; nav: Nav }) {
     );
   }
 
-  const navUrl = sel ? `https://www.google.com/maps/dir/?api=1&destination=${routePoint(sel.stop!.address)!.lat},${routePoint(sel.stop!.address)!.lon}&travelmode=bicycling` : "#";
+  const navUrl = sel ? `https://www.google.com/maps/dir/?api=1&destination=${routePoint(sel.stop!.address)!.lat},${routePoint(sel.stop!.address)!.lon}&travelmode=walking` : "#";
   const addr = (x: typeof items[number]) => x.stop!.address.display.split(" - ")[0];
 
   return (
@@ -273,8 +273,8 @@ export function RoutePage({ routeId, nav }: { routeId?: string; nav: Nav }) {
                 <Button variant="secondary" size="sm" onClick={() => bulk("postponed", "Pular este endereço (adiar)")}><SkipForward className="h-4 w-4" /> Pular endereço</Button>
                 {following && <Button variant="secondary" size="sm" onClick={() => setSelKey(following.key)}>Próxima parada →</Button>}
               </div>
-              <a href={navUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm font-semibold text-next"><ExternalLink className="h-4 w-4" /> Navegação externa (Google Maps, bicicleta)</a>
-              <p className="text-xs muted">A navegação externa usa o perfil de bicicleta do Google (respeita mãos de direção) — pode diferir do caminho de pedestre calculado aqui.</p>
+              <a href={navUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm font-semibold text-next"><ExternalLink className="h-4 w-4" /> Navegação externa (Google Maps, a pé)</a>
+              <p className="text-xs muted">A navegação externa usa o perfil de caminhada do Google e pode diferir do caminho calculado aqui.</p>
             </div>
           )}
         </section>
