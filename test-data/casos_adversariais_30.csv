@@ -1,0 +1,32 @@
+﻿identificador;destinatario;logradouro;numero;complemento;bairro;municipio;cep;observacoes
+ADV01;Ana Teste;Praça Francisco Martins dos Santos;100;"bloco A
+apto 12";Centro;Santos;;complemento com QUEBRA DE LINHA
+ADV02;"Bruno; Teste";Praça Francisco Martins dos Santos;102;"sala 3; fundos";Centro;Santos;;ponto-e-vírgula entre aspas
+ADV03;"Carla ""Cacá"" Teste";Praça Francisco Martins dos Santos;104;;Centro;Santos;;"aspas duplas escapadas """""
+ADV04;Diego Teste;;10;;Centro;Santos;;sem logradouro
+ADV05;Elisa Teste;Praça Francisco Martins dos Santos;S/N;;Centro;Santos;;sem número
+ADV06;Fábio Teste;Praça Francisco Martins dos Santos;106A;;Centro;Santos;;número com letra
+ADV07;Gabriela Teste;Praça Francisco Martins dos Santos;108.0;;Centro;Santos;;número vindo de planilha (108.0)
+ADV08;Heitor Teste;Praça Francisco Martins dos Santos;0110;;Centro;Santos;;número com zero à esquerda
+ADV09;Íris Teste;Praça Francisco Martins dos Santos;112;;Centro;Santos;1101;CEP inválido
+ADV10;João Teste;Praça Francisco Martins dos Santos;114;;Centro;São Vicente/SP;;outro município
+ADV11;Kátia Teste;R. Francisco Martins dos Santos;116;;Centro;Santos;;abreviação R.
+ADV12;Lucas Teste;PRAÇA FRANCISCO MARTINS DOS SANTOS;116;apto 2;Centro;Santos;;MAIÚSCULAS: mesma chave do ADV11
+ADV13;Marina Teste;Praça Francisco Martins dos Santos;118;;Vila Nova;Santos;;bairro informado possivelmente errado
+ADV14;Nélson Teste;Praça Francisco Martins dos Santos;120;;Centro;Santos;;"=HYPERLINK(""http://x"",""clique"")"
+ADV15;<script>alert(1)</script>;Praça Francisco Martins dos Santos;122;;Centro;Santos;;<img src=x onerror=alert(1)>
+ADV16;Olívia Teste;  Praça Francisco Martins dos Santos  ;  124 ;; Centro ;Santos;;espaços extras
+ADV17;Paulo Teste;Praça Francisco Martins dos Santos;126;;Centro;Santos;;NBSP
+ADV18;Quitéria Teste;Praça Francisco Martins dos Santos;128;;Centro;Santos;;+5511999999999
+ADV19;Rafael Teste;Praça Francisco Martins dos Santos;130;;Centro;Santos;;-2+3
+ADV20;Sílvia Teste;Praça Francisco Martins dos Santos;132;;Centro;Santos;;@SUM(A1)
+STS00001;Tiago Teste;Praça Francisco Martins dos Santos;134;;Centro;Santos;;ID repetido do cenário principal
+ADV22;Úrsula Teste;Praça Francisco Martins dos Santos;136;;Centro;Santos;;
+ADV22;Úrsula Teste;Praça Francisco Martins dos Santos;136;;Centro;Santos;;ID repetido no próprio arquivo
+ADV24;Vítor Teste 🚲;Praça Francisco Martins dos Santos;138;;Centro;Santos;;emoji
+ADV25;Wanda Teste;Av. Cons. Nébias;140;;Vila Nova;Santos;;abreviações de tipo e título
+ADV26;Xavier Teste;Avenida Conselheiro Nébias;140;;Paquetá;Santos;;mesma chave do ADV25 com bairro diferente
+ADV27;Yara Teste;Rua Conselheiro Nébias;140;;Vila Nova;Santos;;tipo diferente (Rua x Avenida): chave diferente
+ADV28;Zeca Teste;Praça Francisco Martins dos Santos;142-144;;Centro;Santos;;faixa de números
+ADV29;Ana Teste;Praça Francisco Martins dos Santos;146;;Centro;Santos;;observação longa xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+ADV30;Bruno Teste;Praça Francisco Martins dos Santos;abc;;Centro;Santos;;número inválido

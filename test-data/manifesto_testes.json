@@ -1,0 +1,207 @@
+{
+ "gerador": "gerar_casos.py",
+ "versao": "2.0",
+ "seed": 20261009,
+ "fonte_vias": "OpenStreetMap (ODbL) — nomes de vias da malha de pedestres; polígonos de bairro via Nominatim",
+ "aviso": "Números de porta SINTÉTICOS e NÃO verificados. Destinatários e IDs fictícios. Posições TESTE não representam portas.",
+ "cenario_300": {
+  "arquivo": "cenario_300_cartas_centro_paqueta_vila_nova.csv",
+  "sha256": "ad9a0dd4f4ae73b6a84cc1483aebaf10245cabbeb2fd98c6092e8accfd8260f1",
+  "cartas": 300,
+  "ids_distintos": 300,
+  "chaves_imovel": 150,
+  "por_bairro": {
+   "Centro": {
+    "chaves": 60,
+    "cartas": 120,
+    "vias": 10
+   },
+   "Paquetá": {
+    "chaves": 50,
+    "cartas": 101,
+    "vias": 10
+   },
+   "Vila Nova": {
+    "chaves": 40,
+    "cartas": 79,
+    "vias": 9
+   }
+  },
+  "multiplicidade": {
+   "1": 20,
+   "2": 120,
+   "4": 10
+  },
+  "codificacao": "UTF-8 com BOM",
+  "delimitador": ";",
+  "fim_de_linha": "CRLF"
+ },
+ "posicoes_teste": {
+  "arquivo": "posicoes_teste_osm.csv",
+  "sha256": "467295b34ca5863f20239cafd14637cb83aad4410716cbe0773763f1d9be8ee4",
+  "quantidade": 150
+ },
+ "adversariais": {
+  "arquivo": "casos_adversariais_30.csv",
+  "sha256": "11dc1fcf8c49cfda68f799914c9b8b71beb771fe1f336c1b77a43be77a0943db",
+  "linhas_de_dados": 30,
+  "expectativa": [
+   {
+    "id": "ADV01",
+    "caso": "complemento com QUEBRA DE LINHA",
+    "esperado": "ok"
+   },
+   {
+    "id": "ADV02",
+    "caso": "ponto-e-vírgula entre aspas",
+    "esperado": "ok"
+   },
+   {
+    "id": "ADV03",
+    "caso": "aspas duplas escapadas \"\"",
+    "esperado": "ok"
+   },
+   {
+    "id": "ADV04",
+    "caso": "sem logradouro",
+    "esperado": "erro"
+   },
+   {
+    "id": "ADV05",
+    "caso": "sem número",
+    "esperado": "alerta"
+   },
+   {
+    "id": "ADV06",
+    "caso": "número com letra",
+    "esperado": "ok"
+   },
+   {
+    "id": "ADV07",
+    "caso": "número vindo de planilha (108.0)",
+    "esperado": "ok"
+   },
+   {
+    "id": "ADV08",
+    "caso": "número com zero à esquerda",
+    "esperado": "ok"
+   },
+   {
+    "id": "ADV09",
+    "caso": "CEP inválido",
+    "esperado": "alerta"
+   },
+   {
+    "id": "ADV10",
+    "caso": "outro município",
+    "esperado": "alerta"
+   },
+   {
+    "id": "ADV11",
+    "caso": "abreviação R.",
+    "esperado": "ok"
+   },
+   {
+    "id": "ADV12",
+    "caso": "MAIÚSCULAS: mesma chave do ADV11",
+    "esperado": "ok"
+   },
+   {
+    "id": "ADV13",
+    "caso": "bairro informado possivelmente errado",
+    "esperado": "ok"
+   },
+   {
+    "id": "ADV14",
+    "caso": "=HYPERLINK(\"http://x\",\"clique\")",
+    "esperado": "ok"
+   },
+   {
+    "id": "ADV15",
+    "caso": "<img src=x onerror=alert(1)>",
+    "esperado": "ok"
+   },
+   {
+    "id": "ADV16",
+    "caso": "espaços extras",
+    "esperado": "ok"
+   },
+   {
+    "id": "ADV17",
+    "caso": "NBSP",
+    "esperado": "ok"
+   },
+   {
+    "id": "ADV18",
+    "caso": "+5511999999999",
+    "esperado": "ok"
+   },
+   {
+    "id": "ADV19",
+    "caso": "-2+3",
+    "esperado": "ok"
+   },
+   {
+    "id": "ADV20",
+    "caso": "@SUM(A1)",
+    "esperado": "ok"
+   },
+   {
+    "id": "STS00001",
+    "caso": "ID repetido do cenário principal",
+    "esperado": "duplicado_se_mesmo_banco"
+   },
+   {
+    "id": "ADV22",
+    "caso": "",
+    "esperado": "ok"
+   },
+   {
+    "id": "ADV22",
+    "caso": "ID repetido no próprio arquivo",
+    "esperado": "duplicado"
+   },
+   {
+    "id": "ADV24",
+    "caso": "emoji",
+    "esperado": "ok"
+   },
+   {
+    "id": "ADV25",
+    "caso": "abreviações de tipo e título",
+    "esperado": "ok"
+   },
+   {
+    "id": "ADV26",
+    "caso": "mesma chave do ADV25 com bairro diferente",
+    "esperado": "ok"
+   },
+   {
+    "id": "ADV27",
+    "caso": "tipo diferente (Rua x Avenida): chave diferente",
+    "esperado": "ok"
+   },
+   {
+    "id": "ADV28",
+    "caso": "faixa de números",
+    "esperado": "ok"
+   },
+   {
+    "id": "ADV29",
+    "caso": "observação longa xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "esperado": "ok"
+   },
+   {
+    "id": "ADV30",
+    "caso": "número inválido",
+    "esperado": "alerta"
+   }
+  ],
+  "esperado_importacao_isolada": {
+   "registros_lidos": 30,
+   "inseridas": 29,
+   "duplicadas_no_arquivo": 1,
+   "com_erro": 1
+  }
+ }
+}

@@ -1,0 +1,301 @@
+﻿identificador;destinatario;logradouro;numero;complemento;bairro;municipio;cep;observacoes
+STS00024;Elisa Jardim Queiroz;Praça dos Andradas;184;loja;Centro;Santos;;
+STS00155;Ana Xisto Macedo;Rua da Constituição;48;apto 101;Paquetá;Santos;;portaria 24h
+STS00212;Olívia Esteves Galvão;Rua Aguiar de Andrade;107;fundos;Paquetá;Santos;;deixar com zelador
+STS00176;Nélson Pacheco Xisto;Rua Doutor Cochrane;124;loja;Paquetá;Santos;;
+STS00046;Lucas Nogueira Jardim;Avenida São Francisco;82;fundos;Centro;Santos;;interfone com defeito
+STS00074;João Cardoso Otero;Rua São Bento;104;;Centro;Santos;;interfone com defeito
+STS00185;Yara Toledo Pacheco;Avenida Conselheiro Nébias;77;apto 51;Paquetá;Santos;;interfone com defeito
+STS00040;Elisa Jardim Valadares;Avenida São Francisco;47;apto 62;Centro;Santos;;portaria 24h
+STS00076;Diego Macedo Xisto;Rua São Bento;129;apto 84;Centro;Santos;;interfone com defeito
+STS00150;Quitéria Otero Fagundes;Rua João Otávio;280;apto 62;Paquetá;Santos;;interfone com defeito
+STS00091;Heitor Cardoso Henriques;Rua Braz Cubas;189;fundos;Centro;Santos;;
+STS00144;Úrsula Esteves Queiroz;Rua João Otávio;191;apto 122;Paquetá;Santos;;
+STS00224;Olívia Abreu Toledo;Avenida Conselheiro Nébias;135;casa 2;Vila Nova;Santos;;interfone com defeito
+STS00291;Rafael Barbosa Xisto;Rua Doutor Cochrane;101;;Vila Nova;Santos;;deixar com zelador
+STS00124;Gabriela Esteves Esteves;Avenida Xavier da Silveira;130;;Paquetá;Santos;;
+STS00154;João Valadares Queiroz;Rua da Constituição;37;apto 33;Paquetá;Santos;;
+STS00085;Olívia Toledo Jardim;Rua Braz Cubas;98;;Centro;Santos;;interfone com defeito
+STS00062;Zeca Otero Jardim;Rua General Câmara;34;apto 72;Centro;Santos;;deixar com zelador
+STS00048;Carla Henriques Galvão;Avenida São Francisco;106;apto 84;Centro;Santos;;portaria 24h
+STS00194;Olívia Henriques Leal;Rua General Câmara;44;loja;Paquetá;Santos;;interfone com defeito
+STS00274;Lucas Abreu Leal;Rua Bittencourt;76;apto 102;Vila Nova;Santos;;
+STS00027;Heitor Esteves Queiroz;Praça dos Andradas;203;;Centro;Santos;;
+STS00240;Wanda Siqueira Cardoso;Praça Iguatemi Martins;58;apto 123;Vila Nova;Santos;;
+STS00118;Nélson Barbosa Rezende;Rua Amador Bueno;187;loja;Centro;Santos;;portaria 24h
+STS00167;Kátia Rezende Abreu;Rua Doutor Cochrane;107;apto 73;Paquetá;Santos;;
+STS00217;Diego Valadares Abreu;Avenida São Francisco;72;apto 104;Paquetá;Santos;;
+STS00241;Ana Nogueira Cardoso;Praça Iguatemi Martins;58;apto 32;Vila Nova;Santos;;interfone com defeito
+STS00079;Yara Duarte Barbosa;Rua São Bento;128;apto 64;Centro;Santos;;interfone com defeito
+STS00288;Xavier Rezende Valadares;Rua Doutor Cochrane;88;apto 52;Vila Nova;Santos;;deixar com zelador
+STS00117;Úrsula Cardoso Siqueira;Rua Amador Bueno;187;;Centro;Santos;;
+STS00120;Diego Xisto Nogueira;Rua Amador Bueno;162;fundos;Centro;Santos;;deixar com zelador
+STS00112;Marina Henriques Nogueira;Rua Amador Bueno;114;apto 51;Centro;Santos;;
+STS00174;Úrsula Pacheco Macedo;Rua Doutor Cochrane;167;casa 2;Paquetá;Santos;;
+STS00028;Quitéria Abreu Esteves;Praça dos Andradas;220;apto 101;Centro;Santos;;
+STS00182;Ana Queiroz Pacheco;Rua João Pessoa;100;loja;Paquetá;Santos;;interfone com defeito
+STS00295;Úrsula Toledo Macedo;Rua Doutor Cochrane;125;apto 123;Vila Nova;Santos;;
+STS00158;Carla Jardim Rezende;Rua da Constituição;103;apto 82;Paquetá;Santos;;
+STS00132;Tiago Otero Duarte;Avenida Xavier da Silveira;178;;Paquetá;Santos;;interfone com defeito
+STS00149;Lucas Queiroz Xisto;Rua João Otávio;280;apto 54;Paquetá;Santos;;deixar com zelador
+STS00249;Heitor Siqueira Queiroz;Rua 7 de Setembro;129;;Vila Nova;Santos;;
+STS00115;Tiago Nogueira Henriques;Rua Amador Bueno;138;apto 53;Centro;Santos;;portaria 24h
+STS00081;Ana Jardim Macedo;Rua São Bento;177;casa 2;Centro;Santos;;
+STS00054;Carla Nogueira Valadares;Avenida Getúlio Dornelles Vargas;105;apto 112;Centro;Santos;;interfone com defeito
+STS00161;Heitor Pacheco Duarte;Rua da Constituição;73;;Paquetá;Santos;;
+STS00238;Yara Valadares Valadares;Praça Iguatemi Martins;34;apto 63;Vila Nova;Santos;;deixar com zelador
+STS00059;Rafael Nogueira Otero;Avenida Getúlio Dornelles Vargas;117;loja;Centro;Santos;;portaria 24h
+STS00006;João Henriques Nogueira;Praça Francisco Martins dos Santos;98;loja;Centro;Santos;;
+STS00264;Tiago Queiroz Esteves;Avenida Campos Salles;164;;Vila Nova;Santos;;portaria 24h
+STS00038;Íris Nogueira Abreu;Avenida São Francisco;70;;Centro;Santos;;deixar com zelador
+STS00152;Gabriela Fagundes Toledo;Rua da Constituição;12;apto 112;Paquetá;Santos;;
+STS00105;Vítor Duarte Leal;Rua Conde D'Eu;85;apto 31;Centro;Santos;;
+STS00231;Heitor Macedo Rezende;Avenida Conselheiro Nébias;182;;Vila Nova;Santos;;
+STS00011;Quitéria Xisto Siqueira;Praça Francisco Martins dos Santos;182;apto 82;Centro;Santos;;
+STS00034;Kátia Xisto Esteves;Avenida São Francisco;10;;Centro;Santos;;deixar com zelador
+STS00084;Nélson Duarte Siqueira;Rua Braz Cubas;98;;Centro;Santos;;interfone com defeito
+STS00145;Lucas Otero Esteves;Rua João Otávio;191;apto 104;Paquetá;Santos;;portaria 24h
+STS00188;Ana Rezende Xisto;Avenida Conselheiro Nébias;70;apto 52;Paquetá;Santos;;
+STS00251;Elisa Siqueira Toledo;Rua 7 de Setembro;146;;Vila Nova;Santos;;
+STS00210;Ana Jardim Nogueira;Rua Aguiar de Andrade;88;casa 2;Paquetá;Santos;;
+STS00051;Sílvia Pacheco Queiroz;Avenida São Francisco;119;apto 82;Centro;Santos;;
+STS00162;Yara Toledo Duarte;Rua da Constituição;73;;Paquetá;Santos;;deixar com zelador
+STS00082;Gabriela Duarte Abreu;Rua São Bento;152;apto 61;Centro;Santos;;
+STS00276;Elisa Toledo Queiroz;Avenida Perimetral;40;apto 62;Vila Nova;Santos;;
+STS00104;Elisa Otero Valadares;Rua Conde D'Eu;72;apto 103;Centro;Santos;;deixar com zelador
+STS00204;Xavier Otero Macedo;Rua Amador Bueno;118;casa 2;Paquetá;Santos;;
+STS00239;Úrsula Rezende Abreu;Praça Iguatemi Martins;59;;Vila Nova;Santos;;interfone com defeito
+STS00218;Ana Nogueira Abreu;Avenida São Francisco;72;apto 41;Paquetá;Santos;;
+STS00015;Tiago Toledo Cardoso;Praça dos Andradas;100;apto 114;Centro;Santos;;portaria 24h
+STS00200;Vítor Fagundes Macedo;Rua Amador Bueno;89;casa 2;Paquetá;Santos;;portaria 24h
+STS00107;Elisa Leal Cardoso;Rua Conde D'Eu;120;;Centro;Santos;;deixar com zelador
+STS00242;João Cardoso Nogueira;Praça Iguatemi Martins;107;;Vila Nova;Santos;;
+STS00255;Kátia Xisto Pacheco;Rua 7 de Setembro;218;apto 54;Vila Nova;Santos;;interfone com defeito
+STS00005;Bruno Cardoso Otero;Praça Francisco Martins dos Santos;98;;Centro;Santos;;deixar com zelador
+STS00108;Elisa Cardoso Esteves;Rua Conde D'Eu;109;;Centro;Santos;;interfone com defeito
+STS00246;Úrsula Esteves Queiroz;Praça Iguatemi Martins;155;apto 102;Vila Nova;Santos;;
+STS00068;Sílvia Galvão Cardoso;Rua General Câmara;125;apto 123;Centro;Santos;;portaria 24h
+STS00099;Tiago Barbosa Leal;Rua Frei Gaspar;143;;Centro;Santos;;
+STS00199;Zeca Queiroz Queiroz;Rua Amador Bueno;89;;Paquetá;Santos;;
+STS00137;Carla Henriques Macedo;Rua João Otávio;71;apto 124;Paquetá;Santos;;deixar com zelador
+STS00153;Diego Fagundes Fagundes;Rua da Constituição;37;apto 31;Paquetá;Santos;;portaria 24h
+STS00143;Heitor Xisto Henriques;Rua João Otávio;136;apto 121;Paquetá;Santos;;
+STS00213;Olívia Siqueira Siqueira;Avenida São Francisco;12;;Paquetá;Santos;;
+STS00026;Elisa Galvão Leal;Praça dos Andradas;203;;Centro;Santos;;interfone com defeito
+STS00098;Tiago Fagundes Abreu;Rua Frei Gaspar;130;loja;Centro;Santos;;
+STS00133;Carla Esteves Siqueira;Avenida Xavier da Silveira;178;loja;Paquetá;Santos;;
+STS00128;Sílvia Nogueira Galvão;Avenida Xavier da Silveira;190;apto 62;Paquetá;Santos;;interfone com defeito
+STS00205;Úrsula Cardoso Duarte;Rua Amador Bueno;95;apto 123;Paquetá;Santos;;
+STS00021;João Jardim Henriques;Praça dos Andradas;227;;Centro;Santos;;
+STS00103;Sílvia Leal Fagundes;Rua Conde D'Eu;72;apto 24;Centro;Santos;;deixar com zelador
+STS00208;Marina Jardim Xisto;Rua Amador Bueno;178;fundos;Paquetá;Santos;;interfone com defeito
+STS00201;Kátia Cardoso Rezende;Rua Amador Bueno;89;casa 2;Paquetá;Santos;;deixar com zelador
+STS00214;Úrsula Cardoso Barbosa;Avenida São Francisco;31;;Paquetá;Santos;;
+STS00220;Paulo Barbosa Siqueira;Avenida São Francisco;58;apto 13;Paquetá;Santos;;
+STS00196;Quitéria Toledo Siqueira;Rua General Câmara;57;apto 114;Paquetá;Santos;;
+STS00042;Nélson Macedo Barbosa;Avenida São Francisco;130;;Centro;Santos;;interfone com defeito
+STS00114;Marina Duarte Nogueira;Rua Amador Bueno;145;fundos;Centro;Santos;;
+STS00284;Gabriela Leal Nogueira;Avenida Senador Feijó;117;;Vila Nova;Santos;;interfone com defeito
+STS00116;Ana Rezende Fagundes;Rua Amador Bueno;138;apto 63;Centro;Santos;;interfone com defeito
+STS00282;Fábio Cardoso Henriques;Avenida Perimetral;77;apto 122;Vila Nova;Santos;;deixar com zelador
+STS00198;Fábio Henriques Barbosa;Rua Amador Bueno;58;apto 21;Paquetá;Santos;;
+STS00126;Sílvia Otero Xisto;Avenida Xavier da Silveira;130;;Paquetá;Santos;;portaria 24h
+STS00207;Nélson Esteves Barbosa;Rua Amador Bueno;178;;Paquetá;Santos;;interfone com defeito
+STS00277;Fábio Galvão Henriques;Avenida Perimetral;53;apto 122;Vila Nova;Santos;;
+STS00058;Wanda Henriques Duarte;Avenida Getúlio Dornelles Vargas;117;;Centro;Santos;;interfone com defeito
+STS00245;Tiago Queiroz Valadares;Praça Iguatemi Martins;155;apto 21;Vila Nova;Santos;;
+STS00256;Quitéria Otero Cardoso;Rua 7 de Setembro;218;apto 33;Vila Nova;Santos;;
+STS00056;Elisa Otero Rezende;Avenida Getúlio Dornelles Vargas;104;apto 71;Centro;Santos;;
+STS00260;Vítor Nogueira Toledo;Avenida Campos Salles;104;fundos;Vila Nova;Santos;;interfone com defeito
+STS00222;Quitéria Nogueira Macedo;Avenida Conselheiro Nébias;110;;Vila Nova;Santos;;portaria 24h
+STS00140;Kátia Leal Toledo;Rua João Otávio;95;apto 13;Paquetá;Santos;;deixar com zelador
+STS00278;Carla Rezende Duarte;Avenida Perimetral;53;apto 51;Vila Nova;Santos;;
+STS00002;Carla Leal Fagundes;Praça Francisco Martins dos Santos;62;apto 93;Centro;Santos;;
+STS00292;Fábio Rezende Esteves;Rua Doutor Cochrane;148;;Vila Nova;Santos;;
+STS00248;Carla Esteves Esteves;Rua 7 de Setembro;98;;Vila Nova;Santos;;
+STS00086;João Cardoso Nogueira;Rua Braz Cubas;129;apto 104;Centro;Santos;;
+STS00293;Rafael Galvão Barbosa;Rua Doutor Cochrane;148;;Vila Nova;Santos;;interfone com defeito
+STS00078;Heitor Fagundes Galvão;Rua São Bento;128;apto 81;Centro;Santos;;
+STS00022;Heitor Abreu Cardoso;Praça dos Andradas;184;;Centro;Santos;;portaria 24h
+STS00236;Tiago Macedo Leal;Avenida Conselheiro Nébias;290;apto 51;Vila Nova;Santos;;
+STS00273;Zeca Leal Rezende;Rua Bittencourt;76;apto 53;Vila Nova;Santos;;portaria 24h
+STS00170;Lucas Otero Henriques;Rua Doutor Cochrane;107;apto 73;Paquetá;Santos;;
+STS00209;Yara Fagundes Otero;Rua Aguiar de Andrade;88;;Paquetá;Santos;;interfone com defeito
+STS00077;Gabriela Esteves Siqueira;Rua São Bento;129;apto 11;Centro;Santos;;interfone com defeito
+STS00265;Elisa Galvão Nogueira;Avenida Campos Salles;141;;Vila Nova;Santos;;portaria 24h
+STS00055;Íris Toledo Siqueira;Avenida Getúlio Dornelles Vargas;105;apto 21;Centro;Santos;;interfone com defeito
+STS00080;Gabriela Esteves Barbosa;Rua São Bento;177;;Centro;Santos;;deixar com zelador
+STS00101;Quitéria Nogueira Queiroz;Rua Frei Gaspar;118;apto 112;Centro;Santos;;portaria 24h
+STS00050;João Henriques Valadares;Avenida São Francisco;119;apto 23;Centro;Santos;;interfone com defeito
+STS00221;Elisa Barbosa Abreu;Avenida São Francisco;58;apto 102;Paquetá;Santos;;
+STS00141;Kátia Macedo Queiroz;Rua João Otávio;95;apto 73;Paquetá;Santos;;
+STS00013;Tiago Rezende Abreu;Praça dos Andradas;76;apto 74;Centro;Santos;;portaria 24h
+STS00097;Heitor Abreu Barbosa;Rua Frei Gaspar;130;;Centro;Santos;;deixar com zelador
+STS00047;Bruno Macedo Valadares;Avenida São Francisco;179;;Centro;Santos;;portaria 24h
+STS00043;Zeca Leal Barbosa;Avenida São Francisco;101;apto 122;Centro;Santos;;interfone com defeito
+STS00272;Kátia Fagundes Esteves;Rua Bittencourt;83;apto 101;Vila Nova;Santos;;deixar com zelador
+STS00299;Úrsula Duarte Nogueira;Rua Braz Cubas;56;apto 12;Vila Nova;Santos;;portaria 24h
+STS00148;Heitor Cardoso Siqueira;Rua João Otávio;167;;Paquetá;Santos;;deixar com zelador
+STS00281;Sílvia Barbosa Henriques;Avenida Perimetral;77;apto 94;Vila Nova;Santos;;
+STS00067;Diego Macedo Galvão;Rua General Câmara;94;;Centro;Santos;;portaria 24h
+STS00279;Quitéria Jardim Otero;Avenida Perimetral;64;apto 93;Vila Nova;Santos;;portaria 24h
+STS00233;João Rezende Jardim;Avenida Conselheiro Nébias;231;apto 71;Vila Nova;Santos;;interfone com defeito
+STS00234;Sílvia Macedo Cardoso;Avenida Conselheiro Nébias;231;apto 94;Vila Nova;Santos;;interfone com defeito
+STS00297;Vítor Otero Abreu;Rua Braz Cubas;33;apto 33;Vila Nova;Santos;;interfone com defeito
+STS00094;Rafael Macedo Macedo;Rua Frei Gaspar;70;;Centro;Santos;;
+STS00164;Vítor Abreu Esteves;Rua da Constituição;120;loja;Paquetá;Santos;;
+STS00252;Kátia Toledo Nogueira;Rua 7 de Setembro;146;fundos;Vila Nova;Santos;;deixar com zelador
+STS00211;Gabriela Abreu Esteves;Rua Aguiar de Andrade;107;;Paquetá;Santos;;
+STS00031;Yara Leal Galvão;Praça dos Andradas;220;apto 64;Centro;Santos;;interfone com defeito
+STS00066;Quitéria Nogueira Jardim;Rua General Câmara;94;;Centro;Santos;;interfone com defeito
+STS00102;Rafael Siqueira Leal;Rua Frei Gaspar;118;apto 24;Centro;Santos;;
+STS00160;Quitéria Duarte Toledo;Rua da Constituição;60;apto 82;Paquetá;Santos;;interfone com defeito
+STS00135;Zeca Macedo Cardoso;Rua João Otávio;40;apto 52;Paquetá;Santos;;
+STS00192;Úrsula Pacheco Pacheco;Avenida Conselheiro Nébias;94;casa 2;Paquetá;Santos;;
+STS00070;Yara Pacheco Leal;Rua General Câmara;125;apto 54;Centro;Santos;;deixar com zelador
+STS00237;Zeca Queiroz Galvão;Praça Iguatemi Martins;34;apto 43;Vila Nova;Santos;;deixar com zelador
+STS00175;Paulo Rezende Galvão;Rua Doutor Cochrane;124;;Paquetá;Santos;;deixar com zelador
+STS00193;Diego Toledo Siqueira;Rua General Câmara;44;;Paquetá;Santos;;interfone com defeito
+STS00037;Elisa Nogueira Valadares;Avenida São Francisco;29;apto 12;Centro;Santos;;
+STS00202;Gabriela Abreu Galvão;Rua Amador Bueno;89;casa 2;Paquetá;Santos;;deixar com zelador
+STS00119;Yara Rezende Fagundes;Rua Amador Bueno;162;;Centro;Santos;;interfone com defeito
+STS00254;Gabriela Pacheco Pacheco;Rua 7 de Setembro;171;;Vila Nova;Santos;;portaria 24h
+STS00073;Úrsula Otero Pacheco;Rua General Câmara;106;apto 111;Centro;Santos;;
+STS00032;Olívia Barbosa Valadares;Praça dos Andradas;239;;Centro;Santos;;portaria 24h
+STS00035;Yara Jardim Rezende;Avenida São Francisco;10;fundos;Centro;Santos;;
+STS00095;Paulo Duarte Galvão;Rua Frei Gaspar;83;apto 63;Centro;Santos;;portaria 24h
+STS00093;Elisa Otero Toledo;Rua Braz Cubas;170;apto 23;Centro;Santos;;
+STS00001;Ana Siqueira Nogueira;Praça Francisco Martins dos Santos;62;apto 92;Centro;Santos;;deixar com zelador
+STS00033;Tiago Abreu Leal;Praça dos Andradas;239;casa 2;Centro;Santos;;interfone com defeito
+STS00072;Quitéria Barbosa Siqueira;Rua General Câmara;106;apto 52;Centro;Santos;;
+STS00203;Sílvia Barbosa Barbosa;Rua Amador Bueno;118;;Paquetá;Santos;;
+STS00177;Vítor Esteves Esteves;Rua João Pessoa;52;apto 54;Paquetá;Santos;;portaria 24h
+STS00041;Marina Valadares Valadares;Avenida São Francisco;47;apto 14;Centro;Santos;;interfone com defeito
+STS00089;Elisa Siqueira Duarte;Rua Braz Cubas;146;fundos;Centro;Santos;;
+STS00130;Vítor Queiroz Nogueira;Avenida Xavier da Silveira;221;apto 23;Paquetá;Santos;;deixar com zelador
+STS00039;Rafael Otero Leal;Avenida São Francisco;70;fundos;Centro;Santos;;deixar com zelador
+STS00096;Heitor Leal Valadares;Rua Frei Gaspar;83;apto 34;Centro;Santos;;deixar com zelador
+STS00065;Gabriela Esteves Xisto;Rua General Câmara;53;apto 93;Centro;Santos;;deixar com zelador
+STS00257;Yara Xisto Galvão;Rua 7 de Setembro;189;apto 101;Vila Nova;Santos;;interfone com defeito
+STS00219;Diego Toledo Fagundes;Avenida São Francisco;65;;Paquetá;Santos;;
+STS00157;Paulo Henriques Queiroz;Rua da Constituição;103;apto 123;Paquetá;Santos;;portaria 24h
+STS00123;Marina Duarte Galvão;Avenida Xavier da Silveira;130;;Paquetá;Santos;;
+STS00290;Gabriela Nogueira Macedo;Rua Doutor Cochrane;101;;Vila Nova;Santos;;deixar com zelador
+STS00178;Gabriela Henriques Leal;Rua João Pessoa;52;apto 54;Paquetá;Santos;;interfone com defeito
+STS00243;Rafael Barbosa Valadares;Praça Iguatemi Martins;106;apto 52;Vila Nova;Santos;;deixar com zelador
+STS00014;Wanda Queiroz Henriques;Praça dos Andradas;89;;Centro;Santos;;interfone com defeito
+STS00125;Heitor Nogueira Jardim;Avenida Xavier da Silveira;130;;Paquetá;Santos;;
+STS00235;Olívia Cardoso Toledo;Avenida Conselheiro Nébias;290;apto 123;Vila Nova;Santos;;
+STS00216;Zeca Nogueira Pacheco;Avenida São Francisco;72;apto 61;Paquetá;Santos;;interfone com defeito
+STS00131;Carla Henriques Fagundes;Avenida Xavier da Silveira;221;apto 94;Paquetá;Santos;;
+STS00300;Nélson Siqueira Leal;Rua Braz Cubas;56;apto 101;Vila Nova;Santos;;
+STS00025;Diego Macedo Duarte;Praça dos Andradas;184;;Centro;Santos;;interfone com defeito
+STS00269;Íris Toledo Duarte;Rua Bittencourt;52;apto 112;Vila Nova;Santos;;
+STS00106;Quitéria Cardoso Nogueira;Rua Conde D'Eu;85;apto 104;Centro;Santos;;interfone com defeito
+STS00088;Diego Nogueira Toledo;Rua Braz Cubas;146;;Centro;Santos;;
+STS00226;Íris Jardim Leal;Avenida Conselheiro Nébias;135;;Vila Nova;Santos;;
+STS00163;Carla Queiroz Abreu;Rua da Constituição;120;;Paquetá;Santos;;portaria 24h
+STS00253;Ana Cardoso Rezende;Rua 7 de Setembro;171;;Vila Nova;Santos;;portaria 24h
+STS00183;Úrsula Jardim Duarte;Avenida Conselheiro Nébias;46;;Paquetá;Santos;;
+STS00111;Olívia Fagundes Esteves;Rua Amador Bueno;114;apto 94;Centro;Santos;;portaria 24h
+STS00090;Xavier Siqueira Xisto;Rua Braz Cubas;189;;Centro;Santos;;portaria 24h
+STS00053;Diego Otero Galvão;Avenida Getúlio Dornelles Vargas;80;casa 2;Centro;Santos;;
+STS00136;Olívia Nogueira Fagundes;Rua João Otávio;71;apto 24;Paquetá;Santos;;
+STS00275;Úrsula Leal Rezende;Avenida Perimetral;40;apto 72;Vila Nova;Santos;;
+STS00180;Sílvia Duarte Rezende;Rua João Pessoa;71;loja;Paquetá;Santos;;
+STS00142;Wanda Leal Valadares;Rua João Otávio;136;apto 101;Paquetá;Santos;;portaria 24h
+STS00165;Rafael Siqueira Galvão;Rua Doutor Cochrane;76;;Paquetá;Santos;;
+STS00267;Diego Toledo Cardoso;Avenida Campos Salles;141;;Vila Nova;Santos;;interfone com defeito
+STS00197;Olívia Barbosa Galvão;Rua Amador Bueno;58;apto 43;Paquetá;Santos;;interfone com defeito
+STS00138;Quitéria Siqueira Cardoso;Rua João Otávio;76;;Paquetá;Santos;;portaria 24h
+STS00023;Yara Henriques Galvão;Praça dos Andradas;184;fundos;Centro;Santos;;
+STS00285;Kátia Valadares Otero;Avenida Senador Feijó;117;;Vila Nova;Santos;;
+STS00083;Xavier Galvão Leal;Rua São Bento;152;apto 12;Centro;Santos;;
+STS00250;Nélson Fagundes Valadares;Rua 7 de Setembro;129;casa 2;Vila Nova;Santos;;deixar com zelador
+STS00100;Vítor Jardim Siqueira;Rua Frei Gaspar;143;fundos;Centro;Santos;;
+STS00110;Sílvia Siqueira Nogueira;Rua Conde D'Eu;122;;Centro;Santos;;portaria 24h
+STS00294;Diego Cardoso Macedo;Rua Doutor Cochrane;125;apto 83;Vila Nova;Santos;;
+STS00147;Quitéria Nogueira Nogueira;Rua João Otávio;220;apto 42;Paquetá;Santos;;portaria 24h
+STS00289;Íris Barbosa Jardim;Rua Doutor Cochrane;88;apto 23;Vila Nova;Santos;;interfone com defeito
+STS00129;Quitéria Jardim Leal;Avenida Xavier da Silveira;190;apto 114;Paquetá;Santos;;
+STS00018;Íris Macedo Siqueira;Praça dos Andradas;131;;Centro;Santos;;
+STS00179;João Jardim Barbosa;Rua João Pessoa;71;;Paquetá;Santos;;portaria 24h
+STS00075;Zeca Xisto Duarte;Rua São Bento;104;fundos;Centro;Santos;;interfone com defeito
+STS00109;Wanda Fagundes Rezende;Rua Conde D'Eu;109;loja;Centro;Santos;;
+STS00159;Úrsula Henriques Galvão;Rua da Constituição;60;apto 81;Paquetá;Santos;;
+STS00009;Vítor Siqueira Barbosa;Praça Francisco Martins dos Santos;182;apto 33;Centro;Santos;;
+STS00283;Nélson Duarte Nogueira;Avenida Senador Feijó;104;;Vila Nova;Santos;;
+STS00061;Gabriela Queiroz Pacheco;Avenida Getúlio Dornelles Vargas;200;loja;Centro;Santos;;
+STS00228;Sílvia Barbosa Nogueira;Avenida Conselheiro Nébias;134;casa 2;Vila Nova;Santos;;
+STS00263;Vítor Xisto Fagundes;Avenida Campos Salles;164;;Vila Nova;Santos;;portaria 24h
+STS00166;Marina Valadares Leal;Rua Doutor Cochrane;76;;Paquetá;Santos;;
+STS00271;Yara Macedo Barbosa;Rua Bittencourt;83;apto 104;Vila Nova;Santos;;portaria 24h
+STS00087;Marina Siqueira Valadares;Rua Braz Cubas;129;apto 31;Centro;Santos;;
+STS00060;Vítor Xisto Xisto;Avenida Getúlio Dornelles Vargas;200;;Centro;Santos;;
+STS00223;Paulo Siqueira Queiroz;Avenida Conselheiro Nébias;135;;Vila Nova;Santos;;deixar com zelador
+STS00227;Kátia Jardim Duarte;Avenida Conselheiro Nébias;134;;Vila Nova;Santos;;
+STS00052;Tiago Nogueira Duarte;Avenida Getúlio Dornelles Vargas;80;;Centro;Santos;;deixar com zelador
+STS00215;Nélson Otero Nogueira;Avenida São Francisco;72;apto 53;Paquetá;Santos;;
+STS00258;Tiago Queiroz Fagundes;Rua 7 de Setembro;189;apto 114;Vila Nova;Santos;;interfone com defeito
+STS00146;Diego Jardim Macedo;Rua João Otávio;220;apto 61;Paquetá;Santos;;deixar com zelador
+STS00232;Wanda Nogueira Abreu;Avenida Conselheiro Nébias;182;loja;Vila Nova;Santos;;portaria 24h
+STS00181;Gabriela Duarte Fagundes;Rua João Pessoa;100;;Paquetá;Santos;;portaria 24h
+STS00298;Yara Henriques Otero;Rua Braz Cubas;33;apto 124;Vila Nova;Santos;;interfone com defeito
+STS00020;Wanda Queiroz Esteves;Praça dos Andradas;124;apto 31;Centro;Santos;;deixar com zelador
+STS00092;Bruno Esteves Valadares;Rua Braz Cubas;170;apto 22;Centro;Santos;;interfone com defeito
+STS00045;Xavier Siqueira Xisto;Avenida São Francisco;82;;Centro;Santos;;interfone com defeito
+STS00064;Sílvia Leal Siqueira;Rua General Câmara;53;apto 103;Centro;Santos;;interfone com defeito
+STS00016;Gabriela Macedo Siqueira;Praça dos Andradas;100;apto 113;Centro;Santos;;interfone com defeito
+STS00122;Marina Queiroz Jardim;Avenida Xavier da Silveira;83;;Paquetá;Santos;;interfone com defeito
+STS00030;Paulo Barbosa Otero;Praça dos Andradas;220;apto 81;Centro;Santos;;
+STS00270;Lucas Macedo Rezende;Rua Bittencourt;52;apto 71;Vila Nova;Santos;;
+STS00191;Marina Esteves Nogueira;Avenida Conselheiro Nébias;94;;Paquetá;Santos;;interfone com defeito
+STS00007;Vítor Toledo Toledo;Praça Francisco Martins dos Santos;117;;Centro;Santos;;
+STS00036;Diego Leal Henriques;Avenida São Francisco;29;apto 93;Centro;Santos;;interfone com defeito
+STS00287;Zeca Siqueira Galvão;Avenida Senador Feijó;164;apto 34;Vila Nova;Santos;;interfone com defeito
+STS00244;João Queiroz Macedo;Praça Iguatemi Martins;106;apto 51;Vila Nova;Santos;;interfone com defeito
+STS00004;Úrsula Esteves Valadares;Praça Francisco Martins dos Santos;75;apto 21;Centro;Santos;;portaria 24h
+STS00019;Tiago Xisto Macedo;Praça dos Andradas;124;apto 63;Centro;Santos;;portaria 24h
+STS00266;Íris Jardim Esteves;Avenida Campos Salles;141;loja;Vila Nova;Santos;;interfone com defeito
+STS00261;Diego Esteves Otero;Avenida Campos Salles;129;apto 114;Vila Nova;Santos;;
+STS00195;Olívia Queiroz Henriques;Rua General Câmara;57;apto 72;Paquetá;Santos;;interfone com defeito
+STS00169;Tiago Pacheco Henriques;Rua Doutor Cochrane;107;apto 32;Paquetá;Santos;;
+STS00247;Carla Rezende Duarte;Rua 7 de Setembro;98;;Vila Nova;Santos;;deixar com zelador
+STS00171;Lucas Duarte Abreu;Rua Doutor Cochrane;136;apto 73;Paquetá;Santos;;
+STS00172;Elisa Jardim Barbosa;Rua Doutor Cochrane;136;apto 92;Paquetá;Santos;;
+STS00017;Heitor Toledo Otero;Praça dos Andradas;131;;Centro;Santos;;interfone com defeito
+STS00280;Olívia Cardoso Esteves;Avenida Perimetral;64;apto 94;Vila Nova;Santos;;
+STS00190;Vítor Otero Pacheco;Avenida Conselheiro Nébias;83;;Paquetá;Santos;;portaria 24h
+STS00156;Wanda Nogueira Rezende;Rua da Constituição;48;apto 24;Paquetá;Santos;;
+STS00012;João Esteves Henriques;Praça dos Andradas;76;apto 91;Centro;Santos;;portaria 24h
+STS00296;Kátia Rezende Cardoso;Rua Braz Cubas;20;;Vila Nova;Santos;;
+STS00286;Diego Fagundes Queiroz;Avenida Senador Feijó;164;apto 24;Vila Nova;Santos;;interfone com defeito
+STS00268;Kátia Henriques Valadares;Avenida Campos Salles;141;loja;Vila Nova;Santos;;deixar com zelador
+STS00229;Vítor Macedo Duarte;Avenida Conselheiro Nébias;201;apto 33;Vila Nova;Santos;;interfone com defeito
+STS00029;João Queiroz Toledo;Praça dos Andradas;220;apto 113;Centro;Santos;;
+STS00206;Fábio Barbosa Barbosa;Rua Amador Bueno;95;apto 103;Paquetá;Santos;;interfone com defeito
+STS00184;Diego Rezende Macedo;Avenida Conselheiro Nébias;46;loja;Paquetá;Santos;;
+STS00259;Rafael Fagundes Otero;Avenida Campos Salles;104;;Vila Nova;Santos;;deixar com zelador
+STS00127;Carla Rezende Fagundes;Avenida Xavier da Silveira;143;;Paquetá;Santos;;
+STS00121;Xavier Galvão Barbosa;Avenida Xavier da Silveira;70;;Paquetá;Santos;;
+STS00071;Vítor Henriques Pacheco;Rua General Câmara;125;apto 91;Centro;Santos;;portaria 24h
+STS00113;Vítor Barbosa Macedo;Rua Amador Bueno;145;;Centro;Santos;;
+STS00069;Elisa Nogueira Rezende;Rua General Câmara;125;apto 82;Centro;Santos;;interfone com defeito
+STS00057;Sílvia Barbosa Barbosa;Avenida Getúlio Dornelles Vargas;104;apto 23;Centro;Santos;;
+STS00173;Zeca Barbosa Abreu;Rua Doutor Cochrane;167;;Paquetá;Santos;;
+STS00003;Gabriela Leal Xisto;Praça Francisco Martins dos Santos;75;apto 61;Centro;Santos;;interfone com defeito
+STS00262;Diego Macedo Henriques;Avenida Campos Salles;129;apto 101;Vila Nova;Santos;;
+STS00151;Ana Xisto Macedo;Rua da Constituição;12;apto 64;Paquetá;Santos;;
+STS00010;Lucas Xisto Queiroz;Praça Francisco Martins dos Santos;182;apto 112;Centro;Santos;;interfone com defeito
+STS00168;Kátia Fagundes Cardoso;Rua Doutor Cochrane;107;apto 13;Paquetá;Santos;;interfone com defeito
+STS00139;Bruno Otero Cardoso;Rua João Otávio;76;loja;Paquetá;Santos;;
+STS00063;Bruno Henriques Otero;Rua General Câmara;34;apto 53;Centro;Santos;;portaria 24h
+STS00187;Quitéria Fagundes Cardoso;Avenida Conselheiro Nébias;70;apto 54;Paquetá;Santos;;
+STS00008;Bruno Nogueira Valadares;Praça Francisco Martins dos Santos;182;apto 22;Centro;Santos;;portaria 24h
+STS00186;Diego Macedo Queiroz;Avenida Conselheiro Nébias;77;apto 54;Paquetá;Santos;;interfone com defeito
+STS00044;Quitéria Macedo Abreu;Avenida São Francisco;101;apto 23;Centro;Santos;;interfone com defeito
+STS00134;Marina Nogueira Leal;Rua João Otávio;40;apto 11;Paquetá;Santos;;deixar com zelador
+STS00049;Gabriela Xisto Abreu;Avenida São Francisco;106;apto 61;Centro;Santos;;
+STS00230;Carla Cardoso Macedo;Avenida Conselheiro Nébias;201;apto 111;Vila Nova;Santos;;portaria 24h
+STS00225;Marina Macedo Jardim;Avenida Conselheiro Nébias;135;loja;Vila Nova;Santos;;
+STS00189;Zeca Toledo Otero;Avenida Conselheiro Nébias;83;;Paquetá;Santos;;interfone com defeito
