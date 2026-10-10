@@ -5,6 +5,7 @@ import { queryFor, search } from "../core/geocode";
 import { normalizeAddress, parseAddressLine } from "../core/normalize";
 import { backupJson, getSettings, restoreJson, saveSettings, shareFile, undoRestore, verifyIntegrity } from "../core/service";
 import { quotaUsed } from "../core/geocode";
+import { collectDiagnostics } from "../core/diagnostics";
 import { usageReport } from "../core/geoqueue";
 import { Button } from "../ui/button";
 import { Alert, Card, Input, Label, Select, Spinner } from "../ui/misc";
@@ -128,7 +129,12 @@ export function SettingsPage() {
           <Button variant="ghost" size="sm" onClick={async () => { try { await undoRestore(); setMsg({ kind: "ok", text: "Restauração desfeita." }); } catch (e) { setMsg({ kind: "error", text: (e as Error).message }); } }}>Desfazer última restauração</Button>
         </div>
         <label className="block text-sm">Restaurar backup: <input type="file" accept=".json,application/json" onChange={(e) => e.target.files?.[0] && restore(e.target.files[0])} /></label>
-        <Button variant="ghost" size="sm" onClick={async () => { const p = await verifyIntegrity(); setMsg({ kind: p.length ? "warn" : "ok", text: p.length ? p.join(" ") : "Integridade OK: nenhuma carta perdida." }); }}>Verificar integridade dos dados</Button>
+        <Button variant="secondary" onClick={async () => {
+            const d = await collectDiagnostics();
+            await shareFile(`diagnostico-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(d, null, 1), "application/json");
+            setMsg({ kind: "info", text: "Diagnóstico gerado (sem nomes nem endereços): tempos de cálculo, memória e versões." });
+          }}>Exportar diagnóstico de desempenho</Button>
+          <Button variant="ghost" size="sm" onClick={async () => { const p = await verifyIntegrity(); setMsg({ kind: p.length ? "warn" : "ok", text: p.length ? p.join(" ") : "Integridade OK: nenhuma carta perdida." }); }}>Verificar integridade dos dados</Button>
       </Card>
       <p className="px-1 text-xs muted">Malha de pedestres e mapa: © colaboradores do OpenStreetMap (ODbL) · mapa-base OpenFreeMap · endereços: Nominatim (1 consulta/s). Tempos e distâncias são estimativas.</p>
     </div>

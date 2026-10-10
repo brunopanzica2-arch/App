@@ -171,3 +171,19 @@ describe("V3: observação de campo", () => {
     expect((await db.letters.get(l.id))!.fieldNote).toBeNull();
   });
 });
+
+describe("V3: diagnóstico de desempenho", () => {
+  it("não contém nomes, endereços nem coordenadas; traz contagens e tempos", async () => {
+    await import300();
+    const { collectDiagnostics } = await import("../src/core/diagnostics");
+    const d = await collectDiagnostics("teste");
+    expect(d.dados).toMatchObject({ lotes: 1, cartas: 300 });
+    const json = JSON.stringify(d);
+    const letters = await db.letters.toArray();
+    for (const l of letters.slice(0, 40)) {
+      if (l.recipient) expect(json).not.toContain(l.recipient);
+      if (l.street) expect(json).not.toContain(l.street);
+    }
+    expect(json).not.toMatch(/-23\.\d{3,}/); // nenhuma coordenada de Santos
+  });
+});
