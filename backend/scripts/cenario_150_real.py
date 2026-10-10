@@ -31,7 +31,7 @@ from roteamento.config import TravelProfile
 
 ROOT = Path(__file__).resolve().parents[2]
 TD = ROOT / "test-data"
-OUT = TD / "resultados"
+OUT = TD / "resultados"  # V2; a V3 grava em test-data/v3/rota_150 (--out)
 ORIGIN = (-23.9480025, -46.3406209)
 ORIGIN_LABEL = ("PONTO TESTE — centro da Rua Joaquim Távora retornado pelo Nominatim; "
                 "nº 480 NÃO localizado pelo provedor nem validado em campo")
@@ -138,7 +138,11 @@ def run(mode: str, time_limit: int, eng: InternalEngine, pos, prof: TravelProfil
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--time-limit", type=int, default=30)
+    ap.add_argument("--out", default=None, help="pasta de saída (padrão: test-data/resultados, a da V2)")
     a = ap.parse_args()
+    global OUT
+    if a.out:
+        OUT = (ROOT / a.out) if not Path(a.out).is_absolute() else Path(a.out)
     pos, _ = load()
     eng = InternalEngine(get_settings())
     prof = TravelProfile(ride_speed_kmh=15)

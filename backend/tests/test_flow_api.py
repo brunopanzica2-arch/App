@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from openpyxl import Workbook
 
-from .synthetic import STEP, S, W
+from .synthetic import S, W
 
 CSV = """identificador;destinatario;logradouro;numero;complemento;bairro;cep;observacoes
 OBJ001;Pessoa Teste Um;Rua Alfa;100;apto 1;Centro;11010-000;

@@ -440,10 +440,10 @@ def solve(T: np.ndarray, D: np.ndarray, start: int, stops: list[int], end: int |
         t0 = time.perf_counter()
         manager = pywrapcp.RoutingIndexManager(n, 1, [0], [end_idx])
         routing = pywrapcp.RoutingModel(manager)
-        cb = routing.RegisterTransitCallback(lambda i, j: arc_l[manager.IndexToNode(i)][manager.IndexToNode(j)])
+        cb = routing.RegisterTransitCallback(lambda i, j, m=manager: arc_l[m.IndexToNode(i)][m.IndexToNode(j)])
         routing.SetArcCostEvaluatorOfAllVehicles(cb)
         if prio:
-            tcb = routing.RegisterTransitCallback(lambda i, j: travel_l[manager.IndexToNode(i)][manager.IndexToNode(j)])
+            tcb = routing.RegisterTransitCallback(lambda i, j, m=manager: travel_l[m.IndexToNode(i)][m.IndexToNode(j)])
             routing.AddDimension(tcb, 0, 10**13, True, "Time")
             dim = routing.GetDimensionOrDie("Time")
             for pos, node in enumerate(nodes):
@@ -481,10 +481,10 @@ def solve(T: np.ndarray, D: np.ndarray, start: int, stops: list[int], end: int |
         t0 = time.perf_counter()
         manager = pywrapcp.RoutingIndexManager(n, 1, [0], [end_idx])
         routing = pywrapcp.RoutingModel(manager)
-        cb = routing.RegisterTransitCallback(lambda i, j: arc_l[manager.IndexToNode(i)][manager.IndexToNode(j)])
+        cb = routing.RegisterTransitCallback(lambda i, j, m=manager: arc_l[m.IndexToNode(i)][m.IndexToNode(j)])
         routing.SetArcCostEvaluatorOfAllVehicles(cb)
         if prio:
-            tcb = routing.RegisterTransitCallback(lambda i, j: travel_l[manager.IndexToNode(i)][manager.IndexToNode(j)])
+            tcb = routing.RegisterTransitCallback(lambda i, j, m=manager: travel_l[m.IndexToNode(i)][m.IndexToNode(j)])
             routing.AddDimension(tcb, 0, 10**13, True, "Time")
             dim = routing.GetDimensionOrDie("Time")
             for p_, node in enumerate(nodes):

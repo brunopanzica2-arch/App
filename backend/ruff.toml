@@ -1,0 +1,8 @@
+# Lint de CORREÇÃO (erros de sintaxe, nomes indefinidos/não usados, bugs prováveis). Estilo fica fora de propósito.
+target-version = "py312"
+line-length = 120
+[lint]
+select = ["E9", "F", "B"]
+ignore = ["B905", "B008", "B904", "B007"]  # estilo; B008 = idioma Depends() do FastAPI
+[lint.per-file-ignores]
+"tests/*" = ["B017"]

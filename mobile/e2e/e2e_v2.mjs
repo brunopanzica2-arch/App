@@ -224,14 +224,20 @@ await page.reload();
 await page.waitForTimeout(2500);
 const online = await page.locator("text=/\\d+\\/300/").first().innerText();
 pass("E2E-13", offlineCount.startsWith("80/") && online === offlineCount, `offline ${offlineCount} · após voltar a rede e recarregar ${online}`);
-// mapa-base inacessível: estilo/tiles bloqueados
+// V3: com o pacote offline de Santos presente, bloquear o mapa online NÃO deve degradar o mapa
+const p3 = await ctx.newPage();
+await p3.route(/openfreemap/, (r) => r.abort());
+await p3.goto(page.url());
+await p3.getByText(/Mapa offline \(pacote de Santos\)/).waitFor({ timeout: 30000 });
+await p3.close();
+// pacote ausente E mapa online inacessível: cai no fundo liso de contingência (rota e paradas continuam visíveis)
 const p2 = await ctx.newPage();
-await p2.route(/openfreemap/, (r) => r.abort());
+await p2.route(/openfreemap|map\/santos\.pmtiles/, (r) => r.abort());
 await p2.goto(page.url());
-await p2.getByText(/Mapa-base indisponível/).waitFor({ timeout: 30000 });
+await p2.getByText(/Mapa-base indisponível/).first().waitFor({ timeout: 30000 });
 await p2.waitForTimeout(2500);
 await p2.screenshot({ path: `${OUT}/12-mapa-offline-fallback.png` });
-pass("J-mapa-offline", true, "estilo de contingência exibido; rota e paradas numeradas continuam visíveis (ver captura 12)");
+pass("J-mapa-offline", true, "com pacote: mapa de ruas offline; sem pacote e sem internet: estilo de contingência com rota e paradas numeradas (captura 12)");
 await p2.close();
 
 // ------------------------------------------------------------------ E2E-14

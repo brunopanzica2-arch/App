@@ -1,12 +1,11 @@
 """V3 §7.3: a factibilidade (Tarjan + cadeia no DAG) maximiza a cobertura? Comparação com busca exata."""
-import itertools
 import math
 import random
 
 import numpy as np
 import pytest
 
-from app.services.optimization import evaluate, feasibility, solve, validate
+from app.services.optimization import feasibility, solve, validate
 
 
 def floyd(adj):

@@ -1,0 +1,151 @@
+seq;chave;bairro;logradouro;numero_sintetico;cartas;eta_min;trecho_m;trecho_s;snap_m;confianca;flags;lat_teste;lon_teste
+1;K141;Vila Nova;Avenida Senador Feijó;104;1;6.6;1645.9;395.0;0.0;alta;;-23.9434167;-46.3262937
+2;K148;Vila Nova;Rua Braz Cubas;20;1;8.0;161.0;38.6;0.0;alta;;-23.9431521;-46.3251116
+3;K130;Vila Nova;Avenida Campos Salles;104;2;9.7;238.6;57.3;0.0;alta;;-23.9437229;-46.3232293
+4;K131;Vila Nova;Avenida Campos Salles;129;2;10.8;39.8;9.6;0.0;alta;;-23.9437064;-46.3228419
+5;K111;Vila Nova;Avenida Conselheiro Nébias;110;1;12.4;171.6;41.2;0.0;alta;;-23.9430226;-46.321452
+6;K132;Vila Nova;Avenida Campos Salles;164;2;13.2;32.2;7.7;0.0;alta;;-23.9431894;-46.3213786
+7;K133;Vila Nova;Avenida Campos Salles;141;4;15.0;220.1;52.8;0.0;alta;;-23.9427294;-46.3194856
+8;K144;Vila Nova;Rua Doutor Cochrane;88;2;16.8;122.2;29.3;0.0;alta;;-23.9423235;-46.3197537
+9;K112;Vila Nova;Avenida Conselheiro Nébias;135;4;18.3;160.9;38.6;0.0;alta;;-23.9421828;-46.3212882
+10;K113;Vila Nova;Avenida Conselheiro Nébias;134;2;20.0;99.9;24.0;0.0;alta;;-23.9412877;-46.3212038
+11;K126;Vila Nova;Rua 7 de Setembro;146;2;21.6;168.5;40.4;0.0;alta;;-23.9407038;-46.3203249
+12;K114;Vila Nova;Avenida Conselheiro Nébias;201;2;22.9;96.6;23.2;0.0;alta;;-23.9404222;-46.3211233
+13;K115;Vila Nova;Avenida Conselheiro Nébias;182;2;24.2;97.6;23.4;0.0;alta;;-23.9395471;-46.3210483
+14;K116;Vila Nova;Avenida Conselheiro Nébias;231;2;25.2;25.8;6.2;0.0;alta;;-23.9393154;-46.3210456
+15;K135;Vila Nova;Rua Bittencourt;83;2;26.6;110.8;26.6;0.0;alta;;-23.939397;-46.3201062
+16;K117;Vila Nova;Avenida Conselheiro Nébias;290;2;27.9;105.0;25.2;0.0;alta;;-23.9392054;-46.3211177
+17;K092;Paquetá;Avenida Conselheiro Nébias;46;2;29.2;93.1;22.3;0.0;alta;;-23.9383835;-46.3209627
+18;K093;Paquetá;Avenida Conselheiro Nébias;77;2;30.6;119.0;28.6;0.0;alta;;-23.9373171;-46.3208589
+19;K094;Paquetá;Avenida Conselheiro Nébias;70;2;31.9;105.5;25.3;0.0;alta;;-23.9363705;-46.3207957
+20;K095;Paquetá;Avenida Conselheiro Nébias;83;2;32.9;9.7;2.3;0.0;alta;;-23.936283;-46.3207907
+21;K096;Paquetá;Avenida Conselheiro Nébias;94;2;33.8;4.4;1.1;0.0;alta;;-23.9362435;-46.3207857
+22;K090;Paquetá;Rua João Pessoa;71;2;34.8;16.6;4.0;0.0;alta;;-23.9362298;-46.3206609
+23;K097;Paquetá;Rua General Câmara;44;2;36.4;163.4;39.2;0.0;alta;;-23.9348576;-46.3206497
+24;K082;Paquetá;Rua da Constituição;73;2;38.0;169.7;40.7;0.0;alta;;-23.9346471;-46.3222656
+25;K081;Paquetá;Rua da Constituição;60;2;39.4;133.9;32.1;0.0;alta;;-23.9358437;-46.3224128
+26;K089;Paquetá;Rua João Pessoa;52;2;40.4;29.6;7.1;0.0;alta;;-23.9359312;-46.3221764
+27;K080;Paquetá;Rua da Constituição;103;2;41.5;29.7;7.1;0.0;alta;;-23.9359178;-46.3224231
+28;K079;Paquetá;Rua da Constituição;48;2;42.5;14.9;3.6;0.0;alta;;-23.9360512;-46.3224392
+29;K099;Paquetá;Rua Amador Bueno;58;2;43.8;103.7;24.9;0.0;alta;;-23.9369782;-46.3225541
+30;K078;Paquetá;Rua da Constituição;37;2;44.7;3.4;0.8;0.0;alta;;-23.9370081;-46.3225617
+31;K077;Paquetá;Rua da Constituição;12;2;45.9;69.7;16.7;0.0;alta;;-23.9376326;-46.322625
+32;K106;Paquetá;Avenida São Francisco;12;1;47.0;44.9;10.8;0.0;alta;;-23.9380348;-46.322666
+33;K107;Paquetá;Avenida São Francisco;31;1;47.8;5.0;1.2;0.0;alta;;-23.9380447;-46.3226177
+34;K125;Vila Nova;Rua 7 de Setembro;129;2;49.5;251.5;60.3;0.0;alta;;-23.9402053;-46.3228936
+35;K149;Vila Nova;Rua Braz Cubas;33;2;51.6;287.0;68.9;0.0;alta;;-23.9408558;-46.3249233
+36;K124;Vila Nova;Rua 7 de Setembro;98;2;53.0;117.1;28.1;0.0;alta;;-23.9398062;-46.3248303
+37;K142;Vila Nova;Avenida Senador Feijó;117;2;54.5;136.4;32.7;0.0;alta;;-23.9398999;-46.325851
+38;K143;Vila Nova;Avenida Senador Feijó;164;2;56.1;172.5;41.4;0.0;alta;;-23.9383561;-46.3256824
+39;K134;Vila Nova;Rua Bittencourt;52;2;57.4;102.6;24.6;0.0;alta;;-23.9385026;-46.3247147
+40;K150;Vila Nova;Rua Braz Cubas;56;2;58.7;87.7;21.0;0.0;alta;;-23.9377159;-46.3246547
+41;K041;Centro;Rua Braz Cubas;98;2;60.1;122.7;29.5;0.0;alta;;-23.9366142;-46.324585
+42;K060;Centro;Rua Amador Bueno;162;2;61.0;5.3;1.3;0.0;alta;;-23.9365806;-46.3245683
+43;K059;Centro;Rua Amador Bueno;187;2;62.3;96.5;23.2;0.0;alta;;-23.9363911;-46.3254948
+44;K058;Centro;Rua Amador Bueno;138;2;64.0;203.4;48.8;0.0;alta;;-23.9359663;-46.3274418
+45;K025;Centro;Avenida São Francisco;119;2;65.8;216.2;51.9;0.0;alta;;-23.9369015;-46.3285015
+46;K024;Centro;Avenida São Francisco;106;2;67.1;85.3;20.5;0.0;alta;;-23.9367272;-46.3293193
+47;K023;Centro;Avenida São Francisco;179;1;68.6;145.8;35.0;0.0;alta;;-23.9364499;-46.3307214
+48;K046;Centro;Rua Frei Gaspar;70;1;69.4;8.2;2.0;0.0;alta;;-23.9363812;-46.3307502
+49;K047;Centro;Rua Frei Gaspar;83;2;70.3;41.5;9.9;0.0;alta;;-23.9360167;-46.3306801
+50;K022;Centro;Avenida São Francisco;82;2;71.4;43.6;10.5;0.0;alta;;-23.9363673;-46.3308291
+51;K021;Centro;Avenida São Francisco;101;2;72.4;24.8;8.9;0.0;alta;;-23.9363876;-46.3310244
+52;K001;Centro;Praça Francisco Martins dos Santos;62;2;74.0;173.8;41.7;0.0;alta;;-23.9370472;-46.3322958
+53;K004;Centro;Praça Francisco Martins dos Santos;117;1;75.3;92.2;22.1;0.0;alta;;-23.9366939;-46.3316104
+54;K005;Centro;Praça Francisco Martins dos Santos;182;4;76.2;33.8;8.1;0.0;alta;;-23.9364287;-46.3314687
+55;K019;Centro;Avenida São Francisco;47;2;77.8;95.0;22.8;0.0;alta;;-23.9362112;-46.331915
+56;K018;Centro;Avenida São Francisco;70;2;78.8;20.6;5.0;0.0;alta;;-23.9362067;-46.3321177
+57;K002;Centro;Praça Francisco Martins dos Santos;75;2;80.2;116.9;28.1;0.0;alta;;-23.9369553;-46.3320018
+58;K003;Centro;Praça Francisco Martins dos Santos;98;2;81.7;132.4;31.8;0.0;alta;;-23.9362097;-46.3322697
+59;K017;Centro;Avenida São Francisco;29;2;83.0;97.5;23.4;0.0;alta;;-23.9360732;-46.3321854
+60;K020;Centro;Avenida São Francisco;130;1;84.1;40.8;9.8;0.0;alta;;-23.936176;-46.331802
+61;K016;Centro;Avenida São Francisco;10;2;85.0;53.3;12.8;0.0;alta;;-23.9359778;-46.3322448
+62;K011;Centro;Praça dos Andradas;227;1;86.0;23.3;5.6;0.0;alta;;-23.9359005;-46.3322819
+63;K012;Centro;Praça dos Andradas;184;4;87.1;91.7;22.0;0.0;alta;;-23.9351319;-46.3319689
+64;K056;Centro;Rua Amador Bueno;114;2;88.7;74.1;17.8;0.0;alta;;-23.9351951;-46.3313077
+65;K057;Centro;Rua Amador Bueno;145;2;90.4;193.8;46.5;0.0;alta;;-23.9355966;-46.3294526
+66;K048;Centro;Rua Frei Gaspar;130;2;92.2;220.0;52.8;0.0;alta;;-23.9344008;-46.3302839
+67;K015;Centro;Praça dos Andradas;239;2;94.0;220.2;52.8;0.0;alta;;-23.9337984;-46.3322263
+68;K014;Centro;Praça dos Andradas;220;4;94.9;9.5;2.3;0.0;alta;;-23.9338466;-46.3323036
+69;K013;Centro;Praça dos Andradas;203;2;96.7;118.1;28.3;0.0;alta;;-23.9348727;-46.3325937
+70;K008;Centro;Praça dos Andradas;100;2;98.1;136.2;32.7;0.0;alta;;-23.9359928;-46.3325658
+71;K009;Centro;Praça dos Andradas;131;2;99.1;12.6;3.0;0.0;alta;;-23.935998;-46.3324429
+72;K010;Centro;Praça dos Andradas;124;2;100.1;27.2;6.5;0.0;alta;;-23.9359231;-46.3326854
+73;K007;Centro;Praça dos Andradas;89;1;101.2;35.0;8.4;0.0;alta;;-23.9360642;-46.3326854
+74;K006;Centro;Praça dos Andradas;76;2;102.0;18.2;4.4;0.0;alta;;-23.9362258;-46.3326879
+75;K030;Centro;Avenida Getúlio Dornelles Vargas;200;2;103.1;37.1;8.9;0.0;alta;;-23.9360567;-46.3328167
+76;K029;Centro;Avenida Getúlio Dornelles Vargas;117;2;104.1;34.0;8.2;0.0;alta;;-23.9359547;-46.3331293
+77;K028;Centro;Avenida Getúlio Dornelles Vargas;104;2;105.2;48.7;11.7;0.0;alta;;-23.9358919;-46.3336009
+78;K027;Centro;Avenida Getúlio Dornelles Vargas;105;2;106.6;107.5;25.8;0.0;alta;;-23.9352281;-46.3343686
+79;K026;Centro;Avenida Getúlio Dornelles Vargas;80;2;107.9;114.4;27.5;0.0;alta;;-23.9345208;-46.3351805
+80;K036;Centro;Rua São Bento;104;2;109.5;171.0;41.0;0.0;alta;;-23.9340513;-46.3350888
+81;K037;Centro;Rua São Bento;129;2;110.8;98.0;23.5;0.0;alta;;-23.9332731;-46.334649
+82;K038;Centro;Rua São Bento;128;2;111.9;24.7;5.9;0.0;alta;;-23.9330698;-46.3345578
+83;K039;Centro;Rua São Bento;177;2;113.4;150.8;36.2;0.0;alta;;-23.9319177;-46.3337773
+84;K040;Centro;Rua São Bento;152;2;115.4;131.2;65.3;0.0;alta;;-23.9309814;-46.3331272
+85;K055;Centro;Rua Conde D'Eu;122;1;117.8;263.8;91.0;0.0;alta;;-23.9317969;-46.3310491
+86;K054;Centro;Rua Conde D'Eu;109;2;118.7;33.3;8.0;0.0;alta;;-23.932082;-46.3311152
+87;K053;Centro;Rua Conde D'Eu;120;1;119.7;29.9;7.2;0.0;alta;;-23.9323135;-46.3309663
+88;K052;Centro;Rua Conde D'Eu;85;2;120.6;25.8;6.2;0.0;alta;;-23.9325254;-46.3308873
+89;K051;Centro;Rua Conde D'Eu;72;2;121.8;65.0;15.6;0.0;alta;;-23.9330148;-46.3312213
+90;K050;Centro;Rua Frei Gaspar;118;2;123.2;125.0;30.0;0.0;alta;;-23.9326011;-46.3302635
+91;K049;Centro;Rua Frei Gaspar;143;2;124.6;128.5;30.8;0.0;alta;;-23.9337559;-46.3302096
+92;K031;Centro;Rua General Câmara;34;2;125.6;5.4;1.3;0.0;alta;;-23.9337585;-46.3301567
+93;K032;Centro;Rua General Câmara;53;2;126.9;117.1;28.1;0.0;alta;;-23.9338433;-46.3290082
+94;K033;Centro;Rua General Câmara;94;2;128.3;118.5;28.4;0.0;alta;;-23.9339297;-46.3278459
+95;K034;Centro;Rua General Câmara;125;4;129.3;23.6;5.7;0.0;alta;;-23.9339858;-46.3276232
+96;K035;Centro;Rua General Câmara;106;2;131.0;110.5;26.5;0.0;alta;;-23.9342018;-46.3265665
+97;K042;Centro;Rua Braz Cubas;129;2;133.3;325.0;78.0;0.0;alta;;-23.9354535;-46.3244804
+98;K043;Centro;Rua Braz Cubas;146;2;134.7;132.5;31.8;0.0;alta;;-23.9342652;-46.3244123
+99;K044;Centro;Rua Braz Cubas;189;2;136.2;134.4;32.3;0.0;alta;;-23.933068;-46.3242963
+100;K045;Centro;Rua Braz Cubas;170;2;137.3;52.2;12.5;0.0;alta;;-23.9326016;-46.3242585
+101;K083;Paquetá;Rua da Constituição;120;2;139.5;307.7;81.4;0.0;alta;;-23.9332814;-46.3221034
+102;K061;Paquetá;Avenida Xavier da Silveira;70;1;141.2;145.9;42.6;0.0;alta;;-23.9328446;-46.3212589
+103;K062;Paquetá;Avenida Xavier da Silveira;83;1;142.3;87.0;20.9;0.0;alta;;-23.9330588;-46.3204357
+104;K063;Paquetá;Avenida Xavier da Silveira;130;4;144.2;295.0;70.8;0.0;alta;;-23.9340189;-46.3177294
+105;K088;Paquetá;Rua Doutor Cochrane;124;2;145.7;67.9;16.3;0.0;alta;;-23.9346145;-46.317875
+106;K087;Paquetá;Rua Doutor Cochrane;167;2;146.9;60.1;14.4;0.0;alta;;-23.9351423;-46.318004
+107;K086;Paquetá;Rua Doutor Cochrane;136;2;148.5;177.5;42.6;0.0;alta;;-23.9366936;-46.3184158
+108;K085;Paquetá;Rua Doutor Cochrane;107;4;149.5;15.6;3.7;0.0;alta;;-23.9368273;-46.3184625
+109;K084;Paquetá;Rua Doutor Cochrane;76;2;151.2;107.6;25.8;0.0;alta;;-23.937775;-46.3186772
+110;K100;Paquetá;Rua Amador Bueno;89;4;152.1;3.3;0.8;0.0;alta;;-23.93778;-46.3186451
+111;K101;Paquetá;Rua Amador Bueno;118;2;153.6;68.5;16.4;0.0;alta;;-23.937917;-46.3179883
+112;K102;Paquetá;Rua Amador Bueno;95;2;154.8;64.8;15.5;0.0;alta;;-23.9380452;-46.3173668
+113;K091;Paquetá;Rua João Pessoa;100;2;156.2;122.4;29.4;0.0;alta;;-23.9369709;-46.3171065
+114;K104;Paquetá;Rua Aguiar de Andrade;88;2;157.5;94.4;22.6;0.0;alta;;-23.9361452;-46.3168925
+115;K098;Paquetá;Rua General Câmara;57;2;158.8;99.1;23.8;0.0;alta;;-23.9352778;-46.3166687
+116;K105;Paquetá;Rua Aguiar de Andrade;107;2;160.1;90.3;21.7;0.0;alta;;-23.9344841;-46.3164812
+117;K064;Paquetá;Avenida Xavier da Silveira;143;1;161.3;67.2;16.1;0.0;alta;;-23.9347504;-46.3158892
+118;K065;Paquetá;Avenida Xavier da Silveira;190;2;162.3;80.3;19.3;0.0;alta;;-23.9350651;-46.3157777
+119;K066;Paquetá;Avenida Xavier da Silveira;221;2;163.3;20.1;4.8;0.0;alta;;-23.9352269;-46.3156926
+120;K067;Paquetá;Avenida Xavier da Silveira;178;2;164.3;17.8;4.3;0.0;alta;;-23.9353837;-46.3157141
+121;K076;Paquetá;Rua João Otávio;280;2;165.4;36.2;8.7;0.0;alta;;-23.9355989;-46.3154953
+122;K075;Paquetá;Rua João Otávio;167;1;166.4;17.6;4.2;0.0;alta;;-23.9357574;-46.3154894
+123;K074;Paquetá;Rua João Otávio;220;2;167.4;71.5;17.2;0.0;alta;;-23.9363958;-46.3155736
+124;K073;Paquetá;Rua João Otávio;191;2;168.8;106.8;25.6;0.0;alta;;-23.9373454;-46.3157323
+125;K072;Paquetá;Rua João Otávio;136;2;170.1;106.5;25.6;0.0;alta;;-23.9382838;-46.3159399
+126;K071;Paquetá;Rua João Otávio;95;2;171.0;6.6;1.6;0.0;alta;;-23.9383192;-46.3159903
+127;K070;Paquetá;Rua João Otávio;76;2;172.0;3.3;0.8;0.0;alta;;-23.9383226;-46.3160225
+128;K103;Paquetá;Rua Amador Bueno;178;2;173.0;20.9;5.0;0.0;alta;;-23.9382809;-46.3162234
+129;K069;Paquetá;Rua João Otávio;71;2;174.3;103.4;27.3;0.0;alta;;-23.9391892;-46.3164362
+130;K068;Paquetá;Rua João Otávio;40;2;175.4;13.4;10.7;0.0;alta;;-23.939282;-46.3165174
+131;K110;Paquetá;Avenida São Francisco;58;2;176.7;66.9;18.3;0.0;alta;;-23.9391692;-46.3171595
+132;K136;Vila Nova;Rua Bittencourt;76;2;177.9;87.8;21.1;0.0;alta;;-23.9399274;-46.3172644
+133;K119;Vila Nova;Praça Iguatemi Martins;59;1;179.3;103.9;24.9;0.0;alta;;-23.9400248;-46.318005
+134;K118;Vila Nova;Praça Iguatemi Martins;34;2;180.1;25.6;6.1;0.0;alta;;-23.939805;-46.3180237
+135;K120;Vila Nova;Praça Iguatemi Martins;58;2;181.6;132.2;31.7;0.0;alta;;-23.9403095;-46.3187604
+136;K147;Vila Nova;Rua Doutor Cochrane;125;2;183.0;119.4;28.6;0.0;alta;;-23.9395887;-46.319082
+137;K109;Paquetá;Avenida São Francisco;65;1;184.3;95.5;22.9;0.0;alta;;-23.9388196;-46.3188385
+138;K108;Paquetá;Avenida São Francisco;72;4;185.0;6.5;1.6;0.0;alta;;-23.9388056;-46.3189003
+139;K146;Vila Nova;Rua Doutor Cochrane;148;2;186.9;163.9;39.3;0.0;alta;;-23.9402481;-46.3192316
+140;K145;Vila Nova;Rua Doutor Cochrane;101;2;188.4;134.3;32.2;0.0;alta;;-23.9414234;-46.3195341
+141;K127;Vila Nova;Rua 7 de Setembro;171;2;189.8;115.0;27.6;0.0;alta;;-23.9409654;-46.3188926
+142;K121;Vila Nova;Praça Iguatemi Martins;107;1;191.0;73.6;17.7;0.0;alta;;-23.9409685;-46.3183134
+143;K122;Vila Nova;Praça Iguatemi Martins;106;2;191.9;50.7;12.2;0.0;alta;;-23.9410711;-46.3178271
+144;K123;Vila Nova;Praça Iguatemi Martins;155;2;193.0;25.5;6.1;0.0;alta;;-23.9411199;-46.3175833
+145;K129;Vila Nova;Rua 7 de Setembro;189;2;193.9;0.8;0.2;0.0;alta;;-23.9411258;-46.317578
+146;K128;Vila Nova;Rua 7 de Setembro;218;2;194.9;22.8;5.5;0.0;alta;;-23.9412418;-46.3176926
+147;K137;Vila Nova;Avenida Perimetral;40;2;196.7;147.9;55.5;0.0;alta;;-23.9420083;-46.3173402
+148;K138;Vila Nova;Avenida Perimetral;53;2;198.0;93.7;22.5;0.0;alta;;-23.9411735;-46.3172138
+149;K139;Vila Nova;Avenida Perimetral;64;2;199.2;71.6;17.2;0.0;alta;;-23.9405406;-46.3170875
+150;K140;Vila Nova;Avenida Perimetral;77;2;200.4;56.7;13.6;0.0;alta;;-23.9400595;-46.3169023

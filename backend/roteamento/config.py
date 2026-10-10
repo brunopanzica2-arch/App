@@ -9,7 +9,7 @@ velocidade própria (também configurável).
 from __future__ import annotations
 
 from dataclasses import dataclass, field, asdict
-from typing import Literal, Optional
+from typing import Literal
 
 Policy = Literal["allow", "penalize", "forbid"]
 RouteMode = Literal["open", "circular", "fixed_end"]
