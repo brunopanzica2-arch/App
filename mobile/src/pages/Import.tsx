@@ -31,7 +31,7 @@ export function ImportPage({ nav }: { nav: Nav }) {
   async function load() {
     setError(null);
     try {
-      const forced = { delimiter: delimiter === "auto" ? null : delimiter, hasHeader: hasHeaderForced ? hasHeader : undefined };
+      const forced = { delimiter: delimiter === "auto" ? undefined : delimiter, hasHeader: hasHeaderForced ? hasHeader : undefined };
       const p = mode === "file" ? await prepareFile(file!, forced) : prepareText(text, forced);
       setPrep(p);
       setTable(p.table);
