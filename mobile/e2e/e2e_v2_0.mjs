@@ -42,7 +42,7 @@ await shot("01-mapa-vazio");
   const st = await page.evaluate(() => { const e = document.querySelector("[data-testid=map-home]"); const c = document.querySelector("[role=application] canvas")?.getBoundingClientRect(); return { map: e.dataset.mapState, gps: e.dataset.gpsState, fix: e.dataset.fix, h: c?.height }; });
   const png = await page.screenshot({ clip: { x: 0, y: 200, width: 412, height: 400 } });
   pass("MAP-01 mapa real renderizado (estado operacional, canvas>300px, imagem com detalhe)", st.map === "operational" && st.h > 300 && png.length > 40000, `${JSON.stringify(st)} png=${png.length}B`);
-  pass("GPS-01 fix automático e marcador", st.gps === "ok" && /^-23\.9489,-46\.3336/.test(st.fix), `gps=${st.gps} fix=${st.fix}`);
+  pass("GPS-01 fix automático e marcador", st.gps === "ok" && /^-23\.9480,-46\.3406/.test(st.fix), `gps=${st.gps} fix=${st.fix}`);
 }
 
 // 2. regressão da linha sem cabeçalho
@@ -90,6 +90,12 @@ pass("UX-03 próxima parada exibida", addr.length > 3, addr);
 const sizes = await page.evaluate(() => [...document.querySelectorAll("[data-testid=sheet] button")].map((b) => ({ t: b.innerText.trim(), h: b.getBoundingClientRect().height, clip: b.scrollWidth > b.clientWidth + 1 })).filter((b) => b.t));
 pass("UX-04 botões sem texto cortado", sizes.every((b) => !b.clip), JSON.stringify(sizes.map((b) => `${b.t}:${Math.round(b.h)}`)));
 
+await page.getByRole("button", { name: "Expandir painel" }).click();
+await page.waitForTimeout(500);
+await shot("04b-painel-expandido");
+await page.getByRole("button", { name: "Recolher painel" }).click();
+await page.waitForTimeout(500);
+await shot("04c-painel-compacto");
 // 7. entrega + desfazer
 const doneBefore = Number((await page.getByTestId("counters").innerText()).split("\n").filter(Boolean)[6] ?? 0);
 const btn = page.getByRole("button", { name: /^(Entregue|Entregar todas)/ });

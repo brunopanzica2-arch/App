@@ -3,6 +3,14 @@
     "ok": true,
     "detail": "tela inicial é o mapa com ação Importar"
   },
+  "MAP-01 mapa real renderizado (estado operacional, canvas>300px, imagem com detalhe)": {
+    "ok": true,
+    "detail": "{\"map\":\"operational\",\"gps\":\"ok\",\"fix\":\"-23.94800,-46.34062\",\"h\":859} png=322466B"
+  },
+  "GPS-01 fix automático e marcador": {
+    "ok": false,
+    "detail": "gps=ok fix=-23.94800,-46.34062"
+  },
   "IMP-01 linha sem cabeçalho reconhecida": {
     "ok": true,
     "detail": "Colunas reconhecidas automaticamente (confiança 90%): Logradouro, Número, Bairro, Município, UF. Sem cabeçalho."

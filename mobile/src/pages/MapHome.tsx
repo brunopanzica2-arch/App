@@ -36,7 +36,7 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
   const [confirmDeliver, setConfirmDeliver] = useState<string | null>(null);
   const [baseMap, setBaseMap] = useState<string | null>(null);
   const [mapState, setMapState] = useState<MapState>("init");
-  const [sheetMode, setSheetMode] = useState<"normal" | "compact">("normal");
+  const [sheetMode, setSheetMode] = useState<"normal" | "compact">("compact");
   const [sheetH, setSheetH] = useState(180);
   const sheetRef = useRef<HTMLElement>(null);
   const centered = useRef(false);
@@ -94,7 +94,7 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
   })), [items, next]);
 
   // seguir a posição ao iniciar; gesto do usuário desliga
-  useEffect(() => { setSheetMode(navigating ? "compact" : "normal"); }, [navigating]);
+  useEffect(() => { if (navigating) setSheetMode("compact"); }, [navigating]);
   useEffect(() => { if (navigating) getNavPrefs().then((p) => setFollow(p.camera3d ? "3d" : "2d")); else setFollow("off"); }, [navigating]);
 
   const [kw, setKw] = useState(0);
@@ -212,7 +212,7 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
       <div className="absolute right-2 flex flex-col gap-2" style={{ bottom: sheetH + 12 }}>
         <Fab label={follow === "off" ? "Centralizar em mim" : follow === "3d" ? "Câmera 3D (tocar para 2D)" : "Câmera 2D (tocar para 3D)"}
           onClick={() => { if (!ui.fix && !navigating) void N.locate(); setFollow(follow === "off" ? "3d" : follow === "3d" ? "2d" : "3d"); }} active={follow !== "off"}>
-          <Crosshair className="h-6 w-6" />{follow !== "off" && <span className="text-[10px] font-bold">{follow.toUpperCase()}</span>}
+          <Crosshair className="h-6 w-6" />
         </Fab>
         {navigating && (<>
           <Fab label="Repetir instrução" onClick={() => void N.repeat()}><Repeat className="h-6 w-6" /></Fab>
@@ -277,15 +277,14 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
                 {navigating && ui.nearStopKey === current!.rs.key && ui.nearStopText && (
                   <Alert kind="ok">{ui.nearStopText}</Alert>
                 )}
-                <div className="grid grid-cols-2 gap-2">
-                  <Button variant="success" size="lg" className="h-16 whitespace-normal text-lg leading-tight" disabled={!curLetters.length}
+                <div className={cn("grid gap-2", sheetMode === "compact" ? "grid-cols-3" : "grid-cols-2")}>
+                  <Button variant="success" size="lg" className="h-16 whitespace-normal px-2 text-base leading-tight" disabled={!curLetters.length}
                     onClick={() => curLetters.length > 1 ? setConfirmDeliver(current!.rs.key) : mark(curLetters, "delivered")}>
                     {curLetters.length > 1 ? `Entregar todas (${curLetters.length})` : "Entregue"}
                   </Button>
-                  <Button variant="danger" size="lg" className="h-16 whitespace-normal text-lg leading-tight" disabled={!curLetters.length} onClick={() => setReasonOpen(true)}>Não consegui</Button>
-                  {sheetMode !== "compact" && <>
-                  <Button variant="secondary" size="lg" className="h-14 whitespace-normal" disabled={!curLetters.length} onClick={() => mark(curLetters, "postponed")}><SkipForward className="h-5 w-5" /> Pular</Button>
-                  <Button variant="secondary" size="lg" className="h-14 whitespace-normal" onClick={() => setDetail(!detail)}><Info className="h-5 w-5" /> Detalhes</Button></>}
+                  <Button variant="danger" size="lg" className="h-16 whitespace-normal px-2 text-base leading-tight" disabled={!curLetters.length} onClick={() => setReasonOpen(true)}>Não consegui</Button>
+                  <Button variant="secondary" size="lg" className={cn("whitespace-normal px-2 text-base", sheetMode === "compact" ? "h-16" : "h-14")} disabled={!curLetters.length} onClick={() => mark(curLetters, "postponed")}><SkipForward className="h-5 w-5" /> Pular</Button>
+                  {sheetMode !== "compact" && <Button variant="secondary" size="lg" className="h-14 whitespace-normal" onClick={() => setDetail(!detail)}><Info className="h-5 w-5" /> Detalhes</Button>}
                 </div>
                 {detail && <Details stop={cur} onMark={(l, s) => mark([l], s)} nav={nav} batchId={batchId!} reload={reload} />}
               </>
@@ -301,7 +300,7 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
               </>)}
               {sheetMode !== "compact" && <>
               <Button variant="ghost" onClick={undo}><Undo2 className="h-5 w-5" /> Desfazer</Button>
-              <Button variant="ghost" onClick={() => nav("/entregas")}><ListChecks className="h-5 w-5" /> Todas as entregas</Button></>}
+              <Button variant="ghost" onClick={() => nav("/entregas")}><ListChecks className="h-5 w-5" /> Entregas</Button></>}
             </div>
             {navigating && st && <div className="text-center text-xs muted">{fmtDist(st.total - st.progress)} restantes · {st.stopsLeft} parada(s) · GPS ±{Math.round(st.accuracy)} m</div>}
             {route && !navigating && <div className="text-center text-xs muted">{stopsDone}/{items.length} paradas · {fmtDist(route.totalDistance)} · {fmtTime(route.totalTime)} (estimativa)</div>}
