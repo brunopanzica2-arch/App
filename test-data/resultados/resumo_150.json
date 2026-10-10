@@ -1,0 +1,250 @@
+{
+ "open": {
+  "modo": "open",
+  "paradas_entrada": 150,
+  "paradas_roteadas": 150,
+  "excluidas_snap": {},
+  "excluidas_factibilidade": {},
+  "cartas_roteadas": 300,
+  "distancia_km": 15.527,
+  "tempo_total_min": 201.9,
+  "tempo_viagem_min": 64.4,
+  "tempo_servico_min": 137.5,
+  "tempo_acesso_min": 0.0,
+  "eta_igual_avaliacao": true,
+  "por_bairro": {
+   "Vila Nova": {
+    "paradas": 40,
+    "cartas": 79
+   },
+   "Centro": {
+    "paradas": 60,
+    "cartas": 120
+   },
+   "Paquetá": {
+    "paradas": 50,
+    "cartas": 101
+   }
+  },
+  "snap": {
+   "max_m": 0.0,
+   "revisar_>30m_ou_flags": 0,
+   "confianca": {
+    "alta": 150
+   }
+  },
+  "melhor_estrategia": "path_cheapest_arc",
+  "candidatos": [
+   {
+    "strategy": "nearest_neighbor_baseline",
+    "time_s": 12699.5,
+    "distance_m": 17958.3,
+    "cost_s": 12699.5,
+    "feasible": true,
+    "solve_ms": 1
+   },
+   {
+    "strategy": "baseline:ordem_importada",
+    "time_s": 16967.2,
+    "distance_m": 35495.9,
+    "cost_s": 16967.2,
+    "feasible": true,
+    "solve_ms": 0
+   },
+   {
+    "strategy": "baseline:alfabetica",
+    "time_s": 24816.9,
+    "distance_m": 68291.7,
+    "cost_s": 24816.9,
+    "feasible": true,
+    "solve_ms": 0
+   },
+   {
+    "strategy": "baseline:bairro_agrupado",
+    "time_s": 17682.4,
+    "distance_m": 38500.3,
+    "cost_s": 17682.4,
+    "feasible": true,
+    "solve_ms": 0
+   },
+   {
+    "strategy": "path_cheapest_arc",
+    "time_s": 12112.9,
+    "distance_m": 15526.6,
+    "cost_s": 12112.9,
+    "feasible": true,
+    "solve_ms": 10005
+   },
+   {
+    "strategy": "local_cheapest_insertion",
+    "time_s": 12146.9,
+    "distance_m": 15773.1,
+    "cost_s": 12146.9,
+    "feasible": true,
+    "solve_ms": 10002
+   },
+   {
+    "strategy": "christofides",
+    "time_s": 12133.6,
+    "distance_m": 15612.6,
+    "cost_s": 12133.6,
+    "feasible": true,
+    "solve_ms": 10002
+   }
+  ],
+  "tempos_calculo_s": {
+   "matriz": 1.71,
+   "solver": 30.05,
+   "geometria": 0.59
+  },
+  "malha": {
+   "versao": "462dd3ef7b847815",
+   "nos": 41598,
+   "arestas": 48747
+  },
+  "perfil": {
+   "ride_speed_kmh": 15,
+   "walk_speed_kmh": 4.5,
+   "steps_speed_factor": 0.5,
+   "sidewalk_mode": "walk",
+   "steps_policy": "penalize",
+   "steps_penalty_s": 30.0,
+   "private_policy": "penalize",
+   "private_penalty_s": 120.0,
+   "barrier_policy": "penalize",
+   "barrier_penalty_s": 20.0,
+   "contraflow_factor": 1.0,
+   "cross_pedestrian_areas": true
+  },
+  "atendimento": {
+   "base_s": 45.0,
+   "por_carta_extra_s": 10.0,
+   "acesso": "2 x distância do snap / velocidade a pé"
+  },
+  "aviso": "Estimativas sobre posições TESTE; não são tempos reais de entrega."
+ },
+ "circular": {
+  "modo": "circular",
+  "paradas_entrada": 150,
+  "paradas_roteadas": 150,
+  "excluidas_snap": {},
+  "excluidas_factibilidade": {},
+  "cartas_roteadas": 300,
+  "distancia_km": 17.565,
+  "tempo_total_min": 210.0,
+  "tempo_viagem_min": 72.5,
+  "tempo_servico_min": 137.5,
+  "tempo_acesso_min": 0.0,
+  "eta_igual_avaliacao": true,
+  "por_bairro": {
+   "Vila Nova": {
+    "paradas": 40,
+    "cartas": 79
+   },
+   "Centro": {
+    "paradas": 60,
+    "cartas": 120
+   },
+   "Paquetá": {
+    "paradas": 50,
+    "cartas": 101
+   }
+  },
+  "snap": {
+   "max_m": 0.0,
+   "revisar_>30m_ou_flags": 0,
+   "confianca": {
+    "alta": 150
+   }
+  },
+  "melhor_estrategia": "path_cheapest_arc",
+  "candidatos": [
+   {
+    "strategy": "nearest_neighbor_baseline",
+    "time_s": 13370.6,
+    "distance_m": 20754.5,
+    "cost_s": 13370.6,
+    "feasible": true,
+    "solve_ms": 1
+   },
+   {
+    "strategy": "baseline:ordem_importada",
+    "time_s": 17534.1,
+    "distance_m": 37858.1,
+    "cost_s": 17534.1,
+    "feasible": true,
+    "solve_ms": 0
+   },
+   {
+    "strategy": "baseline:alfabetica",
+    "time_s": 25560.1,
+    "distance_m": 71356.7,
+    "cost_s": 25560.1,
+    "feasible": true,
+    "solve_ms": 0
+   },
+   {
+    "strategy": "baseline:bairro_agrupado",
+    "time_s": 18306.9,
+    "distance_m": 41102.3,
+    "cost_s": 18306.9,
+    "feasible": true,
+    "solve_ms": 0
+   },
+   {
+    "strategy": "path_cheapest_arc",
+    "time_s": 12599.2,
+    "distance_m": 17565.2,
+    "cost_s": 12599.2,
+    "feasible": true,
+    "solve_ms": 10001
+   },
+   {
+    "strategy": "local_cheapest_insertion",
+    "time_s": 12714.5,
+    "distance_m": 18015.7,
+    "cost_s": 12714.5,
+    "feasible": true,
+    "solve_ms": 10001
+   },
+   {
+    "strategy": "christofides",
+    "time_s": 12638.8,
+    "distance_m": 17730.1,
+    "cost_s": 12638.8,
+    "feasible": true,
+    "solve_ms": 10002
+   }
+  ],
+  "tempos_calculo_s": {
+   "matriz": 1.48,
+   "solver": 30.05,
+   "geometria": 0.62
+  },
+  "malha": {
+   "versao": "462dd3ef7b847815",
+   "nos": 41598,
+   "arestas": 48747
+  },
+  "perfil": {
+   "ride_speed_kmh": 15,
+   "walk_speed_kmh": 4.5,
+   "steps_speed_factor": 0.5,
+   "sidewalk_mode": "walk",
+   "steps_policy": "penalize",
+   "steps_penalty_s": 30.0,
+   "private_policy": "penalize",
+   "private_penalty_s": 120.0,
+   "barrier_policy": "penalize",
+   "barrier_penalty_s": 20.0,
+   "contraflow_factor": 1.0,
+   "cross_pedestrian_areas": true
+  },
+  "atendimento": {
+   "base_s": 45.0,
+   "por_carta_extra_s": 10.0,
+   "acesso": "2 x distância do snap / velocidade a pé"
+  },
+  "aviso": "Estimativas sobre posições TESTE; não são tempos reais de entrega."
+ }
+}
