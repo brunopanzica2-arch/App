@@ -79,6 +79,7 @@ export function normalizeAddress(street?: string | null, number?: string | null,
   const issues: string[] = [];
   const [type, name] = splitStreet(street);
   if (!name) errors.push("Logradouro ausente");
+  else if (/^\d+$/.test(name) && !type) errors.push("Logradouro é só um número: coluna deslocada ou mapeamento errado?");
   const [num, ni] = normalizeNumber(number);
   if (ni) issues.push(ni);
   const [cepN, ci] = normalizeCep(cep);

@@ -1,0 +1,35 @@
+ RUN  v5.0.3 /home/user/App/mobile
+ ❯ tests/repro_import211.test.ts (2 tests | 2 failed) 97ms
+   ❯ regressão — linha sem cabeçalho (2)
+     × 'Rua Itororó;118;Centro;Santos;SP' vira logradouro/número/bairro/município/UF sem mapear nada 39ms
+     × 211 linhas não podem virar 28 inseridas + 183 'duplicadas' (identificador mapeado numa coluna repetida) 55ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  tests/repro_import211.test.ts > regressão — linha sem cabeçalho > 'Rua Itororó;118;Centro;Santos;SP' vira logradouro/número/bairro/município/UF sem mapear nada
+Error: Mapeie a coluna de logradouro ou de endereço completo.
+ ❯ mapRows src/core/importer.ts:134:55
+    132|
+    133| export function mapRows(t: Table, mapping: Record<string, string | nul…
+    134|   if (!mapping.street && !mapping.full_address) throw new Error("Mapei…
+       |                                                       ^
+    135|   const idx = Object.fromEntries(t.headers.map((h, i) => [h, i]));
+    136|   const out: MappedRow[] = [];
+ ❯ tests/repro_import211.test.ts:21:18
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+ FAIL  tests/repro_import211.test.ts > regressão — linha sem cabeçalho > 211 linhas não podem virar 28 inseridas + 183 'duplicadas' (identificador mapeado numa coluna repetida)
+AssertionError: expected 28 to be 211 // Object.is equality
+- Expected
++ Received
+- 211
++ 28
+ ❯ tests/repro_import211.test.ts:29:31
+     27|     const bad = { ...suggestMapping(t.headers), street: "coluna_1", nu…
+     28|     const b = await commitImport(t, bad, "x", "2026-10-10", "text");
+     29|     expect(b.report.inserted).toBe(211);
+       |                               ^
+     30|     expect(b.report.duplicates.length).toBe(0);
+     31|   });
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+ Test Files  1 failed (1)
+      Tests  2 failed (2)
+   Start at  16:57:22
+   Duration  682ms (transform 46%, import 28%, tests 24%, worker 1%)

@@ -247,6 +247,35 @@ export async function recordEvent(letterId: string, status: LetterStatus, routeI
   return ev;
 }
 
+/** Resumo do que "Desfazer importação" apagaria (para confirmar com o usuário). */
+export async function batchUndoSummary(batchId: string) {
+  const letters = await db.letters.where("batchId").equals(batchId).toArray();
+  const done = letters.filter((l) => !["pending", "in_route"].includes(l.status)).length;
+  return { letters: letters.length, withDeliveryRecords: done, events: await db.events.where("batchId").equals(batchId).count(), routes: await db.routes.where("batchId").equals(batchId).count() };
+}
+
+/**
+ * Desfaz uma importação: apaga as cartas, rotas, eventos e a fila de geocodificação DESTE lote e o próprio lote, numa transação.
+ * Outros lotes e os endereços já confirmados (portarias, pinos) NÃO são tocados. Antes de apagar, guarda um instantâneo
+ * (mesmo mecanismo da restauração) para poder voltar atrás.
+ */
+export async function undoBatch(batchId: string) {
+  const batch = await db.batches.get(batchId);
+  if (!batch) throw new Error("Lote não encontrado.");
+  await db.snapshots.put({ id: uid(), at: new Date().toISOString(), reason: `antes de desfazer a importação "${batch.reference}"`, json: await snapshotJson() });
+  const sum = await batchUndoSummary(batchId);
+  await db.transaction("rw", [db.batches, db.letters, db.routes, db.events, db.geojobs], async () => {
+    await db.letters.where("batchId").equals(batchId).delete();
+    await db.events.where("batchId").equals(batchId).delete();
+    await db.routes.where("batchId").equals(batchId).delete();
+    await db.geojobs.where("batchId").equals(batchId).delete();
+    await db.batches.delete(batchId);
+  });
+  const st = await getSettings();
+  if (st.currentBatch === batchId) await saveSettings({ currentBatch: null });
+  return sum;
+}
+
 /** Observação do entregador sobre uma carta (ex.: "portão azul", "voltar às 15h"). Não altera o status. */
 export async function setFieldNote(letterId: string, text: string) {
   const l = await db.letters.get(letterId);

@@ -14,7 +14,9 @@ export interface Batch {
   filename?: string;
   original: string; // entrada original preservada
   importHash?: string; // SHA-256 do conteúdo importado (detecta reimportação)
-  report: { inserted: number; duplicates: { row: number; externalId: string }[]; withErrors: { row: number; errors: string[] }[] };
+  report: { inserted: number; duplicates: { row: number; externalId: string; reason?: string }[]; withErrors: { row: number; errors: string[] }[]; warnings?: string[] };
+  /** esquema inferido na importação (campo → coluna), confiança e avisos */
+  schema?: { hasHeader: boolean; delimiter: string | null; confidence: number; columns: { index: number; field: string | null; score: number }[] };
 }
 
 export interface Letter {
@@ -38,6 +40,8 @@ export interface Letter {
   addressKey: string | null;
   /** observação registrada pelo entregador em campo (separada de `notes`, que vem da importação) */
   fieldNote?: string | null;
+  /** linha ORIGINAL da importação, intacta (auditoria/reversão) */
+  raw?: string[];
 }
 
 export interface Candidate {
