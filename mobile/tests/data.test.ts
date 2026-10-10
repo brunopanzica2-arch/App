@@ -150,3 +150,24 @@ describe("migração IndexedDB v1 -> v3 e v2 -> v3", () => {
     expect((await db.letters.get("l2"))!.addressKey).toBe("k");
   });
 });
+
+describe("V3: observação de campo", () => {
+  it("grava, aparece na exportação (com neutralização de fórmula) e sobrevive a backup/restauração", async () => {
+    await import300();
+    const l = (await db.letters.toArray())[5];
+    const { setFieldNote } = await import("../src/core/service");
+    await setFieldNote(l.id, "  =HYPERLINK(\"http://x\")  portão azul ");
+    expect((await db.letters.get(l.id))!.fieldNote).toBe('=HYPERLINK("http://x")  portão azul');
+    const { headers, rows } = await exportRows(l.batchId);
+    const col = headers.indexOf("observacao_campo");
+    expect(col).toBeGreaterThan(-1);
+    const row = rows.find((r) => r[2] === l.row)!;
+    expect(String(row[col]).startsWith("'=")).toBe(true); // neutralizado na planilha; o original permanece no banco
+    const json = await backupJson();
+    await db.delete(); await db.open();
+    await restoreJson(json, { mode: "replace" });
+    expect((await db.letters.get(l.id))!.fieldNote).toContain("portão azul");
+    await setFieldNote(l.id, "");
+    expect((await db.letters.get(l.id))!.fieldNote).toBeNull();
+  });
+});

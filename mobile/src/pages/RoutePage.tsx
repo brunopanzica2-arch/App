@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Nav } from "../App";
 import { db, type Letter, type LetterStatus } from "../core/db";
 import {
-  activateRoute, cancelPlan, lastServedPoint, planBatch, recordEvent, stopsOf, TERMINAL, undoLastEvent,
+  activateRoute, cancelPlan, lastServedPoint, planBatch, recordEvent, setFieldNote, stopsOf, TERMINAL, undoLastEvent,
 } from "../core/service";
 import { Button } from "../ui/button";
 import { useAsync, useCurrentBatch } from "../ui/hooks";
@@ -231,7 +231,7 @@ export function RoutePage({ routeId, nav }: { routeId?: string; nav: Nav }) {
           {open && (
             <div className="space-y-3 border-t border-app p-3">
               <div className="flex flex-wrap gap-2 text-xs">
-                <Badge color={["exact", "manual"].includes(sel.stop!.address.precision) ? "#16a34a" : "#b45309"}>{PRECISION_LABEL[sel.stop!.address.precision]}</Badge>
+                <Badge color={sel.stop!.trust.approximate ? "#b45309" : "#16a34a"}>{sel.stop!.trust.label}</Badge>
                 <Badge color={CONF_COLOR[sel.confidence || "alta"]}>Posição na via: {Math.round(sel.snapDistance)} m ({sel.confidence ?? "—"})</Badge>
                 {(sel.flags || []).includes("acesso_cruza_outra_via") && <Badge color="#dc2626">Acesso cruza outra via — confira o lado</Badge>}
                 {(sel.flags || []).includes("via_mais_proxima_desconectada") && <Badge color="#dc2626">Via mais próxima não conectada</Badge>}
@@ -244,6 +244,9 @@ export function RoutePage({ routeId, nav }: { routeId?: string; nav: Nav }) {
                     <Badge color={l.status === "delivered" ? "#16a34a" : TERMINAL.includes(l.status) ? "#dc2626" : l.status === "postponed" ? "#6b7280" : "#7c3aed"}>{STATUS_LABEL[l.status]}</Badge>
                   </div>
                   {l.notes && <div className="text-xs muted">Obs.: {l.notes}</div>}
+                  <input aria-label={`Observação da carta ${l.externalId || l.row}`} placeholder="Observação (opcional)" maxLength={300} defaultValue={l.fieldNote ?? ""}
+                    className="mt-1 w-full rounded-lg border border-app bg-transparent px-2 py-1 text-sm"
+                    onBlur={(e) => { if ((e.target.value.trim() || null) !== (l.fieldNote ?? null)) setFieldNote(l.id, e.target.value).then(reload); }} />
                   <div className="mt-2 grid grid-cols-2 gap-2">
                     <Button variant="success" disabled={!!saving[l.id] || l.status === "delivered"} onClick={() => mark(l, "delivered")}>Entregue</Button>
                     <Button variant="danger" disabled={!!saving[l.id]} onClick={() => mark(l, "not_delivered")}>Não entregue</Button>

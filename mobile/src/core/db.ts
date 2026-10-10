@@ -36,6 +36,8 @@ export interface Letter {
   excluded: boolean;
   exclusionReason?: string;
   addressKey: string | null;
+  /** observação registrada pelo entregador em campo (separada de `notes`, que vem da importação) */
+  fieldNote?: string | null;
 }
 
 export interface Candidate {

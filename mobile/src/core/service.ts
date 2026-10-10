@@ -247,6 +247,13 @@ export async function recordEvent(letterId: string, status: LetterStatus, routeI
   return ev;
 }
 
+/** Observação do entregador sobre uma carta (ex.: "portão azul", "voltar às 15h"). Não altera o status. */
+export async function setFieldNote(letterId: string, text: string) {
+  const l = await db.letters.get(letterId);
+  if (!l) throw new Error("Carta não encontrada.");
+  await db.letters.update(letterId, { fieldNote: text.trim().slice(0, 300) || null });
+}
+
 export async function lastServedPoint(route: Route) {
   const evs = (await db.events.where("batchId").equals(route.batchId).toArray()).filter((e) => e.routeId === route.id).sort((a, b) => b.at.localeCompare(a.at));
   if (!evs.length) return null;
@@ -290,10 +297,10 @@ export async function exportRows(batchId: string) {
   const routes = (await db.routes.where("batchId").equals(batchId).toArray()).sort((a, b) => b.version - a.version);
   const seq = new Map((routes[0]?.stops || []).map((s) => [s.key, s.seq]));
   const addrs = new Map((await db.addresses.toArray()).map((a) => [a.key, a]));
-  const headers = ["identificador", "destinatario", "linha", "logradouro", "numero", "complemento", "bairro", "cep", "status", "precisao", "endereco_normalizado", "parada"];
+  const headers = ["identificador", "destinatario", "linha", "logradouro", "numero", "complemento", "bairro", "cep", "status", "precisao", "endereco_normalizado", "parada", "observacao_campo"];
   const rows = letters.map((l) => {
     const a = l.addressKey ? addrs.get(l.addressKey) : undefined;
-    return ([l.externalId ?? "", l.recipient ?? "", l.row, l.street ?? "", l.number ?? "", l.complement ?? "", l.neighborhood ?? "", l.cep ?? "", l.status, a?.precision ?? "pendente", a?.display ?? "", l.addressKey ? seq.get(l.addressKey) ?? "" : ""] as (string | number)[]).map(safeCell);
+    return ([l.externalId ?? "", l.recipient ?? "", l.row, l.street ?? "", l.number ?? "", l.complement ?? "", l.neighborhood ?? "", l.cep ?? "", l.status, a?.precision ?? "pendente", a?.display ?? "", l.addressKey ? seq.get(l.addressKey) ?? "" : "", l.fieldNote ?? ""] as (string | number)[]).map(safeCell);
   });
   return { headers, rows };
 }
