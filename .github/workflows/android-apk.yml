@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
   push:
     paths: ["mobile/**", "test-data/**", ".github/workflows/android-apk.yml"]
+    branches: ["**"]
     tags: ["mobile-v*"]
 
 jobs:
