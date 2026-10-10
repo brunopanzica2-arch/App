@@ -25,6 +25,8 @@ export interface SolveInput {
   seed?: number;
   compRank?: Record<number, number>;
   baselines?: Record<string, number[]>;
+  /** rota anterior (índices atuais): ponto de partida da busca em replanejamentos; paradas novas entram por inserção mais barata */
+  warm?: number[];
   shouldStop?: () => boolean;
 }
 
@@ -408,10 +410,31 @@ export function solve(inp: SolveInput): { order: number[]; best: Candidate; cand
   add("cheapest_insertion+local_search", lsIns, t0);
   const lsNN = localSearch(nn);
   add("nearest_neighbor+local_search", lsNN, t0);
+  // 2b) partida a quente: a rota anterior (sem as paradas que saíram) + inserção das novas
+  let lsWarm: number[] | null = null;
+  if (inp.warm?.length) {
+    t0 = performance.now();
+    const stopSet = new Set(stops);
+    const w = inp.warm.filter((v, k, a) => stopSet.has(v) && a.indexOf(v) === k);
+    const have = new Set(w);
+    for (const j of stops) {
+      if (have.has(j)) continue;
+      let bp = 0, bd = Infinity;
+      for (let p = 0; p <= w.length; p++) {
+        const a = p === 0 ? start : w[p - 1], b = p < w.length ? w[p] : end;
+        const delta = arc(a, j) + (b != null ? arc(j, b) - arc(a, b) : 0);
+        if (delta < bd) { bd = delta; bp = p; }
+      }
+      w.splice(bp, 0, j);
+    }
+    lsWarm = localSearch(w);
+    add("warm_start+local_search", lsWarm, t0);
+  }
 
   // 3) busca local iterada com várias sementes; para por tempo ou estagnação
   const baseSeed = inp.seed ?? 12345;
   let best = searchCost(lsIns) <= searchCost(lsNN) ? lsIns : lsNN;
+  if (lsWarm && searchCost(lsWarm) < searchCost(best)) best = lsWarm;
   let bestC = searchCost(best);
   let iters = 0, sinceImprove = 0;
   for (let seedK = 0; !stop() && best.length >= 8 && sinceImprove < 400; seedK++) {

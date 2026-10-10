@@ -445,6 +445,19 @@ export interface Leg {
   flags: Record<string, number>;
 }
 
+/** Matriz já calculada, indexada pela ASSINATURA do ponto na malha (aresta + posição), não pela ordem das paradas. */
+export interface MatrixCacheData {
+  key: string; // hash da malha + perfil
+  index: Map<string, number>;
+  n: number;
+  T: Float64Array;
+  D: Float64Array;
+}
+export interface MatrixStats { total: number; cleanPoints: number; dirtyPoints: number; treesRun: number; fullTrees: number; reusedPairs: number }
+
+/** Assinatura estável do ponto encaixado: mesma aresta e mesma fração => mesmas distâncias. */
+export const snapSig = (s: Snap) => `${s.edge}:${Math.round(s.t * 1e7)}`;
+
 /** Grafo da consulta: malha + nós virtuais nas paradas. */
 export class Solver {
   readonly r: Router;
@@ -581,6 +594,55 @@ export class Solver {
       onProgress?.((i + 1) / k);
     }
     return { T, D };
+  }
+
+  /**
+   * Como `matrices()`, reaproveitando `cache` (V3 §12). Mover/acrescentar uma parada invalida só a LINHA e a COLUNA dela:
+   * os pares entre pontos inalterados vêm do cache (nós virtuais só subdividem arestas, não mudam custos).
+   * Pontos novos/alterados ("dirty"): árvore completa (linha); pontos inalterados: árvore parando nos nós dirty (coluna).
+   */
+  matricesCached(sigs: string[], cache: MatrixCacheData | null, key: string, onProgress?: (p: number) => void, shouldStop?: () => boolean):
+    { T: number[][]; D: number[][]; stats: MatrixStats; cache: MatrixCacheData } {
+    const k = this.nodes.length;
+    const valid = cache && cache.key === key ? cache : null;
+    const idx = (i: number) => (valid ? valid.index.get(sigs[i]) : undefined);
+    const clean = Array.from({ length: k }, (_, i) => idx(i) !== undefined);
+    const dirtyIdx = clean.map((c, i) => (c ? -1 : i)).filter((i) => i >= 0);
+    const dirtyNodes = [...new Set(dirtyIdx.map((i) => this.nodes[i]))];
+    const T: number[][] = Array.from({ length: k }, () => new Array(k).fill(0));
+    const D: number[][] = Array.from({ length: k }, () => new Array(k).fill(0));
+    const stats: MatrixStats = { total: k * k, cleanPoints: k - dirtyIdx.length, dirtyPoints: dirtyIdx.length, treesRun: 0, fullTrees: 0, reusedPairs: 0 };
+    for (let i = 0; i < k; i++) {
+      if (shouldStop?.()) throw new Error("Cálculo cancelado.");
+      const ci = clean[i];
+      if (!ci || dirtyNodes.length) {
+        // linha dirty => todos os destinos; linha limpa => só os destinos dirty
+        const tr = this.tree(i, ci ? dirtyNodes : this.nodes);
+        stats.treesRun++;
+        if (!ci) stats.fullTrees++;
+        for (let j = 0; j < k; j++) {
+          if (ci && clean[j]) continue;
+          const same = this.nodes[j] === this.nodes[i];
+          T[i][j] = same ? 0 : tr.time[this.nodes[j]];
+          D[i][j] = same ? 0 : tr.meters[this.nodes[j]];
+        }
+      }
+      if (ci) {
+        for (let j = 0; j < k; j++) {
+          if (!clean[j]) continue;
+          const a = idx(i)!, b = idx(j)!;
+          T[i][j] = valid!.T[a * valid!.n + b];
+          D[i][j] = valid!.D[a * valid!.n + b];
+          stats.reusedPairs++;
+        }
+      }
+      onProgress?.((i + 1) / k);
+    }
+    const index = new Map<string, number>();
+    sigs.forEach((sg, i) => { if (!index.has(sg)) index.set(sg, i); });
+    const n = k, Tf = new Float64Array(n * n), Df = new Float64Array(n * n);
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { Tf[i * n + j] = T[i][j]; Df[i * n + j] = D[i][j]; }
+    return { T, D, stats, cache: { key, index, n, T: Tf, D: Df } };
   }
 
   /** Geometria real do trecho i -> j, agrupada por modo e sinalizações. */

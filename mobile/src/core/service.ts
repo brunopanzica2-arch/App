@@ -179,7 +179,7 @@ export async function planBatch(batchId: string, o: PlanOptions, onProgress?: (s
   if (!remaining.length) throw new Error("Não há paradas pendentes neste lote.");
   const res = await runPlan({
     start: o.start, end: o.end ?? null, mode: o.mode, strategy: o.strategy, profile: s.profile,
-    timeLimitMs: o.timeLimitMs, maxSnap: 150, snapReviewM: 30, fixedFirst: o.fixedFirst,
+    timeLimitMs: o.timeLimitMs, maxSnap: 150, snapReviewM: 30, fixedFirst: o.fixedFirst, cacheKey: batchId,
     stops: remaining.map((st) => {
       const pend = st.letters.filter(isPending).length;
       return {
@@ -205,7 +205,7 @@ export async function planBatch(batchId: string, o: PlanOptions, onProgress?: (s
       letters: remaining.filter((st) => !excludedKeys.has(st.key)).reduce((a, st) => a + st.letters.filter(isPending).length, 0),
       status: res.status === "partial" || notRouted > 0 ? "partial" : "complete", notRoutedLetters: notRouted,
       pendingStops: remaining.length, byMode: res.byMode, flags: res.flags, strategy: res.strategy, excluded: res.excluded,
-      snapReview: res.snapReview, accessTime: res.accessTime, timeBreakdown: res.timeBreakdown, originFlags: res.originFlags,
+      snapReview: res.snapReview, accessTime: res.accessTime, timeBreakdown: res.timeBreakdown, originFlags: res.originFlags, matrixStats: res.matrixStats,
       objectiveRule: "factibilidade > cobertura > tempo+penalidades > distância",
       note: "Tempos e distâncias são ESTIMATIVAS pela malha OSM de pedestres; não verificados em campo.",
     },
