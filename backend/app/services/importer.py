@@ -68,25 +68,51 @@ def _decode(content: bytes, encoding: str | None) -> str:
     raise ImportError_("Não foi possível decodificar o arquivo.")
 
 
+def _records(text: str, delimiter: str) -> list[list[str]]:
+    """RFC 4180: aspas, aspas duplicadas, delimitador e QUEBRA DE LINHA dentro de campo citado."""
+    rows = []
+    for r in csv.reader(io.StringIO(text, newline=""), delimiter=delimiter, quotechar='"', doublequote=True,
+                        strict=False):
+        cells = [c.replace("\r\n", "\n").replace("\r", "\n") for c in r]
+        cells = [c if "\n" in c else clean_spaces(c) for c in cells]
+        cells = ["\n".join(clean_spaces(x) for x in c.split("\n")) if "\n" in c else c for c in cells]
+        if any(x.strip() for x in cells):
+            rows.append(cells)
+    return rows
+
+
+def detect_delimiter(text: str, has_header: bool) -> str | None:
+    """Escolhe o separador pela contagem de CAMPOS por registro (respeitando aspas), não por linha."""
+    best = None
+    for d in (";", "\t", "|", ","):
+        recs = _records(text[:200_000], d)[:50]
+        if len(recs) < 1:
+            continue
+        widths = [len(r) for r in recs]
+        common = max(set(widths), key=widths.count)
+        share = widths.count(common) / len(widths)
+        if common < 2 or share < 0.8:
+            continue
+        if d == "," and not has_header:
+            continue  # vírgula sem cabeçalho é ambígua com "Rua X, 123"
+        if best is None or (share, common) > best[1:]:
+            best = (d, share, common)
+    return best[0] if best else None
+
+
 def parse_delimited(text: str, delimiter: str | None = None, has_header: bool = True) -> ParsedTable:
-    text = text.replace("\r\n", "\n").replace("\r", "\n")
-    lines = [ln for ln in text.split("\n") if ln.strip()]
-    if not lines:
+    text = text.lstrip("\ufeff")
+    if not text.strip():
         raise ImportError_("Conteúdo vazio.")
     if delimiter in (None, "", "auto"):
-        # ";", tab e "|" raramente aparecem em endereços; "," só é aceita como
-        # separador com cabeçalho e contagem constante (senão: uma coluna por linha).
-        sample = lines[:30]
-        delimiter = None
-        for d in (";", "\t", "|", ","):
-            counts = {ln.count(d) for ln in sample}
-            if min(counts) > 0 and (d != "," or (has_header and len(counts) == 1)):
-                delimiter = d
-                break
+        delimiter = detect_delimiter(text, has_header)
     if delimiter is None:
-        rows = [[ln] for ln in lines]  # uma coluna: endereço completo por linha
+        rows = [[clean_spaces(ln)] for ln in text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+                if ln.strip()]
     else:
-        rows = [[clean_spaces(c) for c in r] for r in csv.reader(io.StringIO("\n".join(lines)), delimiter=delimiter)]
+        rows = _records(text, delimiter)
+    if not rows:
+        raise ImportError_("Conteúdo vazio.")
     if has_header:
         headers, rows = rows[0], rows[1:]
     else:

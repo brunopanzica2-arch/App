@@ -150,12 +150,23 @@ export default function PlanPage() {
                 <table className="w-full text-sm">
                   <thead><tr className="muted text-left"><th>Estratégia</th><th>Tempo</th><th>Distância</th><th>Cálculo</th></tr></thead>
                   <tbody>{selected.candidates.map((c: any) => (
-                    <tr key={c.strategy} className={c.strategy === selected.metrics.chosen_strategy ? "font-bold text-brand" : ""}>
+                    <tr key={c.strategy} className={c.strategy === selected.metrics.chosen_strategy ? "font-bold text-brand" : c.feasible === false ? "text-problem line-through" : ""}>
                       <td>{c.strategy}</td><td>{fmtTime(c.time_s)}</td><td>{fmtDist(c.distance_m)}</td><td>{c.solve_ms} ms</td>
                     </tr>))}</tbody>
                 </table>
                 <p className="mt-2 text-xs muted">O OR-Tools busca uma boa solução dentro do tempo limite; não há garantia de ótimo global. {selected.metrics.estimates_note}</p>
               </Card>
+              {selected.metrics.status === "partial" && (
+                <Alert kind="error">
+                  <b>ROTA PARCIAL:</b> {selected.metrics.excluded_stops.length} de {selected.metrics.pending_stops_total} paradas
+                  ficaram fora por falta de caminho viável ou posição inválida. Elas NÃO estão incluídas no tempo/distância.
+                  <ul className="list-disc pl-4">{selected.metrics.excluded_stops.map((e: any) => <li key={e.stop_id}>{e.address}: {e.reason}</li>)}</ul>
+                </Alert>
+              )}
+              {selected.metrics.snap_review?.length > 0 && (
+                <Alert kind="warn">{selected.metrics.snap_review.length} parada(s) com posição a revisar (distância até a via, acesso cruzando outra via ou via mais próxima desconectada).
+                  Tempo de acesso a pé incluído: {fmtTime(selected.metrics.access_time_s)}.</Alert>
+              )}
               {selected.warnings.length > 0 && <Alert kind="warn"><ul className="list-disc pl-4">{selected.warnings.map((w: string, i: number) => <li key={i}>{w}</li>)}</ul></Alert>}
               <Button size="lg" onClick={activate} disabled={selected.status === "active"}><Play className="h-5 w-5" /> {selected.status === "active" ? "Rota ativa" : "Ativar e iniciar jornada"}</Button>
             </>

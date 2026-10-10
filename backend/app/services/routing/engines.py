@@ -42,6 +42,9 @@ class SnapInfo:
     snap_lon: float | None = None
     distance_m: float | None = None
     error: str | None = None
+    flags: list = field(default_factory=list)
+    confidence: str | None = None
+    nearest_any_m: float | None = None
 
 
 @dataclass
@@ -93,12 +96,19 @@ class InternalSession(MatrixSession):
         self.snaps = []
         snaps_ok = []
         self.index_map: dict[int, int] = {}
+        # o ponto 0 é a ORIGEM: ela elege a malha operacional (nós alcançáveis a partir dela)
+        reach = None
         for i, (lat, lon) in enumerate(points):
             try:
-                s = router.snap(lat, lon, max_snap_m)
+                if i == 0:
+                    s, reach = router.snap_origin(lat, lon, max_snap_m)
+                else:
+                    s = router.snap(lat, lon, max_snap_m, reach)
                 self.index_map[i] = len(snaps_ok)
                 snaps_ok.append(s)
-                self.snaps.append(SnapInfo(True, s.snap_lat, s.snap_lon, round(s.distance_m, 1)))
+                self.snaps.append(SnapInfo(True, s.snap_lat, s.snap_lon, round(s.distance_m, 1),
+                                           flags=list(s.flags), confidence=s.confidence,
+                                           nearest_any_m=s.nearest_any_m))
             except SnapError as exc:
                 self.snaps.append(SnapInfo(False, error=str(exc)))
         k = len(points)

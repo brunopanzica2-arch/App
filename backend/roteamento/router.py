@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 from scipy.sparse import csr_matrix
-from scipy.sparse.csgraph import connected_components, dijkstra
+from scipy.sparse.csgraph import breadth_first_order, connected_components, dijkstra
 
 from .config import TravelProfile
 from .network import (
@@ -41,10 +41,31 @@ class Snap:
     snap_lon: float
     distance_m: float
     node: int = -1      # nó do grafo da consulta (preenchido em RouteSolver)
+    # evidências do snapping (auditoria V2 — alerta C)
+    flags: list[str] = field(default_factory=list)
+    nearest_any_m: float | None = None   # via mais próxima, conectada ou não à origem
+    confidence: str = "alta"             # alta (<=15 m) | boa (<=30) | media (<=60) | baixa
+
+SNAP_LEVELS = ((15.0, "alta"), (30.0, "boa"), (60.0, "media"))
+
+
+def snap_confidence(d: float) -> str:
+    for lim, name in SNAP_LEVELS:
+        if d <= lim:
+            return name
+    return "baixa"
 
 
 class SnapError(ValueError):
     pass
+
+
+def _seg_cross(p1, p2, q1, q2) -> bool:
+    def o(a, b, c):
+        v = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+        return 0 if abs(v) < 1e-9 else (1 if v > 0 else -1)
+
+    return o(p1, p2, q1) * o(p1, p2, q2) < 0 and o(q1, q2, p1) * o(q1, q2, p2) < 0
 
 
 class Router:
@@ -112,17 +133,18 @@ class Router:
         self.w_fwd = self.edge_time * np.where(net.ecf_fwd, cf, 1.0) + self.edge_pen
         self.w_bwd = self.edge_time * np.where(net.ecf_bwd, cf, 1.0) + self.edge_pen
 
-        # ---- componente principal (fortemente conexa) da malha permitida
+        # ---- conectividade (diagnóstico). A malha operacional NÃO é mais "a maior
+        # componente": ela é eleita a partir da ORIGEM (ver reach_from / snap_origin).
         src, dst, _, _ = self._base_arcs()
+        self._g = csr_matrix((np.ones(len(src)), (src, dst)), shape=(n, n)) if len(src) else csr_matrix((n, n))
+        self._gT = self._g.T.tocsr()
         if len(src):
-            g = csr_matrix((np.ones(len(src)), (src, dst)), shape=(n, n))
-            _, labels = connected_components(g, directed=True, connection="strong")
-            sizes = np.bincount(labels)
+            _, labels = connected_components(self._g, directed=True, connection="strong")
             self.comp = labels
-            self.main_comp = int(np.argmax(sizes))
+            self.comp_size = np.bincount(labels)
         else:
             self.comp = np.zeros(n, dtype=int)
-            self.main_comp = 0
+            self.comp_size = np.array([n])
         self._build_index()
 
     # ------------------------------------------------------------ arcos
@@ -148,50 +170,136 @@ class Router:
         net = self.net
         for e in np.nonzero(self.edge_ok)[0]:
             a, b = net.ea[e], net.eb[e]
-            if self.comp[a] != self.main_comp or self.comp[b] != self.main_comp:
-                continue
             x0, x1 = sorted((self.x[a], self.x[b]))
             y0, y1 = sorted((self.y[a], self.y[b]))
             for cx in range(int(x0 // self.CELL), int(x1 // self.CELL) + 1):
                 for cy in range(int(y0 // self.CELL), int(y1 // self.CELL) + 1):
                     self.grid.setdefault((cx, cy), []).append(int(e))
 
-    def snap(self, lat: float, lon: float, max_dist: float) -> Snap:
-        """Projeta o ponto na aresta mais próxima da malha principal.
+    # ------------------------------------------------------------ alcance
 
-        A projeção é feita sobre o segmento real (não cria ligações novas);
-        se não houver malha a menos de `max_dist` metros, gera erro.
-        """
-        px, py = lon * self.kx * M_PER_DEG, lat * M_PER_DEG
+    def reach_from(self, nodes) -> np.ndarray:
+        """Máscara dos nós alcançáveis a partir de `nodes` respeitando sentidos de pedestre."""
+        mask = np.zeros(self.net.n_nodes, dtype=bool)
+        for v in nodes:
+            if not mask[v]:
+                mask[breadth_first_order(self._g, int(v), directed=True, return_predecessors=False)] = True
+        return mask
+
+    def reach_to(self, nodes) -> np.ndarray:
+        """Máscara dos nós que alcançam `nodes`."""
+        mask = np.zeros(self.net.n_nodes, dtype=bool)
+        for v in nodes:
+            if not mask[v]:
+                mask[breadth_first_order(self._gT, int(v), directed=True, return_predecessors=False)] = True
+        return mask
+
+    def exit_nodes(self, e: int) -> list[int]:
+        """Nós para onde se pode seguir a partir de um ponto no meio da aresta e."""
+        net = self.net
+        return ([net.eb[e]] if net.efwd[e] else []) + ([net.ea[e]] if net.ebwd[e] else [])
+
+    def edge_reachable(self, e: int, reach: np.ndarray) -> bool:
+        """Um ponto no meio da aresta e é alcançável se entramos por uma ponta permitida."""
+        net = self.net
+        return bool((net.efwd[e] and reach[net.ea[e]]) or (net.ebwd[e] and reach[net.eb[e]]))
+
+    # ------------------------------------------------------------ snapping
+
+    def _candidates(self, px: float, py: float, max_dist: float) -> list[tuple[float, int, float]]:
         cx, cy = int(px // self.CELL), int(py // self.CELL)
         rings = int(max_dist // self.CELL) + 1
-        best = None
+        out: list[tuple[float, int, float]] = []
         seen: set[int] = set()
-        for r in range(rings + 1):
-            for i in range(cx - r, cx + r + 1):
-                for j in range(cy - r, cy + r + 1):
-                    if max(abs(i - cx), abs(j - cy)) != r:
+        for i in range(cx - rings, cx + rings + 1):
+            for j in range(cy - rings, cy + rings + 1):
+                for e in self.grid.get((i, j), ()):
+                    if e in seen:
                         continue
-                    for e in self.grid.get((i, j), ()):
-                        if e in seen:
-                            continue
-                        seen.add(e)
-                        d, t = self._project(e, px, py)
-                        if best is None or d < best[0]:
-                            best = (d, e, t)
-            # tudo a menos de r*CELL já foi visto
-            if best is not None and best[0] <= r * self.CELL:
-                break
-        if best is None or best[0] > max_dist:
-            raise SnapError(
-                f"Ponto ({lat:.6f}, {lon:.6f}) está a mais de {max_dist:.0f} m "
-                "da malha de circulação acessível."
-            )
-        d, e, t = best
+                    seen.add(e)
+                    d, t = self._project(e, px, py)
+                    if d <= max_dist:
+                        out.append((d, e, t))
+        out.sort()
+        return out
+
+    def _crosses_other_edge(self, e: int, px: float, py: float, qx: float, qy: float) -> bool:
+        """O acesso em linha reta ponto->via atravessa outra via (lado oposto, canal, quadra)?"""
+        net = self.net
+        x0, x1 = sorted((px, qx))
+        y0, y1 = sorted((py, qy))
+        ends = {net.ea[e], net.eb[e]}
+        seen: set[int] = set()
+        for i in range(int(x0 // self.CELL), int(x1 // self.CELL) + 1):
+            for j in range(int(y0 // self.CELL), int(y1 // self.CELL) + 1):
+                for f in self.grid.get((i, j), ()):
+                    if f == e or f in seen:
+                        continue
+                    seen.add(f)
+                    a, b = net.ea[f], net.eb[f]
+                    if a in ends or b in ends:
+                        continue
+                    if _seg_cross((px, py), (qx, qy), (self.x[a], self.y[a]), (self.x[b], self.y[b])):
+                        return True
+        return False
+
+    def _make_snap(self, lat, lon, d, e, t, px, py, nearest_any) -> Snap:
         a, b = self.net.ea[e], self.net.eb[e]
         sl = self.net.lat[a] + t * (self.net.lat[b] - self.net.lat[a])
         so = self.net.lon[a] + t * (self.net.lon[b] - self.net.lon[a])
-        return Snap(lat, lon, e, t, sl, so, d)
+        qx, qy = self.x[a] + t * (self.x[b] - self.x[a]), self.y[a] + t * (self.y[b] - self.y[a])
+        flags = []
+        if d > 1.0 and self._crosses_other_edge(e, px, py, qx, qy):
+            flags.append("acesso_cruza_outra_via")
+        if nearest_any is not None and nearest_any + 10.0 < d:
+            flags.append("via_mais_proxima_desconectada")
+        conf = snap_confidence(d)
+        if flags and conf in ("alta", "boa"):
+            conf = "media"
+        return Snap(lat, lon, e, t, sl, so, d, flags=flags, nearest_any_m=nearest_any, confidence=conf)
+
+    def snap(self, lat: float, lon: float, max_dist: float, reach: np.ndarray | None = None) -> Snap:
+        """Projeta o ponto no trecho real mais próximo (sem criar ligações novas).
+
+        Com `reach` (nós alcançáveis a partir da origem), só aceita trechos onde o ponto é
+        alcançável; se a via mais próxima não for, isso fica registrado em `flags`.
+        """
+        px, py = lon * self.kx * M_PER_DEG, lat * M_PER_DEG
+        cands = self._candidates(px, py, max_dist)
+        if not cands:
+            raise SnapError(f"Ponto ({lat:.6f}, {lon:.6f}) está a mais de {max_dist:.0f} m "
+                            "da malha de circulação acessível.")
+        nearest_any = cands[0][0]
+        for d, e, t in cands:
+            if reach is None or self.edge_reachable(e, reach):
+                return self._make_snap(lat, lon, d, e, t, px, py, nearest_any)
+        raise SnapError(f"Há vias a {nearest_any:.0f} m, mas nenhuma conectada à origem por caminho "
+                        "de pedestre num raio de {:.0f} m.".format(max_dist))
+
+    def snap_origin(self, lat: float, lon: float, max_dist: float, slack_m: float = 30.0) -> tuple[Snap, np.ndarray]:
+        """Elege a malha operacional a partir da ORIGEM: entre os trechos até `slack_m` além do
+        mais próximo, escolhe o que alcança mais nós (evita prender a origem num beco de mão
+        única) e devolve a máscara de alcance."""
+        px, py = lon * self.kx * M_PER_DEG, lat * M_PER_DEG
+        cands = self._candidates(px, py, max_dist)
+        if not cands:
+            raise SnapError(f"Origem ({lat:.6f}, {lon:.6f}) está a mais de {max_dist:.0f} m da malha.")
+        best = None
+        for d, e, t in cands:
+            if d > cands[0][0] + slack_m:
+                break
+            reach = self.reach_from(self.exit_nodes(e))
+            size = int(reach.sum())
+            if best is None or size > best[0]:
+                best = (size, d, e, t, reach)
+        size, d, e, t, reach = best
+        sn = self._make_snap(lat, lon, d, e, t, px, py, cands[0][0])
+        # o próprio trecho da origem é alcançável a partir dela
+        reach[self.net.ea[e]] |= bool(self.net.ebwd[e])
+        reach[self.net.eb[e]] |= bool(self.net.efwd[e])
+        if size < 0.01 * self.net.n_nodes:
+            sn.flags.append("origem_em_trecho_isolado")
+        return sn, reach
 
     def _project(self, e: int, px: float, py: float) -> tuple[float, float]:
         a, b = self.net.ea[e], self.net.eb[e]

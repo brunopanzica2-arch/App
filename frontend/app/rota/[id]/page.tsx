@@ -108,6 +108,7 @@ export default function OperationalRoute() {
   return (
     <AppShell title={`Jornada · v${route.version}`} wide>
       {offlineCopy && <div className="mb-2"><Alert kind="warn">Sem conexão: exibindo cópia local salva em {new Date(offlineCopy).toLocaleString("pt-BR")}. Registros ficam na fila.</Alert></div>}
+      {route.metrics?.status === "partial" && <div className="mb-2"><Alert kind="error">ROTA PARCIAL: {route.metrics.excluded_stops.length} parada(s) fora do roteiro (sem caminho viável/posição inválida). Veja os avisos abaixo.</Alert></div>}
       {route.status !== "active" && <div className="mb-2"><Alert kind="info">Esta versão está “{route.status}”. Rotas superadas são mantidas no histórico.</Alert></div>}
       {msg && <div className="mb-2"><Alert kind={msg.kind}>{msg.text}</Alert></div>}
       <div className="relative">

@@ -120,11 +120,22 @@ def export_rows(db: Session, org_id: uuid.UUID, batch_id: uuid.UUID, with_recipi
     return headers, rows
 
 
+FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
+
+
+def safe_cell(v):
+    """Neutraliza injeção de fórmula (CSV/XLSX abertos em planilha) preservando o texto:
+    textos que começam com = + - @ TAB CR recebem um apóstrofo à frente."""
+    if isinstance(v, str) and v.startswith(FORMULA_PREFIXES):
+        return "'" + v
+    return v
+
+
 def to_csv(headers, rows) -> bytes:
     buf = io.StringIO()
     w = csv.writer(buf, delimiter=";")
-    w.writerow(headers)
-    w.writerows(rows)
+    w.writerow([safe_cell(h) for h in headers])
+    w.writerows([[safe_cell(c) for c in r] for r in rows])
     return buf.getvalue().encode("utf-8-sig")
 
 
@@ -136,7 +147,11 @@ def to_xlsx(headers, rows) -> bytes:
     ws.title = "Correspondencias"
     ws.append(headers)
     for r in rows:
-        ws.append(r)
+        ws.append([safe_cell(c) for c in r])
+    for row in ws.iter_rows(min_row=2):
+        for c in row:
+            if isinstance(c.value, str):
+                c.data_type = "s"  # texto, nunca fórmula
     buf = io.BytesIO()
     wb.save(buf)
     return buf.getvalue()

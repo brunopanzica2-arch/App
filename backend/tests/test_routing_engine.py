@@ -103,9 +103,13 @@ def test_sidewalk_is_walk_mode_by_default():
 
 
 def test_disconnected_island_is_not_snapped(net):
+    """Auditoria V2 (alerta B): a malha operacional é a alcançável a partir da ORIGEM.
+    Sem origem, a ilha é uma via válida; com origem na grade, ela é rejeitada."""
     r = Router(net, TravelProfile())
-    with pytest.raises(SnapError):
-        r.snap(*island_point(), 150)
+    assert r.snap(*island_point(), 150).distance_m < 1
+    _, reach = r.snap_origin(*pt(0, 0), 150)
+    with pytest.raises(SnapError, match="conectada à origem"):
+        r.snap(*island_point(), 150, reach)
 
 
 def test_geometry_follows_real_edges(net):
