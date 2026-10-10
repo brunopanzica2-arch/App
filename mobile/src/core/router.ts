@@ -434,7 +434,7 @@ export class Router {
 export interface LegFeature {
   type: "Feature";
   geometry: { type: "LineString"; coordinates: [number, number][] };
-  properties: { kind: "path"; mode: Mode; flags: string[]; distance_m: number; time_s: number; streets: string[]; leg?: number };
+  properties: { kind: "path"; mode: Mode; flags: string[]; distance_m: number; time_s: number; streets: string[]; leg?: number; /** nome da via de cada segmento (coordinates.length-1), para manobras */ segStreets?: string[] };
 }
 
 export interface Leg {
@@ -688,12 +688,13 @@ export class Solver {
         cur.geometry.coordinates.push([lob, lb]);
         cur.properties.distance_m += l;
         cur.properties.time_s += tt;
+        cur.properties.segStreets!.push(name);
         if (name && !cur.properties.streets.includes(name)) cur.properties.streets.push(name);
       } else {
         cur = {
           type: "Feature",
           geometry: { type: "LineString", coordinates: [[lo, la], [lob, lb]] },
-          properties: { kind: "path", mode, flags, distance_m: l, time_s: tt, streets: name ? [name] : [] },
+          properties: { kind: "path", mode, flags, distance_m: l, time_s: tt, streets: name ? [name] : [], segStreets: [name] },
         };
         curKey = k;
         res.features.push(cur);

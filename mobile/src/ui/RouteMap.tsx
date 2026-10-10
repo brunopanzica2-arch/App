@@ -19,6 +19,20 @@ const fallbackStyle = (): any => ({
 });
 const SANTOS: [number, number] = [-46.333, -23.962];
 
+function meFeatures(f: { lat: number; lon: number; accuracy?: number }) {
+  const out: any[] = [{ type: "Feature", properties: { k: "dot" }, geometry: { type: "Point", coordinates: [f.lon, f.lat] } }];
+  const r = Math.min(f.accuracy ?? 0, 150);
+  if (r > 3) { // círculo de precisão (aproximação com 32 vértices)
+    const ring: [number, number][] = [];
+    for (let i = 0; i <= 32; i++) {
+      const a = (i / 32) * 2 * Math.PI;
+      ring.push([f.lon + (r * Math.cos(a)) / (111320 * Math.cos((f.lat * Math.PI) / 180)), f.lat + (r * Math.sin(a)) / 110540]);
+    }
+    out.push({ type: "Feature", properties: { k: "acc" }, geometry: { type: "Polygon", coordinates: [ring] } });
+  }
+  return out;
+}
+
 export const COLORS = {
   route: "#7c3aed",
   walk: "#a855f7",
@@ -58,12 +72,22 @@ type Props = {
   onPinMove?: (lat: number, lon: number) => void;
   onStopClick?: (id: string) => void;
   me?: { lat: number; lon: number } | null;
+  /** posição ao vivo (fonte GeoJSON; sem marcador React por tick) */
+  fix?: { lat: number; lon: number; accuracy?: number; bearing?: number } | null;
+  /** câmera: off = livre; "2d" = segue a posição; "3d" = segue com inclinação e rumo */
+  follow?: "off" | "2d" | "3d";
+  /** trecho restante da rota [lon,lat][] (linha roxa viva) */
+  ahead?: [number, number][] | null;
+  /** o usuário arrastou/zoomou o mapa: desliga o seguimento */
+  onUserMove?: () => void;
+  /** px livres embaixo (painel) para o ponto de seguimento não ficar atrás dele */
+  bottomPad?: number;
   focus?: { lat: number; lon: number } | null;
   className?: string;
   onBaseMap?: (status: "online" | "offline" | "pack") => void;
 };
 
-export default function RouteMap({ stops = [], route, start, candidates = [], pin, onPinMove, onStopClick, me, focus, className, onBaseMap }: Props) {
+export default function RouteMap({ stops = [], route, start, candidates = [], pin, onPinMove, onStopClick, me, fix, follow = "off", ahead, onUserMove, bottomPad = 0, focus, className, onBaseMap }: Props) {
   const [offline, setOffline] = useState(false);
   const applyRef = useRef<(() => void) | null>(null);
   const el = useRef<HTMLDivElement>(null);
@@ -74,6 +98,24 @@ export default function RouteMap({ stops = [], route, start, candidates = [], pi
   const fitted = useRef("");
   const clickRef = useRef(onStopClick);
   clickRef.current = onStopClick;
+  const moveRef = useRef(onUserMove);
+  moveRef.current = onUserMove;
+  const followRef = useRef(follow);
+  followRef.current = follow;
+  const aheadRef = useRef(ahead);
+  aheadRef.current = ahead;
+  const fixRef = useRef(fix ?? (me ? { ...me } : null));
+  fixRef.current = fix ?? (me ? { ...me } : null);
+
+  const pushLive = () => {
+    const m = map.current;
+    if (!m || !ready.current) return;
+    const f = fixRef.current;
+    (m.getSource("me") as GeoJSONSource | undefined)?.setData({ type: "FeatureCollection", features: f ? meFeatures(f) : [] });
+    (m.getSource("ahead") as GeoJSONSource | undefined)?.setData(aheadRef.current && aheadRef.current.length > 1
+      ? { type: "FeatureCollection", features: [{ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: aheadRef.current } }] }
+      : { type: "FeatureCollection", features: [] });
+  };
 
   useEffect(() => {
     if (!el.current) return;
@@ -107,6 +149,8 @@ export default function RouteMap({ stops = [], route, start, candidates = [], pi
       if (!usingFallback) onBaseMap?.(pack ? "pack" : "online");
       m.addSource("route", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       m.addSource("stops", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      m.addSource("ahead", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      m.addSource("me", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       m.addLayer({
         id: "route-casing", type: "line", source: "route", filter: ["==", ["get", "kind"], "path"],
         paint: { "line-color": "#ffffff", "line-width": 8, "line-opacity": 0.8 },
@@ -130,6 +174,10 @@ export default function RouteMap({ stops = [], route, start, candidates = [], pi
           ["in", "barreira", ["get", "flags"]], ["in", "portao_privado", ["get", "flags"]]]],
         paint: { "line-color": COLORS.problem, "line-width": 3, "line-dasharray": [0.5, 1] },
       });
+      // linha viva estilo navegação: halo, contorno escuro e núcleo roxo sobre as ruas (trecho restante)
+      m.addLayer({ id: "ahead-glow", type: "line", source: "ahead", paint: { "line-color": "#c084fc", "line-width": 18, "line-blur": 10, "line-opacity": 0.55 }, layout: { "line-cap": "round", "line-join": "round" } });
+      m.addLayer({ id: "ahead-casing", type: "line", source: "ahead", paint: { "line-color": "#2e1065", "line-width": 11 }, layout: { "line-cap": "round", "line-join": "round" } });
+      m.addLayer({ id: "ahead-line", type: "line", source: "ahead", paint: { "line-color": "#a855f7", "line-width": 7 }, layout: { "line-cap": "round", "line-join": "round" } });
       m.addLayer({
         id: "stops-circle", type: "circle", source: "stops",
         paint: {
@@ -144,8 +192,14 @@ export default function RouteMap({ stops = [], route, start, candidates = [], pi
         layout: { "text-field": ["to-string", ["coalesce", ["get", "seq"], "•"]], "text-size": 12, "text-font": ["Noto Sans Bold"], "text-allow-overlap": true },
         paint: { "text-color": ["case", ["==", ["get", "color"], COLORS.pending], COLORS.route, ["==", ["get", "color"], COLORS.uncertain], "#111827", "#ffffff"] },
       });
+      m.addLayer({ id: "me-acc", type: "fill", source: "me", filter: ["==", ["get", "k"], "acc"], paint: { "fill-color": "#2563eb", "fill-opacity": 0.12 } });
+      m.addLayer({ id: "me-dot", type: "circle", source: "me", filter: ["==", ["get", "k"], "dot"], paint: { "circle-radius": 8, "circle-color": "#2563eb", "circle-stroke-color": "#ffffff", "circle-stroke-width": 3 } });
       if (!handlers) {
         handlers = true;
+        // gesto do usuário (arrastar/zoom/rotação) desliga o seguimento; movimento programático não tem originalEvent
+        m.on("dragstart", () => moveRef.current?.());
+        m.on("zoomstart", (e: any) => { if (e.originalEvent) moveRef.current?.(); });
+        m.on("rotatestart", (e: any) => { if (e.originalEvent) moveRef.current?.(); });
         m.on("click", "stops-circle", (e: any) => {
           const id = e.features?.[0]?.properties?.id;
           if (id) clickRef.current?.(String(id));
@@ -155,6 +209,7 @@ export default function RouteMap({ stops = [], route, start, candidates = [], pi
       }
       ready.current = true;
       applyRef.current?.();
+      pushLive();
       m.fire("data-ready" as any);
     });
     map.current = m;
@@ -210,8 +265,30 @@ export default function RouteMap({ stops = [], route, start, candidates = [], pi
     };
     if (start) mk(start.lat, start.lon, `<div style="background:#111827;color:#fff;border-radius:8px;padding:2px 6px;font-weight:700;font-size:12px">INÍCIO</div>`, start.label || "Início");
     candidates.forEach((c, i) => mk(c.lat, c.lon, `<div style="background:#eab308;color:#111;border-radius:999px;width:22px;height:22px;display:grid;place-items:center;font-weight:800;font-size:11px;border:2px solid #fff">${String.fromCharCode(65 + i)}</div>`, c.label));
-    if (me) mk(me.lat, me.lon, `<div style="width:16px;height:16px;border-radius:999px;background:#2563eb;border:3px solid #fff;box-shadow:0 0 0 6px #2563eb44"></div>`, "Sua localização");
-  }, [start, candidates, me]);
+  }, [start, candidates]);
+
+  // posição ao vivo + trecho restante + câmera de seguimento (só atualiza fontes GeoJSON e a câmera)
+  useEffect(() => {
+    pushLive();
+    const m = map.current, f = fixRef.current;
+    if (!m || !ready.current || !f || follow === "off") return;
+    const moving = (f.bearing ?? -1) >= 0;
+    m.easeTo({
+      center: [f.lon, f.lat],
+      zoom: follow === "3d" ? 18 : Math.max(m.getZoom(), 17),
+      pitch: follow === "3d" ? 60 : 0,
+      bearing: follow === "3d" && moving ? f.bearing! : follow === "3d" ? m.getBearing() : 0,
+      padding: { top: follow === "3d" ? 140 : 0, bottom: bottomPad, left: 0, right: 0 },
+      duration: 900, essential: true,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fix, me, ahead, follow, bottomPad]);
+
+  useEffect(() => {
+    const m = map.current;
+    if (!m || follow !== "off" || !ready.current) return;
+    m.easeTo({ pitch: 0, bearing: 0, padding: { top: 0, bottom: 0, left: 0, right: 0 }, duration: 400 });
+  }, [follow]);
 
   // pino arrastável
   useEffect(() => {

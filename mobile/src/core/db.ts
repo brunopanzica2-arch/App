@@ -163,7 +163,23 @@ export interface Settings {
    *  Vazio = Nominatim PÚBLICO (só uso pontual; lote limitado). A chave NÃO entra no backup. */
   geocoder?: { baseUrl: string; apiKey?: string; minIntervalMs?: number; costPerQueryBRL?: number } | null;
   currentBatch: string | null;
+  /** navegação por voz e localização (2.0) */
+  nav?: NavPrefs;
+  /** diário da sessão de navegação: permite "Retomar N entregas" após fechar o app / reiniciar o aparelho */
+  navSession?: { routeId: string; batchId: string; startedAt: string; lastStopKey: string | null } | null;
 }
+
+export interface NavPrefs {
+  speech: boolean; detailed: boolean; rate: number; volume: number;
+  /** false = economia de bateria (3 s / 3 m) */
+  preciseGps: boolean;
+  /** mostra a instrução (rua/número) na notificação da tela de bloqueio; padrão: só "Navegação ativa" */
+  lockscreenManeuver: boolean;
+  /** abre o mapa por cima da tela de bloqueio quando o usuário toca em "Abrir mapa" */
+  showWhenLocked: boolean;
+  camera3d: boolean;
+}
+export const DEFAULT_NAV: NavPrefs = { speech: true, detailed: true, rate: 1, volume: 1, preciseGps: true, lockscreenManeuver: false, showWhenLocked: false, camera3d: true };
 
 class RotaDB extends Dexie {
   batches!: Table<Batch, string>;

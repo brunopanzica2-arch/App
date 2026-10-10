@@ -1,6 +1,6 @@
 /** Regras de negócio do app (dados locais). */
 import { Capacitor } from "@capacitor/core";
-import { type Address, db, type DeliveryEvent, type Letter, type LetterStatus, type Route, type Settings, uid } from "./db";
+import { type Address, DEFAULT_NAV, db, type DeliveryEvent, type Letter, type LetterStatus, type NavPrefs, type Route, type Settings, uid } from "./db";
 import { routePoint, trustOf, type Trust } from "./address";
 import { QuotaError, resolve, setDailyQuota, setProvider } from "./geocode";
 import { runQueue } from "./geoqueue";
@@ -24,6 +24,8 @@ export async function getSettings(): Promise<Settings> {
   setProvider(out.geocoder); // toda consulta (lote, pontual, ponto de partida) usa o provedor configurado
   return out;
 }
+
+export async function getNavPrefs(): Promise<NavPrefs> { return { ...DEFAULT_NAV, ...((await getSettings()).nav || {}) }; }
 
 export async function saveSettings(patch: Partial<Settings>) {
   await db.settings.put({ ...(await getSettings()), ...patch, key: "main" });
@@ -456,4 +458,55 @@ export async function shareFile(name: string, data: string | Blob, mime: string)
   a.href = URL.createObjectURL(blob);
   a.download = name;
   a.click();
+}
+
+
+// ------------------------------------------------------------ navegação (2.0)
+
+/** Diário de sessão: grava ao iniciar/avançar, apaga ao encerrar. Os estados das cartas já são persistentes (events/letters). */
+export async function journalNav(route: Route | null, lastStopKey: string | null = null) {
+  await saveSettings({ navSession: route ? { routeId: route.id, batchId: route.batchId, startedAt: new Date().toISOString(), lastStopKey } : null });
+}
+
+/** Sessão interrompida (app fechado/aparelho reiniciado) com entregas ainda pendentes? */
+export async function resumableSession() {
+  const s = await getSettings();
+  const j = s.navSession;
+  if (!j) return null;
+  const route = await db.routes.get(j.routeId);
+  if (!route || route.status === "superseded") return null;
+  const { stops } = await stopsOf(route.batchId);
+  const byKey = new Map(stops.map((x) => [x.key, x]));
+  const open = route.stops.filter((rs) => ["pending", "partial"].includes(byKey.get(rs.key)?.status ?? "completed"));
+  const letters = open.reduce((a, rs) => a + (byKey.get(rs.key)?.letters.filter((l) => !TERMINAL.includes(l.status) && l.status !== "postponed").length ?? 0), 0);
+  return open.length ? { route, stops: open.length, letters } : null;
+}
+
+/** Recalcula a partir de uma posição (desvio persistente). O chamador aplica histerese (ver useNavigation). */
+export async function rerouteFrom(route: Route, pos: { lat: number; lon: number } | null, onProgress?: (stage: string, p: number) => void): Promise<Route> {
+  const mode = route.params.mode as any;
+  const base = pos ? { label: "Localização atual", lat: pos.lat, lon: pos.lon } : (await lastServedPoint(route)) ?? route.start;
+  const opts = (st: { label: string; lat: number; lon: number }) => ({
+    mode: (mode === "circular" ? "fixed_end" : mode) as any, strategy: route.params.strategy as any, start: st,
+    end: mode === "circular" ? route.start : route.end, timeLimitMs: 6000, reason: pos ? "desvio" : "reotimização:last",
+  });
+  let r: Route;
+  try {
+    r = await planBatch(route.batchId, opts(base), onProgress);
+  } catch (e) {
+    if (!pos || !/fora da malha/.test((e as Error).message)) throw e;
+    r = await planBatch(route.batchId, opts((await lastServedPoint(route)) ?? route.start), onProgress); // GPS fora da malha: segue da última parada
+  }
+  await activateRoute(r);
+  return r;
+}
+
+/** Planejamento de um toque com os padrões (rota aberta, global). Origem: ponto confirmado, senão a posição atual. */
+export async function quickPlan(batchId: string, here: { lat: number; lon: number } | null, onProgress?: (stage: string, p: number) => void): Promise<Route> {
+  const s = await getSettings();
+  const start = s.start?.confirmed ? s.start : here ? { label: "Localização atual", lat: here.lat, lon: here.lon } : null;
+  if (!start) throw new Error("Defina o ponto de partida em Ajustes ou ative a localização para calcular a rota.");
+  const r = await planBatch(batchId, { mode: s.routeMode === "circular" ? "circular" : "open", strategy: "global", start, timeLimitMs: 8000, reason: "plan" } as any, onProgress);
+  await activateRoute(r);
+  return r;
 }

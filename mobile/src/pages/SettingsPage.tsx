@@ -10,6 +10,7 @@ import { usageReport } from "../core/geoqueue";
 import { Button } from "../ui/button";
 import { Alert, Card, Input, Label, Select, Spinner } from "../ui/misc";
 import RouteMap from "../ui/RouteMap";
+import { NavPrefsCard } from "./NavPrefsCard";
 import { PRECISION_LABEL } from "../ui/utils";
 
 export function SettingsPage() {
@@ -73,6 +74,7 @@ export function SettingsPage() {
   return (
     <div className="space-y-3">
       {msg && <Alert kind={msg.kind}>{msg.text}</Alert>}
+      <NavPrefsCard />
       <Card className="space-y-3">
         <div className="font-semibold">Ponto de partida</div>
         <Input aria-label="Endereço de partida" value={s.startAddress} onChange={(e) => setS({ ...s, startAddress: e.target.value })} />
