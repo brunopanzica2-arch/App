@@ -2,6 +2,7 @@
 
 | Arquivo | Tipo | Instalável? |
 |---|---|---|
+| `rota-santos-2.0.0-DEBUG.apk` | **debug**, `br.santos.rota`, versionCode 4, versionName 2.0.0-debug, minSdk 24 | Sim. Mesma chave debug da 1.2.0 (SHA-256 do certificado `556b8b16…e9a9b`, conferido com `apksigner`): atualiza **por cima** sem apagar dados (faça backup cifrado antes). Migração testada só em Node/Chromium. **Não testado em aparelho.** Release assinado: BLOQUEADO (sem sua chave; ver `mobile/SIGNING.md`). |
 | `rota-santos-1.2.0-DEBUG.apk` | **debug** (chave `CN=Android Debug`), versão 1.2.0 (auditoria V3: mapa de ruas offline, portaria, fila de geocodificação) | Sim. Atualiza a 1.0/1.1 por cima (mesma chave debug, conferido com `apksigner`; a migração dos dados foi testada em Node e no Chromium, **não** num Android real). Faça o backup cifrado antes. Uso pessoal/testes. |
 | `rota-santos-1.2.0-RELEASE-UNSIGNED.apk` | release (sem depuração, sem assinatura) | **Não**: precisa ser assinado com a sua chave (ver `mobile/SIGNING.md`). |
 | `rota-santos-1.0.apk` | debug antigo (antes da auditoria V2) | Obsoleto. |

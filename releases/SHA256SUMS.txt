@@ -1,3 +1,4 @@
 776c1df08a12c48d4341bfdd906cdfb75ea8d1893668a79f1017f315a8cf9f39  rota-santos-1.0.apk
 e636b6a9af06c1d7ef0c3c3037c27638b59331ea91e243db1f1840286b0c2419  rota-santos-1.2.0-DEBUG.apk
 17164bb2ea7338ac4edec668f192be5ab3f058aa0cfe4fbe7fb69ec583bd9222  rota-santos-1.2.0-RELEASE-UNSIGNED.apk
+453947d474dde9e9681d2eea24658f30f016b8bb10a6ede388004ca9776aaa75  rota-santos-2.0.0-DEBUG.apk
