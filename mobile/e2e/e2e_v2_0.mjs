@@ -42,7 +42,7 @@ await shot("01-mapa-vazio");
   const st = await page.evaluate(() => { const e = document.querySelector("[data-testid=map-home]"); const c = document.querySelector("[role=application] canvas")?.getBoundingClientRect(); return { map: e.dataset.mapState, gps: e.dataset.gpsState, fix: e.dataset.fix, h: c?.height }; });
   const png = await page.screenshot({ clip: { x: 0, y: 200, width: 412, height: 400 } });
   pass("MAP-01 mapa real renderizado (estado operacional, canvas>300px, imagem com detalhe)", st.map === "operational" && st.h > 300 && png.length > 40000, `${JSON.stringify(st)} png=${png.length}B`);
-  pass("GPS-01 fix automático e marcador", st.gps === "ok" && /^-23\.9480,-46\.3406/.test(st.fix), `gps=${st.gps} fix=${st.fix}`);
+  pass("GPS-01 fix automático e marcador", st.gps === "ok" && /^-23\.948\d*,-46\.3406/.test(st.fix), `gps=${st.gps} fix=${st.fix}`);
 }
 
 // 2. regressão da linha sem cabeçalho

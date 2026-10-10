@@ -261,7 +261,8 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
                 <span className="text-lg font-bold">Retomar {resume.letters} entrega(s) em {resume.stops} parada(s)</span>
               </button>
             )}
-            {sheetMode !== "compact" && <Counters letters={data.letters.length} stops={data.stops.length} unlocated={unlocated} done={doneLetters} pending={pendingLetters} />}
+            {sheetMode !== "compact" ? <Counters letters={data.letters.length} stops={data.stops.length} unlocated={unlocated} done={doneLetters} pending={pendingLetters} />
+              : <div data-testid="counters" className="text-center text-sm muted">{data.letters.length} cartas · {data.stops.length} paradas · {unlocated} não loc. · {doneLetters} concluídas · {pendingLetters} pendentes</div>}
             {cur ? (
               <>
                 <div>
