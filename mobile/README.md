@@ -15,13 +15,13 @@ Este é o app que você instala no celular. **Não precisa de servidor nem de me
 - **Dados só no celular** (IndexedDB): cartas, endereços confirmados, versões de rota, eventos de entrega. Há backup e restauração em JSON, além de exportação em CSV/XLSX.
 - **Internet é usada apenas** para:
   - localizar endereços (Nominatim/OSM, 1 consulta por segundo, com cache local);
-  - carregar o fundo do mapa (OpenFreeMap). Sem internet, o mapa troca para um fundo liso com rota e paradas numeradas; **não há ruas de fundo offline**.
+  - (opcional) fundo de mapa online (OpenFreeMap) quando o pacote offline não estiver presente. Sem pacote e sem internet, o mapa vira um fundo liso com rota e paradas numeradas; com o pacote de Santos empacotado (`public/map/santos.pmtiles`, © OpenStreetMap/ODbL, atualizável com `scripts/extract_basemap.py`) as ruas aparecem **sem internet**; fora do recorte o fundo fica vazio.
 
   Rotas, entregas e recálculos funcionam sem sinal. A integridade da malha embutida é conferida por SHA-256 ao abrir. Os endereços já confirmados no mapa ficam salvos e não são consultados de novo.
 
 ## Instalar no celular (Android 7 ou superior)
 
-1. Baixe `rota-santos-1.1.0-DEBUG.apk` em `releases/` e confira o SHA-256 em `releases/SHA256SUMS.txt`. Ele atualiza a 1.0 sem apagar os dados.
+1. Baixe `rota-santos-1.2.0-DEBUG.apk` em `releases/` e confira o SHA-256 em `releases/SHA256SUMS.txt`. Ele atualiza a 1.0/1.1 por cima (mesma chave debug) sem apagar os dados; faça o backup cifrado antes.
 2. Abra o arquivo. O Android pede para permitir "instalar apps desconhecidos" para o navegador ou gerenciador de arquivos; autorize.
 3. Toque em **Instalar**.
 4. Na primeira abertura:
@@ -30,7 +30,7 @@ Este é o app que você instala no celular. **Não precisa de servidor nem de me
 
    O Nominatim só encontra a rua, não o número 480, por isso o pino precisa ser ajustado à mão.
 
-Este APK é de **depuração** (assinado com a chave debug pública), próprio para uso pessoal. O build **release** (`releases/rota-santos-1.1.0-RELEASE-UNSIGNED.apk`) sai sem assinatura até você criar a sua chave: veja [`SIGNING.md`](SIGNING.md). A chave nunca vai para o repositório.
+Este APK é de **depuração** (assinado com a chave debug pública), próprio para uso pessoal. O build **release** (`releases/rota-santos-1.2.0-RELEASE-UNSIGNED.apk`) sai sem assinatura até você criar a sua chave: veja [`SIGNING.md`](SIGNING.md). A chave nunca vai para o repositório.
 
 Uso no dia a dia: [`docs/TUTORIAL_USO_DIARIO.md`](../docs/TUTORIAL_USO_DIARIO.md). Auditoria V2: [`docs/AUDITORIA_V2.md`](../docs/AUDITORIA_V2.md).
 

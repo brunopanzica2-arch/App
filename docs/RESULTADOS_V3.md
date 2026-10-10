@@ -111,7 +111,7 @@ Só cobre o que o axe detecta; **não** substitui teste com leitor de tela no ap
 | App `vitest` | 36 passaram, 1 pulado | **82 passaram, 2 pulados** (benchmarks `BENCH=1`) |
 | Parser ADB | — | 3 passaram |
 | `ruff` / `tsc --noEmit` | — / limpo | limpo / limpo |
-| E2E V2 reexecutado (E2E-01,04,05,06,07,08,09,11,12,13,14,16,20 e mapa) | 14 passaram | **14 passaram** (E2E-14 agora cobre o ramo "GPS fora da malha") |
+| E2E V2 reexecutado (E2E-01,04,05,06,07,08,09,11,12,13,14,16,20 e mapa) | todos passaram (15 itens) | **todos passaram (15 itens)** (E2E-14 agora cobre o ramo "GPS fora da malha") |
 | E2E V3: mapa offline / a11y / escala | — | passaram (3/3, 0 violações, 6/6) |
 Não executados: E2E-15 (tempo real × ETA), E2E-17 de ponta a ponta no navegador (coberto no nível do cache), E2E-19 com 2000 cartas, Android real.
 

@@ -9,7 +9,9 @@ Sistema full-stack para importar, geocodificar, agrupar, otimizar, mapear e acom
 - Escadas, acessos privados e barreiras são **sinalizados**. Para cada tipo existe uma política: permitir, penalizar ou evitar.
 - Objetivo da otimização: **menor tempo total**, somando deslocamento e atendimento. Em caso de empate, vale a menor distância. Rota **aberta** por padrão; circular ou com destino fixo são opcionais.
 
-> **App Android offline (sem servidor):** veja [`mobile/README.md`](mobile/README.md). O APK está em [`releases/`](releases/LEIA-ME.md): `rota-santos-1.1.0-DEBUG.apk` (instalável) e o release sem assinatura (ver [`mobile/SIGNING.md`](mobile/SIGNING.md)).
+> **App Android offline (sem servidor):** veja [`mobile/README.md`](mobile/README.md). O APK está em [`releases/`](releases/LEIA-ME.md): `rota-santos-1.2.0-DEBUG.apk` (instalável) e o release sem assinatura (ver [`mobile/SIGNING.md`](mobile/SIGNING.md)).
+>
+> **Auditoria V3:** [`docs/AUDITORIA_V3.md`](docs/AUDITORIA_V3.md) · [`docs/RESULTADOS_V3.md`](docs/RESULTADOS_V3.md) · [`docs/V3_BASELINE.md`](docs/V3_BASELINE.md) · [`docs/V3_SKILLS_UTILIZADAS.md`](docs/V3_SKILLS_UTILIZADAS.md) · [`docs/LIMITACOES_OPERACIONAIS_V3.md`](docs/LIMITACOES_OPERACIONAIS_V3.md) · [`docs/TESTE_FISICO_ANDROID.md`](docs/TESTE_FISICO_ANDROID.md) · evidências em [`docs/EVIDENCIAS_V3/`](docs/EVIDENCIAS_V3/). APK atual: **1.2.0** (ver `releases/LEIA-ME.md`).
 >
 > **Auditoria V2:** [`docs/AUDITORIA_V2.md`](docs/AUDITORIA_V2.md) · [`docs/TESTE_300_CENTRO_PAQUETA_VILA_NOVA.md`](docs/TESTE_300_CENTRO_PAQUETA_VILA_NOVA.md) · [`docs/RESULTADOS_COMPARATIVOS_V2.md`](docs/RESULTADOS_COMPARATIVOS_V2.md) · [`docs/TUTORIAL_USO_DIARIO.md`](docs/TUTORIAL_USO_DIARIO.md) · evidências em [`docs/EVIDENCIAS_E2E_V2/`](docs/EVIDENCIAS_E2E_V2/).
 
