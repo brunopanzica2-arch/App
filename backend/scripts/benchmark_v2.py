@@ -133,6 +133,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--time-limit", type=int, default=15)
     ap.add_argument("--only", nargs="*")
+    ap.add_argument("--tag", default="", help="sufixo do arquivo de saída (ex.: v3 -> resultados_backend_v3.json); vazio = V2")
     a = ap.parse_args()
     eng = InternalEngine(get_settings())
     prof = TravelProfile(ride_speed_kmh=15)
@@ -151,7 +152,7 @@ def main():
             "hardware": f"{platform.platform()} · {cpu} · {os.cpu_count()} vCPU", "python": platform.python_version(),
             "malha": {"nos": net.n_nodes, "arestas": net.n_edges, "carga_s": round(t_load, 2), **area},
             "limite_solver_s": a.time_limit, "implementacao": "backend (Python + scipy + OR-Tools)"}
-    (BD / "resultados_backend.json").write_text(json.dumps({"meta": meta, "linhas": rows}, ensure_ascii=False, indent=1))
+    (BD / f"resultados_backend{'_' + a.tag if a.tag else ''}.json").write_text(json.dumps({"meta": meta, "linhas": rows}, ensure_ascii=False, indent=1))
     for r in rows:
         print(r)
 

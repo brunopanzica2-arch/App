@@ -50,6 +50,6 @@ describe.skipIf(!process.env.BENCH)("benchmarks V2 — app (Node, desktop)", () 
       carga_malha_ms: loadMs, limite_solver_ms: 15000, implementacao: "app (TypeScript, mesmo código do APK) rodando em Node — NÃO é celular",
       nota: "Tempo do app inclui acesso (2×snap/velocidade a pé) no tempo total, igual ao backend. Ver docs/RESULTADOS_COMPARATIVOS_V2.md.",
     };
-    writeFileSync(new URL("resultados_app_node.json", BD), JSON.stringify({ meta, linhas: rows }, null, 1));
+    writeFileSync(new URL(`resultados_app_node${process.env.BENCH_TAG ? "_" + process.env.BENCH_TAG : ""}.json`, BD), JSON.stringify({ meta, linhas: rows }, null, 1));
   }, 600_000);
 });
