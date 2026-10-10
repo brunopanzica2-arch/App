@@ -2,6 +2,7 @@
 import * as maplibregl from "maplibre-gl";
 import type { GeoJSONSource, Map as MLMap } from "maplibre-gl";
 import { useEffect, useRef, useState } from "react";
+import { loadOfflineStyle } from "./offlineMap";
 
 // O worker do MapLibre é servido de /public (copiado no postinstall): o bundler
 // do Next não resolve o import.meta.url usado pela biblioteca para achá-lo.
@@ -59,7 +60,7 @@ type Props = {
   me?: { lat: number; lon: number } | null;
   focus?: { lat: number; lon: number } | null;
   className?: string;
-  onBaseMap?: (status: "online" | "offline") => void;
+  onBaseMap?: (status: "online" | "offline" | "pack") => void;
 };
 
 export default function RouteMap({ stops = [], route, start, candidates = [], pin, onPinMove, onStopClick, me, focus, className, onBaseMap }: Props) {
@@ -76,7 +77,15 @@ export default function RouteMap({ stops = [], route, start, candidates = [], pi
 
   useEffect(() => {
     if (!el.current) return;
-    const m = new maplibregl.Map({ container: el.current, style: STYLE, center: SANTOS, zoom: 13, attributionControl: { compact: true } });
+    let disposed = false, cleanup = () => {};
+    // 1º pacote offline de Santos (sem rede); 2º estilo online; 3º fundo liso (ver toFallback)
+    loadOfflineStyle().then((pack) => {
+      if (disposed || !el.current) return;
+      cleanup = createMap(pack);
+    });
+    return () => { disposed = true; cleanup(); };
+    function createMap(pack: Awaited<ReturnType<typeof loadOfflineStyle>>) {
+    const m = new maplibregl.Map({ container: el.current!, style: pack ? pack.style : STYLE, center: SANTOS, zoom: 13, attributionControl: { compact: true } });
     m.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     let usingFallback = false, handlers = false;
     const toFallback = () => {
@@ -87,14 +96,15 @@ export default function RouteMap({ stops = [], route, start, candidates = [], pi
       onBaseMap?.("offline");
       m.setStyle(fallbackStyle());
     };
-    const timer = setTimeout(() => { if (!m.isStyleLoaded()) toFallback(); }, 10000);
+    const timer = setTimeout(() => { if (!m.isStyleLoaded()) toFallback(); }, pack ? 3000 : 10000);
     m.on("error", (e: any) => {
+      console.warn("[mapa] erro:", String(e?.error?.message || e?.message || e).slice(0, 200));
       // estilo/ fontes do mapa-base inacessíveis (sem internet): mantém rota e paradas visíveis
       if (!m.isStyleLoaded() || /style|Failed to fetch|NetworkError/i.test(String(e?.error?.message || ""))) toFallback();
     });
     m.on("style.load", () => {
       clearTimeout(timer);
-      if (!usingFallback) onBaseMap?.("online");
+      if (!usingFallback) onBaseMap?.(pack ? "pack" : "online");
       m.addSource("route", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       m.addSource("stops", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       m.addLayer({
@@ -152,6 +162,7 @@ export default function RouteMap({ stops = [], route, start, candidates = [], pi
       ready.current = false;
       m.remove();
     };
+    }
   }, []);
 
   // dados

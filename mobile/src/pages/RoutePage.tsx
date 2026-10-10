@@ -41,7 +41,7 @@ export function RoutePage({ routeId, nav }: { routeId?: string; nav: Nav }) {
   const [list, setList] = useState(false);
   const [query, setQuery] = useState("");
   const [me, setMe] = useState<{ lat: number; lon: number } | null>(null);
-  const [baseMap, setBaseMap] = useState<"online" | "offline" | null>(null);
+  const [baseMap, setBaseMap] = useState<"online" | "offline" | "pack" | null>(null);
   const [msg, setMsg] = useState<{ kind: "ok" | "error" | "info" | "warn"; text: string } | null>(null);
   const [reason, setReason] = useState("ausente");
   const [busy, setBusy] = useState<string | null>(null);
@@ -157,7 +157,7 @@ export function RoutePage({ routeId, nav }: { routeId?: string; nav: Nav }) {
       {/* indicadores sempre visíveis */}
       <div className="flex flex-wrap gap-1 text-[11px]">
         <Badge color="#16a34a">Rota calculada no aparelho · v{route.version}</Badge>
-        <Badge color={baseMap === "offline" ? "#b45309" : "#16a34a"}>Mapa-base {baseMap === "offline" ? "offline" : "online"}</Badge>
+        <Badge color={baseMap === "offline" ? "#b45309" : "#16a34a"}>{baseMap === "offline" ? "Mapa-base indisponível" : baseMap === "pack" ? "Mapa offline (pacote de Santos)" : "Mapa online"}</Badge>
         <Badge color={partial ? "#dc2626" : "#16a34a"}>{partial ? "ROTA PARCIAL" : "Rota completa"}</Badge>
         {stopsData.unlocated.length > 0 && <Badge color="#dc2626">{stopsData.unlocated.length} carta(s) sem localização</Badge>}
       </div>

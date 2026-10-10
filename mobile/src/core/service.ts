@@ -19,6 +19,8 @@ export async function getSettings(): Promise<Settings> {
     serviceTime: 45, perLetterService: 10, routeMode: "open", nominatimEmail: "", currentBatch: null,
     ...(s || {}),
   };
+  // configurações salvas por versões anteriores podem não ter campos novos do perfil: completa com os padrões
+  out.profile = { ...DEFAULT_PROFILE, ...(s?.profile || {}) };
   setProvider(out.geocoder); // toda consulta (lote, pontual, ponto de partida) usa o provedor configurado
   return out;
 }

@@ -1,0 +1,20 @@
+{
+ "arquivo": "santos.pmtiles",
+ "bytes": 2463210,
+ "sha256": "c00cfe909c122d447910efcb74684b716fb0bc5193861e7fc3c1c2203429ce1e",
+ "tiles": 189,
+ "fonte": "https://build.protomaps.com/20261010.pmtiles",
+ "compilacao": "20261010",
+ "recorte_bbox": [
+  -46.415,
+  -24.005,
+  -46.295,
+  -23.915
+ ],
+ "zoom_max": 15,
+ "extraido_em": "2026-10-10",
+ "requisicoes_http": 198,
+ "atribuicao": "© OpenStreetMap contributors (ODbL) · compilação Protomaps",
+ "licenca": "ODbL 1.0 (dados OSM). Esquema/estilo: Protomaps basemaps (BSD-3-Clause).",
+ "atualizacao": "Rode este script de novo (a malha de ruas muda pouco); compare o sha256 e publique nova versão do app."
+}
