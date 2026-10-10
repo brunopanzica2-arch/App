@@ -1,5 +1,13 @@
 apply plugin: 'com.android.application'
 
+// Assinatura RELEASE separada da debug. A chave NUNCA vai para o repositório:
+// vem de variáveis de ambiente (CI: GitHub Secrets) ou de keystore.properties local (ignorado pelo git).
+def releaseProps = new Properties()
+def releasePropsFile = rootProject.file('keystore.properties')
+if (releasePropsFile.exists()) releasePropsFile.withInputStream { releaseProps.load(it) }
+def rel = { String k -> System.getenv(k) ?: releaseProps.getProperty(k) }
+def hasReleaseKey = rel('ROTA_KEYSTORE') && rel('ROTA_KEYSTORE_PASSWORD') && rel('ROTA_KEY_ALIAS') && rel('ROTA_KEY_PASSWORD')
+
 android {
     namespace = "br.santos.rota"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +15,8 @@ android {
         applicationId "br.santos.rota"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode 2
+        versionName "1.1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,8 +24,24 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        if (hasReleaseKey) {
+            release {
+                storeFile file(rel('ROTA_KEYSTORE'))
+                storePassword rel('ROTA_KEYSTORE_PASSWORD')
+                keyAlias rel('ROTA_KEY_ALIAS')
+                keyPassword rel('ROTA_KEY_PASSWORD')
+            }
+        }
+    }
     buildTypes {
+        debug {
+            // mesmo applicationId da 1.0 debug já instalada: atualiza sem perder dados locais
+            versionNameSuffix "-debug"
+        }
         release {
+            // sem chave configurada o Gradle gera app-release-unsigned.apk (não instalável até assinar)
+            if (hasReleaseKey) signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

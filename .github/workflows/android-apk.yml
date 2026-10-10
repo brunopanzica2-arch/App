@@ -3,7 +3,8 @@ name: APK Android (app offline)
 on:
   workflow_dispatch:
   push:
-    paths: ["mobile/**", ".github/workflows/android-apk.yml"]
+    paths: ["mobile/**", "test-data/**", ".github/workflows/android-apk.yml"]
+    tags: ["mobile-v*"]
 
 jobs:
   build:
@@ -24,10 +25,58 @@ jobs:
           java-version: 21
       - run: npm ci
       - run: npm test
-      - run: npm run build
+      - run: npm run build # inclui tsc --noEmit (checagem de tipos)
       - run: npx cap sync android
+
+      # DEBUG: assinado com a chave debug do runner, só para testes. NÃO é release.
       - run: cd android && ./gradlew assembleDebug --no-daemon
+      - run: |
+          cd android/app/build/outputs/apk/debug
+          mv app-debug.apk rota-santos-DEBUG.apk
+          sha256sum rota-santos-DEBUG.apk | tee rota-santos-DEBUG.apk.sha256
       - uses: actions/upload-artifact@v4
         with:
-          name: rota-santos-apk
-          path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          name: rota-santos-DEBUG-apk
+          path: mobile/android/app/build/outputs/apk/debug/rota-santos-DEBUG.apk*
+
+      # RELEASE: assinado somente se os GitHub Secrets existirem; a chave é decodificada
+      # num arquivo temporário do runner e apagada ao final. Nunca é versionada.
+      - name: Decodificar keystore release (GitHub Secrets)
+        id: key
+        env:
+          ROTA_KEYSTORE_BASE64: ${{ secrets.ROTA_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$ROTA_KEYSTORE_BASE64" ]; then
+            echo "$ROTA_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Secrets de assinatura ausentes: será gerado app-release-UNSIGNED.apk (não instalável). Veja mobile/SIGNING.md."
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Build release
+        env:
+          ROTA_KEYSTORE: ${{ steps.key.outputs.signed == 'true' && format('{0}/release.jks', runner.temp) || '' }}
+          ROTA_KEYSTORE_PASSWORD: ${{ secrets.ROTA_KEYSTORE_PASSWORD }}
+          ROTA_KEY_ALIAS: ${{ secrets.ROTA_KEY_ALIAS }}
+          ROTA_KEY_PASSWORD: ${{ secrets.ROTA_KEY_PASSWORD }}
+        run: cd android && ./gradlew assembleRelease --no-daemon
+      - name: Verificar assinatura e publicar SHA-256
+        run: |
+          cd android/app/build/outputs/apk/release
+          BT=$(ls -d $ANDROID_HOME/build-tools/* | tail -1)
+          if [ -f app-release.apk ]; then
+            $BT/apksigner verify --print-certs app-release.apk | tee signing.txt
+            if grep -q "CN=Android Debug" signing.txt; then echo "::error::release assinado com chave debug"; exit 1; fi
+            mv app-release.apk rota-santos-RELEASE.apk
+          else
+            mv app-release-unsigned.apk rota-santos-RELEASE-UNSIGNED.apk
+          fi
+          sha256sum rota-santos-RELEASE*.apk | tee SHA256SUMS.txt
+          rm -f "$RUNNER_TEMP/release.jks"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rota-santos-RELEASE-apk
+          path: |
+            mobile/android/app/build/outputs/apk/release/rota-santos-RELEASE*.apk
+            mobile/android/app/build/outputs/apk/release/SHA256SUMS.txt
+            mobile/android/app/build/outputs/apk/release/signing.txt
