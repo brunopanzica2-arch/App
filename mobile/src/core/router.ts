@@ -61,6 +61,22 @@ export interface Snap {
   snapLat: number;
   snapLon: number;
   distance: number;
+  /** evidências (auditoria V2, alerta C) */
+  flags: string[];
+  nearestAny: number;
+  confidence: "alta" | "boa" | "media" | "baixa";
+}
+
+export function snapConfidence(d: number): Snap["confidence"] {
+  return d <= 15 ? "alta" : d <= 30 ? "boa" : d <= 60 ? "media" : "baixa";
+}
+
+function segCross(p1: number[], p2: number[], q1: number[], q2: number[]) {
+  const o = (a: number[], b: number[], c: number[]) => {
+    const v = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+    return Math.abs(v) < 1e-9 ? 0 : v > 0 ? 1 : -1;
+  };
+  return o(p1, p2, q1) * o(p1, p2, q2) < 0 && o(q1, q2, p1) * o(q1, q2, p2) < 0;
 }
 
 export class SnapError extends Error {}
@@ -132,7 +148,6 @@ export class Router {
   readonly arcEdge: Uint32Array;
   readonly arcFwd: Uint8Array;
   readonly comp: Int32Array;
-  readonly mainComp: number;
   private kx: number;
   private grid = new Map<string, number[]>();
   private readonly CELL = 100;
@@ -209,17 +224,8 @@ export class Router {
         this.arcFwd[k] = 0;
       }
     }
+    // diagnóstico apenas: a malha operacional é eleita a partir da ORIGEM (snapOrigin)
     this.comp = this.scc();
-    const sizes = new Map<number, number>();
-    for (let i = 0; i < n; i++) sizes.set(this.comp[i], (sizes.get(this.comp[i]) || 0) + 1);
-    let best = 0, bestSize = -1;
-    sizes.forEach((s, c) => {
-      if (s > bestSize) {
-        bestSize = s;
-        best = c;
-      }
-    });
-    this.mainComp = best;
     let latSum = 0;
     for (let i = 0; i < n; i++) latSum += g.lat[i];
     this.kx = Math.cos(((latSum / Math.max(n, 1)) * Math.PI) / 180);
@@ -298,7 +304,6 @@ export class Router {
     for (let e = 0; e < g.m; e++) {
       if (!this.edgeOk[e]) continue;
       const a = g.ea[e], b = g.eb[e];
-      if (this.comp[a] !== this.mainComp || this.comp[b] !== this.mainComp) continue;
       const x0 = Math.min(this.x(a), this.x(b)), x1 = Math.max(this.x(a), this.x(b));
       const y0 = Math.min(this.y(a), this.y(b)), y1 = Math.max(this.y(a), this.y(b));
       for (let cx = Math.floor(x0 / this.CELL); cx <= Math.floor(x1 / this.CELL); cx++)
@@ -319,36 +324,106 @@ export class Router {
     return [Math.hypot(px - (ax + t * dx), py - (ay + t * dy)), t];
   }
 
-  /** Projeta o ponto no trecho real mais próximo da malha principal. */
-  snap(lat: number, lon: number, maxDist: number): Snap {
-    const px = lon * this.kx * M_PER_DEG, py = lat * M_PER_DEG;
+  /** Nós alcançáveis a partir de `from` respeitando sentidos de pedestre (BFS no CSR). */
+  reachFrom(from: number[]): Uint8Array {
+    const seen = new Uint8Array(this.g.n);
+    const st = [...from];
+    for (const v of st) seen[v] = 1;
+    while (st.length) {
+      const u = st.pop()!;
+      for (let k = this.off[u]; k < this.off[u + 1]; k++) {
+        const v = this.arcTo[k];
+        if (!seen[v]) { seen[v] = 1; st.push(v); }
+      }
+    }
+    return seen;
+  }
+
+  exitNodes(e: number): number[] {
+    const g = this.g;
+    return [...(g.dir[e] & 1 ? [g.eb[e]] : []), ...(g.dir[e] & 2 ? [g.ea[e]] : [])];
+  }
+
+  edgeReachable(e: number, reach: Uint8Array): boolean {
+    const g = this.g;
+    return !!((g.dir[e] & 1 && reach[g.ea[e]]) || (g.dir[e] & 2 && reach[g.eb[e]]));
+  }
+
+  private candidates(px: number, py: number, maxDist: number): [number, number, number][] {
     const cx = Math.floor(px / this.CELL), cy = Math.floor(py / this.CELL);
     const rings = Math.floor(maxDist / this.CELL) + 1;
-    let best = null as [number, number, number] | null;
+    const out: [number, number, number][] = [];
     const seen = new Set<number>();
-    for (let r = 0; r <= rings; r++) {
-      for (let i = cx - r; i <= cx + r; i++)
-        for (let j = cy - r; j <= cy + r; j++) {
-          if (Math.max(Math.abs(i - cx), Math.abs(j - cy)) !== r) continue;
-          for (const e of this.grid.get(i + ":" + j) || []) {
-            if (seen.has(e)) continue;
-            seen.add(e);
-            const [d, t] = this.project(e, px, py);
-            if (!best || d < best[0]) best = [d, e, t];
-          }
+    for (let i = cx - rings; i <= cx + rings; i++)
+      for (let j = cy - rings; j <= cy + rings; j++)
+        for (const e of this.grid.get(i + ":" + j) || []) {
+          if (seen.has(e)) continue;
+          seen.add(e);
+          const [d, t] = this.project(e, px, py);
+          if (d <= maxDist) out.push([d, e, t]);
         }
-      if (best && best[0] <= r * this.CELL) break;
-    }
-    const found = best as [number, number, number] | null;
-    if (!found || found[0] > maxDist)
-      throw new SnapError(`Ponto a mais de ${Math.round(maxDist)} m da malha de circulação acessível.`);
-    const [d, e, t] = found;
-    const a = this.g.ea[e], b = this.g.eb[e];
+    return out.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  }
+
+  private crossesOther(e: number, px: number, py: number, qx: number, qy: number): boolean {
+    const g = this.g;
+    const ends = new Set([g.ea[e], g.eb[e]]);
+    const seen = new Set<number>();
+    for (let i = Math.floor(Math.min(px, qx) / this.CELL); i <= Math.floor(Math.max(px, qx) / this.CELL); i++)
+      for (let j = Math.floor(Math.min(py, qy) / this.CELL); j <= Math.floor(Math.max(py, qy) / this.CELL); j++)
+        for (const f of this.grid.get(i + ":" + j) || []) {
+          if (f === e || seen.has(f)) continue;
+          seen.add(f);
+          const a = g.ea[f], b = g.eb[f];
+          if (ends.has(a) || ends.has(b)) continue;
+          if (segCross([px, py], [qx, qy], [this.x(a), this.y(a)], [this.x(b), this.y(b)])) return true;
+        }
+    return false;
+  }
+
+  private makeSnap(lat: number, lon: number, d: number, e: number, t: number, px: number, py: number, nearestAny: number): Snap {
+    const g = this.g, a = g.ea[e], b = g.eb[e];
+    const qx = this.x(a) + t * (this.x(b) - this.x(a)), qy = this.y(a) + t * (this.y(b) - this.y(a));
+    const flags: string[] = [];
+    if (d > 1 && this.crossesOther(e, px, py, qx, qy)) flags.push("acesso_cruza_outra_via");
+    if (nearestAny + 10 < d) flags.push("via_mais_proxima_desconectada");
+    let confidence = snapConfidence(d);
+    if (flags.length && (confidence === "alta" || confidence === "boa")) confidence = "media";
     return {
-      lat, lon, edge: e, t, distance: d,
-      snapLat: this.g.lat[a] + t * (this.g.lat[b] - this.g.lat[a]),
-      snapLon: this.g.lon[a] + t * (this.g.lon[b] - this.g.lon[a]),
+      lat, lon, edge: e, t, distance: d, flags, nearestAny, confidence,
+      snapLat: g.lat[a] + t * (g.lat[b] - g.lat[a]), snapLon: g.lon[a] + t * (g.lon[b] - g.lon[a]),
     };
+  }
+
+  /** Projeta no trecho real mais próximo; com `reach`, só em trechos alcançáveis da origem. */
+  snap(lat: number, lon: number, maxDist: number, reach?: Uint8Array): Snap {
+    const px = lon * this.kx * M_PER_DEG, py = lat * M_PER_DEG;
+    const c = this.candidates(px, py, maxDist);
+    if (!c.length) throw new SnapError(`Ponto a mais de ${Math.round(maxDist)} m da malha de circulação acessível.`);
+    for (const [d, e, t] of c) if (!reach || this.edgeReachable(e, reach)) return this.makeSnap(lat, lon, d, e, t, px, py, c[0][0]);
+    throw new SnapError(`Há vias a ${Math.round(c[0][0])} m, mas nenhuma conectada à origem num raio de ${Math.round(maxDist)} m.`);
+  }
+
+  /** Elege a malha operacional a partir da ORIGEM (trecho até 30 m além do mais próximo que alcança mais nós). */
+  snapOrigin(lat: number, lon: number, maxDist: number, slack = 30): { snap: Snap; reach: Uint8Array } {
+    const px = lon * this.kx * M_PER_DEG, py = lat * M_PER_DEG;
+    const c = this.candidates(px, py, maxDist);
+    if (!c.length) throw new SnapError(`Origem a mais de ${Math.round(maxDist)} m da malha.`);
+    let best: { size: number; d: number; e: number; t: number; reach: Uint8Array } | null = null;
+    for (const [d, e, t] of c) {
+      if (d > c[0][0] + slack) break;
+      const reach = this.reachFrom(this.exitNodes(e));
+      let size = 0;
+      for (let i = 0; i < reach.length; i++) size += reach[i];
+      if (!best || size > best.size) best = { size, d, e, t, reach };
+    }
+    const b = best!;
+    const g = this.g;
+    if (g.dir[b.e] & 2) b.reach[g.ea[b.e]] = 1;
+    if (g.dir[b.e] & 1) b.reach[g.eb[b.e]] = 1;
+    const snap = this.makeSnap(lat, lon, b.d, b.e, b.t, px, py, c[0][0]);
+    if (b.size < 0.01 * g.n) snap.flags.push("origem_em_trecho_isolado");
+    return { snap, reach: b.reach };
   }
 
   solver(snaps: Snap[]) {
@@ -495,10 +570,11 @@ export class Solver {
   }
 
   /** Matrizes de tempo (s) e distância (m) entre todas as paradas. */
-  matrices(onProgress?: (p: number) => void): { T: number[][]; D: number[][] } {
+  matrices(onProgress?: (p: number) => void, shouldStop?: () => boolean): { T: number[][]; D: number[][] } {
     const k = this.nodes.length;
     const T: number[][] = [], D: number[][] = [];
     for (let i = 0; i < k; i++) {
+      if (shouldStop?.()) throw new Error("Cálculo cancelado.");
       const tr = this.tree(i, this.nodes);
       T.push(this.nodes.map((v) => (v === this.nodes[i] ? 0 : tr.time[v])));
       D.push(this.nodes.map((v) => (v === this.nodes[i] ? 0 : tr.meters[v])));

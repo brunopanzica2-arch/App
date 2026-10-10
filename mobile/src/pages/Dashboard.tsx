@@ -25,7 +25,7 @@ export function Dashboard({ nav }: { nav: Nav }) {
       <Card className="space-y-3 text-center">
         <p>Comece importando as correspondências do dia (CSV, XLSX ou texto colado).</p>
         {!settings?.start?.confirmed && <Alert kind="warn">Antes de calcular rotas, confirme o ponto de partida em Ajustes.</Alert>}
-        <Button size="lg" onClick={() => nav("/importar")}><Upload className="h-5 w-5" /> Importar cartas</Button>
+        <Button size="lg" onClick={() => nav("/importar")}><Upload className="h-5 w-5" /> IMPORTAR E PLANEJAR</Button>
       </Card>
     );
 
@@ -44,6 +44,15 @@ export function Dashboard({ nav }: { nav: Nav }) {
       {!settings?.start?.confirmed && <Alert kind="warn">Ponto de partida não confirmado — vá em Ajustes.</Alert>}
       {!data ? <Spinner /> : (
         <>
+          <Card className="p-3 text-center">
+            <div className="text-2xl font-extrabold">{total} cartas / {data.stops.length + new Set(data.unlocated.map((l) => l.addressKey)).size} imóveis / {new Set(data.letters.map((l) => l.neighborhood).filter(Boolean)).size} bairros</div>
+            <div className="text-xs muted">{data.stops.length} paradas localizadas · {data.unlocated.length} carta(s) aguardando localização</div>
+          </Card>
+          <button onClick={() => nav(`/enderecos/${batchId}`)} className="card w-full p-3 text-left">
+            <div className="text-xs font-semibold uppercase muted">Endereços a conferir</div>
+            <div className="text-xl font-bold">{review + new Set(data.unlocated.map((l) => l.addressKey)).size} pendência(s)</div>
+            <div className="text-xs muted">{data.addresses.filter((a) => a.precision === "test").length} posição(ões) de TESTE · {data.addresses.filter((a) => a.precision === "manual").length} confirmada(s) no mapa</div>
+          </button>
           <div className="grid grid-cols-2 gap-3">
             <Stat label="Cartas" value={total} hint={`${data.letters.filter((l) => l.status === "delivered").length} entregues`} />
             <Stat label="Paradas" value={data.stops.length} hint="imóveis agrupados" />

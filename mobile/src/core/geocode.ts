@@ -11,8 +11,20 @@ import { type NormalizedAddress, normText } from "./normalize";
 
 const URL_BASE = "https://nominatim.openstreetmap.org/search";
 let last = 0;
+let dailyQuota = 250;
+export function setDailyQuota(n: number) { dailyQuota = n; }
+export class QuotaError extends Error {}
+function quotaKey() { return `rota.geocode.${new Date().toISOString().slice(0, 10)}`; }
+export function quotaUsed(): number {
+  try { return +(localStorage.getItem(quotaKey()) || 0); } catch { return 0; }
+}
+function countQuery() {
+  try { localStorage.setItem(quotaKey(), String(quotaUsed() + 1)); } catch { /* sem localStorage */ }
+}
 
 async function http(params: Record<string, string>): Promise<any[]> {
+  if (quotaUsed() >= dailyQuota) throw new QuotaError(`Cota diária de ${dailyQuota} consultas ao Nominatim público atingida. Confirme os demais no mapa ou importe coordenadas.`);
+  countQuery();
   const wait = 1100 - (Date.now() - last);
   if (wait > 0) await new Promise((r) => setTimeout(r, wait));
   last = Date.now();
@@ -61,6 +73,7 @@ export async function search(q: Record<string, string>, email = ""): Promise<Can
       await db.geocache.put({ q: key, at: new Date().toISOString(), result: res });
       return res;
     } catch (e) {
+      if (e instanceof QuotaError) throw e;
       err = e;
       await new Promise((r) => setTimeout(r, delay));
     }

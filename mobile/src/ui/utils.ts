@@ -42,6 +42,7 @@ export const PRECISION_LABEL: Record<string, string> = {
   neighborhood: "Centro do bairro",
   not_found: "Não localizado",
   manual: "Confirmado manualmente",
+  test: "POSIÇÃO DE TESTE (não é a porta)",
   pending: "Aguardando",
 };
 

@@ -1,17 +1,20 @@
-import { ChevronDown, ChevronUp, Crosshair, ExternalLink, ListOrdered, RotateCcw } from "lucide-react";
+import { ChevronDown, ChevronUp, Crosshair, ExternalLink, ListOrdered, Pin, RotateCcw, Search, SkipForward, Undo2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { Nav } from "../App";
-import { db, type LetterStatus } from "../core/db";
-import { activateRoute, getSettings, lastServedPoint, planBatch, recordEvent, stopsOf, TERMINAL } from "../core/service";
+import { db, type Letter, type LetterStatus } from "../core/db";
+import {
+  activateRoute, cancelPlan, lastServedPoint, planBatch, recordEvent, stopsOf, TERMINAL, undoLastEvent,
+} from "../core/service";
 import { Button } from "../ui/button";
 import { useAsync, useCurrentBatch } from "../ui/hooks";
-import { Alert, Badge, Card, Select, Spinner } from "../ui/misc";
+import { Alert, Badge, Card, Input, Select, Spinner } from "../ui/misc";
 import RouteMap, { MapLegend } from "../ui/RouteMap";
 import { PRECISION_LABEL, REASON_LABEL, STATUS_LABEL, STOP_STATUS_LABEL, fmtDist, fmtTime } from "../ui/utils";
 
+const CONF_COLOR: Record<string, string> = { alta: "#16a34a", boa: "#16a34a", media: "#b45309", baixa: "#dc2626" };
+
 export function RoutePage({ routeId, nav }: { routeId?: string; nav: Nav }) {
   const [batchId] = useCurrentBatch();
-  // sem id: abre a rota ativa do lote atual
   useEffect(() => {
     if (routeId || !batchId) return;
     db.routes.where("batchId").equals(batchId).toArray().then((rs) => {
@@ -25,8 +28,10 @@ export function RoutePage({ routeId, nav }: { routeId?: string; nav: Nav }) {
   const [selKey, setSelKey] = useState<string | null>(null);
   const [open, setOpen] = useState(true);
   const [list, setList] = useState(false);
+  const [query, setQuery] = useState("");
   const [me, setMe] = useState<{ lat: number; lon: number } | null>(null);
-  const [msg, setMsg] = useState<{ kind: "ok" | "error" | "info"; text: string } | null>(null);
+  const [baseMap, setBaseMap] = useState<"online" | "offline" | null>(null);
+  const [msg, setMsg] = useState<{ kind: "ok" | "error" | "info" | "warn"; text: string } | null>(null);
   const [reason, setReason] = useState("ausente");
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -35,34 +40,69 @@ export function RoutePage({ routeId, nav }: { routeId?: string; nav: Nav }) {
   const next = items.find((x) => ["pending", "partial"].includes(x.stop!.status));
   const sel = items.find((x) => x.key === (selKey ?? next?.key));
   const following = sel ? items[items.indexOf(sel) + 1] : null;
-  const mapStops = useMemo(() => items.map((x) => ({ id: x.key, lat: x.stop!.address.lat!, lon: x.stop!.address.lon!, seq: x.seq, status: x.stop!.status, uncertain: x.stop!.uncertain, isNext: x.key === next?.key })), [items, next]);
+  const mapStops = useMemo(() => items.map((x) => ({
+    id: x.key, lat: x.stop!.address.lat!, lon: x.stop!.address.lon!, seq: x.seq, status: x.stop!.status,
+    uncertain: x.stop!.uncertain || x.confidence === "baixa", isNext: x.key === next?.key,
+  })), [items, next]);
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter((x) => [x.stop!.address.display, x.stop!.address.neighborhood, ...x.stop!.letters.flatMap((l) => [l.externalId, l.recipient, l.complement])]
+      .some((v) => (v || "").toLowerCase().includes(q)));
+  }, [items, query]);
 
   if (!routeId) return <Card>Nenhuma rota calculada para o lote atual. <Button className="mt-2" onClick={() => nav("/")}>Ir ao painel</Button></Card>;
   if (!route || !stopsData) return <Spinner />;
 
-  async function mark(letterId: string, status: LetterStatus) {
-    await recordEvent(letterId, status, route!.id, ["not_delivered", "returned", "address_not_found"].includes(status) ? reason : null);
-    setMsg({ kind: "ok", text: `${STATUS_LABEL[status]} registrada.` });
+  const letters = stopsData.letters;
+  const pendingLetters = letters.filter((l) => !TERMINAL.includes(l.status) && l.status !== "postponed").length;
+  const doneStops = items.filter((x) => ["completed", "problem"].includes(x.stop!.status)).length;
+  const remaining = items.filter((x) => !["completed", "problem"].includes(x.stop!.status));
+  const remDist = remaining.reduce((a, x) => a + x.legDistance, 0);
+  const remTime = remaining.reduce((a, x) => a + x.legTime, 0);
+  const partial = route.metrics.status === "partial";
+
+  async function mark(l: Letter, status: LetterStatus) {
+    await recordEvent(l.id, status, route!.id, ["not_delivered", "returned", "address_not_found"].includes(status) ? reason : null);
+    setMsg({ kind: "ok", text: `${l.externalId || "Carta"}: ${STATUS_LABEL[status]}. Use "Desfazer" se foi engano.` });
     reload();
   }
 
-  async function reoptimize(origin: "last" | "here") {
+  async function bulk(status: LetterStatus, label: string) {
+    const ls = sel!.stop!.letters.filter((l) => !TERMINAL.includes(l.status));
+    if (!ls.length) return;
+    if (!confirm(`${label}: aplicar a ${ls.length} carta(s) de ${sel!.stop!.address.display.split(" - ")[0]}?`)) return;
+    for (const l of ls) await recordEvent(l.id, status, route!.id, ["returned", "not_delivered"].includes(status) ? reason : null);
+    setMsg({ kind: "ok", text: `${ls.length} carta(s): ${STATUS_LABEL[status]}.` });
+    reload();
+  }
+
+  async function undo() {
+    const ev = await undoLastEvent(route!.batchId);
+    setMsg(ev ? { kind: "info", text: `Desfeito: ${STATUS_LABEL[ev.status]} (volta para ${STATUS_LABEL[ev.previousStatus]}).` } : { kind: "info", text: "Nada para desfazer." });
+    reload();
+  }
+
+  async function reoptimize(origin: "last" | "here", fixedFirst?: string[]) {
     try {
       let start = await lastServedPoint(route!);
       if (origin === "here") {
         if (!confirm("Usar sua localização atual como origem do recálculo? Ela fica só no aparelho.")) return;
-        const pos = await new Promise<GeolocationPosition>((ok, err) => navigator.geolocation.getCurrentPosition(ok, err, { enableHighAccuracy: true, timeout: 20000 }));
-        start = { label: "Localização atual", lat: pos.coords.latitude, lon: pos.coords.longitude };
+        try {
+          const pos = await new Promise<GeolocationPosition>((ok, err) => navigator.geolocation.getCurrentPosition(ok, err, { enableHighAccuracy: true, timeout: 15000 }));
+          start = { label: "Localização atual", lat: pos.coords.latitude, lon: pos.coords.longitude };
+        } catch (e) {
+          // GPS negado/indisponível: segue da última parada concluída
+          setMsg({ kind: "warn", text: `GPS indisponível (${(e as GeolocationPositionError).message || "sem permissão"}). Recalculando a partir da última parada atendida.` });
+        }
       }
       start ??= route!.start;
-      const s = await getSettings();
       setBusy("Recalculando paradas restantes…");
       const mode = route!.params.mode as any;
       const r = await planBatch(route!.batchId, {
         mode: mode === "circular" ? "fixed_end" : mode, strategy: route!.params.strategy as any, start,
-        end: mode === "circular" ? route!.start : route!.end, timeLimitMs: 8000, reason: `reotimização:${origin}`,
+        end: mode === "circular" ? route!.start : route!.end, timeLimitMs: 8000, reason: `reotimização:${origin}`, fixedFirst,
       }, (st, p) => setBusy(`${st} ${Math.round(p * 100)}%`));
-      void s;
       await activateRoute(r);
       setBusy(null);
       nav(`/rota/${r.id}`);
@@ -72,76 +112,131 @@ export function RoutePage({ routeId, nav }: { routeId?: string; nav: Nav }) {
     }
   }
 
-  const done = items.filter((x) => ["completed", "problem"].includes(x.stop!.status)).length;
+  function locate() {
+    navigator.geolocation.getCurrentPosition(
+      (p) => setMe({ lat: p.coords.latitude, lon: p.coords.longitude }),
+      (e) => setMsg({ kind: "warn", text: `GPS indisponível: ${e.message || "permissão negada"}. O app continua funcionando sem localização.` }),
+      { timeout: 15000 },
+    );
+  }
+
   const navUrl = sel ? `https://www.google.com/maps/dir/?api=1&destination=${sel.stop!.address.lat},${sel.stop!.address.lon}&travelmode=bicycling` : "#";
+  const addr = (x: typeof items[number]) => x.stop!.address.display.split(" - ")[0];
 
   return (
     <div className="space-y-2">
-      <div className="text-sm muted">Versão {route.version} · {route.status === "active" ? "ativa" : route.status}</div>
-      {msg && <Alert kind={msg.kind}>{msg.text}</Alert>}
-      {busy && <Alert kind="info">{busy}</Alert>}
-      <div className="relative">
-        <RouteMap className="h-[calc(100dvh-12rem)] w-full overflow-hidden rounded-2xl" stops={mapStops} route={route.geojson} start={route.start} me={me}
-          onStopClick={(k) => { setSelKey(k); setOpen(true); }} focus={sel ? { lat: sel.stop!.address.lat!, lon: sel.stop!.address.lon! } : null} />
-        <div className="absolute left-2 top-2 flex gap-2">
-          <Button size="sm" variant="secondary" onClick={() => setList(!list)} aria-label="Lista de paradas"><ListOrdered className="h-4 w-4" /> {done}/{items.length}</Button>
-          <Button size="sm" variant="secondary" aria-label="Minha localização" onClick={() => navigator.geolocation.getCurrentPosition((p) => setMe({ lat: p.coords.latitude, lon: p.coords.longitude }), (e) => setMsg({ kind: "error", text: e.message }))}><Crosshair className="h-4 w-4" /></Button>
-        </div>
-        {list && (
-          <div className="absolute left-2 top-14 max-h-[60%] w-72 overflow-y-auto card p-2 text-sm">
-            {items.map((x) => (
-              <button key={x.key} onClick={() => { setSelKey(x.key); setList(false); }} className="flex w-full items-center gap-2 rounded-lg p-1.5 text-left">
-                <b className="w-7 text-right">{x.seq}</b><span className="flex-1 truncate">{x.stop!.address.display.split(" - ")[0]}</span>
-                <span className="text-xs muted">{STOP_STATUS_LABEL[x.stop!.status]}</span>
-              </button>
-            ))}
-          </div>
-        )}
-        {sel && (
-          <section className="absolute inset-x-2 bottom-2 card shadow-xl" aria-label="Parada selecionada">
-            <button onClick={() => setOpen(!open)} className="flex w-full items-center gap-2 p-3 text-left">
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-next font-bold text-white">{sel.seq}</span>
-              <span className="flex-1">
-                <span className="block font-bold leading-tight">{sel.stop!.address.display.split(" - ")[0]}</span>
-                <span className="text-xs muted">{sel.stop!.address.neighborhood ?? ""} · {sel.stop!.letters.length} carta(s) · {STOP_STATUS_LABEL[sel.stop!.status]}{sel.key === next?.key ? " · próxima" : ""}</span>
-              </span>
-              {open ? <ChevronDown /> : <ChevronUp />}
-            </button>
-            {open && (
-              <div className="max-h-[45vh] space-y-3 overflow-y-auto border-t border-app p-3">
-                <div className="flex flex-wrap gap-2 text-xs">
-                  <Badge color={["exact", "manual"].includes(sel.stop!.address.precision) ? "#16a34a" : "#b45309"}>{PRECISION_LABEL[sel.stop!.address.precision]}</Badge>
-                  <Badge color="#6b7280">{Math.round(sel.snapDistance)} m até a via</Badge>
-                  {following && <Badge color="#7c3aed">Próximo: {fmtDist(following.legDistance)} · {fmtTime(following.legTime)}</Badge>}
-                </div>
-                {sel.stop!.letters.map((l) => (
-                  <div key={l.id} className="rounded-xl border border-app p-2">
-                    <div className="flex items-center justify-between gap-2 text-sm">
-                      <span><b>{l.externalId || `linha ${l.row}`}</b>{l.complement ? ` · ${l.complement}` : ""}{l.recipient ? ` · ${l.recipient}` : ""}</span>
-                      <Badge color={l.status === "delivered" ? "#16a34a" : TERMINAL.includes(l.status) ? "#dc2626" : l.status === "postponed" ? "#6b7280" : "#7c3aed"}>{STATUS_LABEL[l.status]}</Badge>
-                    </div>
-                    {l.notes && <div className="text-xs muted">Obs.: {l.notes}</div>}
-                    <div className="mt-2 grid grid-cols-2 gap-2">
-                      <Button variant="success" size="sm" onClick={() => mark(l.id, "delivered")}>Entregue</Button>
-                      <Button variant="danger" size="sm" onClick={() => mark(l.id, "not_delivered")}>Não entregue</Button>
-                      <Button variant="secondary" size="sm" onClick={() => mark(l.id, "postponed")}>Adiar</Button>
-                      <Button variant="secondary" size="sm" onClick={() => mark(l.id, "address_not_found")}>End. não localizado</Button>
-                    </div>
-                  </div>
-                ))}
-                <div className="grid grid-cols-2 gap-2">
-                  <Select aria-label="Motivo" value={reason} onChange={(e) => setReason(e.target.value)}>
-                    {Object.entries(REASON_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                  </Select>
-                  <Button variant="secondary" size="sm" onClick={async () => { for (const l of sel.stop!.letters) if (!TERMINAL.includes(l.status)) await recordEvent(l.id, "returned", route.id, reason); reload(); }}>Devolver pendentes</Button>
-                </div>
-                <a href={navUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm font-semibold text-next"><ExternalLink className="h-4 w-4" /> Navegação externa (Google Maps, bicicleta)</a>
-                <p className="text-xs muted">A navegação externa usa o perfil de bicicleta do Google (respeita mãos de direção) — pode diferir do caminho de pedestre calculado aqui.</p>
-              </div>
-            )}
-          </section>
-        )}
+      {/* indicadores sempre visíveis */}
+      <div className="flex flex-wrap gap-1 text-[11px]">
+        <Badge color="#16a34a">Rota calculada no aparelho · v{route.version}</Badge>
+        <Badge color={baseMap === "offline" ? "#b45309" : "#16a34a"}>Mapa-base {baseMap === "offline" ? "offline" : "online"}</Badge>
+        <Badge color={partial ? "#dc2626" : "#16a34a"}>{partial ? "ROTA PARCIAL" : "Rota completa"}</Badge>
+        {stopsData.unlocated.length > 0 && <Badge color="#dc2626">{stopsData.unlocated.length} carta(s) sem localização</Badge>}
       </div>
+      {partial && (
+        <Alert kind="error">ROTA PARCIAL: {route.metrics.notRoutedLetters ?? 0} carta(s) pendente(s) fora do roteiro
+          ({route.metrics.excluded?.length ?? 0} parada(s) sem caminho viável/posição inválida, {stopsData.unlocated.length} sem localização). Elas não estão no tempo nem na distância.</Alert>
+      )}
+      {next && (
+        <Card className="border-next p-3">
+          <div className="text-xs font-semibold uppercase text-next">Próxima parada · {next.seq} de {items.length}</div>
+          <div className="text-2xl font-extrabold leading-tight">{addr(next)}</div>
+          <div className="text-sm muted">{next.stop!.address.neighborhood ?? ""} · {next.stop!.letters.filter((l) => !TERMINAL.includes(l.status)).length} carta(s) pendente(s)</div>
+        </Card>
+      )}
+      <div className="grid grid-cols-2 gap-2 text-center text-xs">
+        <Card className="p-2"><b className="text-base">{letters.length - pendingLetters}/{letters.length}</b><div>cartas tratadas ({Math.round(((letters.length - pendingLetters) / Math.max(letters.length, 1)) * 100)}%)</div></Card>
+        <Card className="p-2"><b className="text-base">{doneStops}/{items.length}</b><div>paradas concluídas ({Math.round((doneStops / Math.max(items.length, 1)) * 100)}%)</div></Card>
+        <Card className="p-2"><b className="text-base">{fmtDist(remDist)}</b><div>restante de {fmtDist(route.totalDistance)}</div></Card>
+        <Card className="p-2"><b className="text-base">{fmtTime(remTime)}</b><div>deslocamento restante (estimativa ±20%)</div></Card>
+      </div>
+      {msg && <Alert kind={msg.kind}>{msg.text}</Alert>}
+      {busy && <Alert kind="info">{busy} <button className="ml-2 underline" onClick={() => { cancelPlan(); setBusy(null); }}>Cancelar</button></Alert>}
+
+      <div className="relative">
+        <RouteMap className="h-[55dvh] w-full overflow-hidden rounded-2xl" stops={mapStops} route={route.geojson} start={route.start} me={me}
+          onBaseMap={setBaseMap} onStopClick={(k) => { setSelKey(k); setOpen(true); }} focus={sel ? { lat: sel.stop!.address.lat!, lon: sel.stop!.address.lon! } : null} />
+        <div className="absolute left-2 top-2 flex gap-2">
+          <Button size="sm" variant="secondary" onClick={() => setList(!list)} aria-label="Lista de paradas"><ListOrdered className="h-4 w-4" /> Lista</Button>
+          <Button size="sm" variant="secondary" aria-label="Minha localização" onClick={locate}><Crosshair className="h-4 w-4" /></Button>
+          <Button size="sm" variant="secondary" aria-label="Desfazer última ação" onClick={undo}><Undo2 className="h-4 w-4" /></Button>
+        </div>
+      </div>
+
+      {list && (
+        <Card className="p-2">
+          <div className="mb-2 flex items-center gap-2">
+            <Search className="h-4 w-4" />
+            <Input aria-label="Buscar parada" placeholder="Rua, número, código, bairro…" value={query} onChange={(e) => setQuery(e.target.value)} />
+            <button aria-label="Fechar lista" onClick={() => setList(false)}><X className="h-5 w-5" /></button>
+          </div>
+          <ol className="max-h-[50vh] divide-y divide-[var(--border)] overflow-y-auto text-sm">
+            {filtered.map((x) => (
+              <li key={x.key} className="flex items-center gap-2 py-2">
+                <button onClick={() => { setSelKey(x.key); setList(false); setOpen(true); }} className="flex flex-1 items-center gap-2 text-left">
+                  <b className="w-8 text-right">{x.seq}</b>
+                  <span className="flex-1">
+                    <span className="block font-semibold">{addr(x)}</span>
+                    <span className="text-xs muted">{x.stop!.address.neighborhood ?? ""} · {x.stop!.letters.length} carta(s) · {STOP_STATUS_LABEL[x.stop!.status]}
+                      {x.stop!.letters.length > 1 ? " · agrupadas: mesmo logradouro e número" : ""}</span>
+                  </span>
+                </button>
+                {["pending", "partial"].includes(x.stop!.status) && x.key !== next?.key && (
+                  <Button size="sm" variant="ghost" aria-label="Fixar como próxima" onClick={() => reoptimize("last", [x.key])}><Pin className="h-4 w-4" /></Button>
+                )}
+              </li>
+            ))}
+          </ol>
+        </Card>
+      )}
+
+      {sel && (
+        <section className="card shadow-xl" aria-label="Parada selecionada">
+          <button onClick={() => setOpen(!open)} className="flex w-full items-center gap-2 p-3 text-left">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-next text-lg font-bold text-white">{sel.seq}</span>
+            <span className="flex-1">
+              <span className="block text-lg font-bold leading-tight">{addr(sel)}</span>
+              <span className="text-xs muted">{sel.stop!.address.neighborhood ?? ""} · {sel.stop!.letters.length} carta(s) · {STOP_STATUS_LABEL[sel.stop!.status]}{sel.key === next?.key ? " · próxima" : ""}</span>
+            </span>
+            {open ? <ChevronDown /> : <ChevronUp />}
+          </button>
+          {open && (
+            <div className="space-y-3 border-t border-app p-3">
+              <div className="flex flex-wrap gap-2 text-xs">
+                <Badge color={["exact", "manual"].includes(sel.stop!.address.precision) ? "#16a34a" : "#b45309"}>{PRECISION_LABEL[sel.stop!.address.precision]}</Badge>
+                <Badge color={CONF_COLOR[sel.confidence || "alta"]}>Posição na via: {Math.round(sel.snapDistance)} m ({sel.confidence ?? "—"})</Badge>
+                {(sel.flags || []).includes("acesso_cruza_outra_via") && <Badge color="#dc2626">Acesso cruza outra via — confira o lado</Badge>}
+                {(sel.flags || []).includes("via_mais_proxima_desconectada") && <Badge color="#dc2626">Via mais próxima não conectada</Badge>}
+                {following && <Badge color="#7c3aed">Próximo: {fmtDist(following.legDistance)} · {fmtTime(following.legTime)}</Badge>}
+              </div>
+              {sel.stop!.letters.map((l) => (
+                <div key={l.id} className="rounded-xl border border-app p-2">
+                  <div className="flex items-center justify-between gap-2 text-sm">
+                    <span><b>{l.externalId || `linha ${l.row}`}</b>{l.complement ? ` · ${l.complement}` : ""}{l.recipient ? ` · ${l.recipient}` : ""}</span>
+                    <Badge color={l.status === "delivered" ? "#16a34a" : TERMINAL.includes(l.status) ? "#dc2626" : l.status === "postponed" ? "#6b7280" : "#7c3aed"}>{STATUS_LABEL[l.status]}</Badge>
+                  </div>
+                  {l.notes && <div className="text-xs muted">Obs.: {l.notes}</div>}
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <Button variant="success" onClick={() => mark(l, "delivered")}>Entregue</Button>
+                    <Button variant="danger" onClick={() => mark(l, "not_delivered")}>Não entregue</Button>
+                    <Button variant="secondary" size="sm" onClick={() => mark(l, "postponed")}>Adiar</Button>
+                    <Button variant="secondary" size="sm" onClick={() => mark(l, "address_not_found")}>Endereço errado</Button>
+                  </div>
+                </div>
+              ))}
+              <div className="grid grid-cols-2 gap-2">
+                <Select aria-label="Motivo da ocorrência" value={reason} onChange={(e) => setReason(e.target.value)}>
+                  {Object.entries(REASON_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </Select>
+                <Button variant="secondary" size="sm" onClick={() => bulk("returned", "Devolver pendentes")}>Devolver pendentes</Button>
+                <Button variant="secondary" size="sm" onClick={() => bulk("postponed", "Pular este endereço (adiar)")}><SkipForward className="h-4 w-4" /> Pular endereço</Button>
+                {following && <Button variant="secondary" size="sm" onClick={() => setSelKey(following.key)}>Próxima parada →</Button>}
+              </div>
+              <a href={navUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm font-semibold text-next"><ExternalLink className="h-4 w-4" /> Navegação externa (Google Maps, bicicleta)</a>
+              <p className="text-xs muted">A navegação externa usa o perfil de bicicleta do Google (respeita mãos de direção) — pode diferir do caminho de pedestre calculado aqui.</p>
+            </div>
+          )}
+        </section>
+      )}
       <div className="grid gap-2">
         <Button variant="secondary" onClick={() => reoptimize("last")} disabled={!!busy}><RotateCcw className="h-4 w-4" /> Recalcular a partir da última parada</Button>
         <Button variant="secondary" onClick={() => reoptimize("here")} disabled={!!busy}><Crosshair className="h-4 w-4" /> Recalcular da minha localização</Button>

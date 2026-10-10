@@ -1,9 +1,15 @@
 /**
- * Sequenciamento no aparelho (sem OR-Tools): construção + busca local
- * (2-opt, Or-opt) + perturbação iterada (ILS) até o limite de tempo.
- * Objetivo = tempo total (ms) + 1 por metro (desempate) + penalidades
- * (setor/bairro no modo por setores; prioridade sobre o horário de chegada).
- * Não garante ótimo global. Validado contra o OR-Tools em tests/optimizer.test.ts.
+ * Sequenciamento no aparelho (sem OR-Tools).
+ *
+ * Critério lexicográfico (auditoria V2):
+ *   1. FACTIBILIDADE — nenhuma sequência com par sem caminho é aceita (validateRoute);
+ *   2. COBERTURA — todas as paradas factíveis (as demais saem com motivo: feasibility);
+ *   3. TEMPO — deslocamento + atendimento + penalidades configuradas (prioridade, troca de setor);
+ *   4. DISTÂNCIA — só desempata (na busca: 1 km vale 1 ms; na escolha final: comparação exata).
+ * Busca: vizinho mais próximo, inserção mais barata, 2-opt e Or-opt com avaliação incremental
+ * O(1) correta para matrizes ASSIMÉTRICAS (custo do trecho invertido calculado no sentido
+ * real), e busca local iterada com perturbação double-bridge e várias sementes, até o limite
+ * de tempo ou estagnação. Não garante ótimo global.
  */
 
 export interface SolveInput {
@@ -17,19 +23,29 @@ export interface SolveInput {
   sector?: Record<number, string>;
   timeLimitMs?: number;
   seed?: number;
+  compRank?: Record<number, number>;
+  baselines?: Record<string, number[]>;
+  shouldStop?: () => boolean;
 }
 
 export interface Candidate {
   strategy: string;
   order: number[];
-  objective: number;
   time_s: number;
   distance_m: number;
+  cost_s: number;
+  feasible: boolean;
   solve_ms: number;
 }
 
+export interface Feasibility {
+  kept: number[];
+  excluded: Record<number, string>;
+  compRank: Record<number, number>;
+}
+
 const SECTOR_SWITCH_S = 300;
-const BIG = 1e12;
+const DIST_W = 1e-6; // s por metro na busca (1 km = 1 ms): distância só desempata
 
 function rng(seed: number) {
   let s = seed >>> 0 || 1;
@@ -41,7 +57,7 @@ function rng(seed: number) {
   };
 }
 
-export function evaluate(order: number[], inp: SolveInput): { time: number; dist: number } {
+export function evaluate(order: number[], inp: Pick<SolveInput, "T" | "D" | "start" | "end" | "service">) {
   const seq = [inp.start, ...order, ...(inp.end != null ? [inp.end] : [])];
   let t = 0, d = 0;
   for (let k = 0; k < seq.length - 1; k++) {
@@ -52,6 +68,84 @@ export function evaluate(order: number[], inp: SolveInput): { time: number; dist
   return { time: t, dist: d };
 }
 
+export function validateRoute(order: number[], T: number[][], start: number, stops: number[], end: number | null): string[] {
+  const p: string[] = [];
+  if (new Set(order).size !== order.length) p.push("parada visitada mais de uma vez");
+  const a = [...order].sort((x, y) => x - y), b = [...stops].sort((x, y) => x - y);
+  if (a.length !== b.length || a.some((v, i) => v !== b[i])) p.push("paradas faltando ou a mais");
+  const seq = [start, ...order, ...(end != null ? [end] : [])];
+  const bad = seq.slice(1).filter((v, k) => !isFinite(T[seq[k]][v])).length;
+  if (bad) p.push(`${bad} trecho(s) sem caminho na malha`);
+  return p;
+}
+
+/** Componentes fortemente conexas (Tarjan iterativo) da relação de alcance entre paradas. */
+function scc(nodes: number[], reach: (a: number, b: number) => boolean): number[][] {
+  const index = new Map<number, number>(), low = new Map<number, number>(), on = new Set<number>();
+  const stack: number[] = [], out: number[][] = [];
+  let counter = 0;
+  for (const root of nodes) {
+    if (index.has(root)) continue;
+    const work: [number, number][] = [[root, 0]];
+    index.set(root, counter); low.set(root, counter++); stack.push(root); on.add(root);
+    while (work.length) {
+      const top = work[work.length - 1];
+      const v = top[0];
+      let advanced = false;
+      while (top[1] < nodes.length) {
+        const w = nodes[top[1]++];
+        if (w === v || !reach(v, w)) continue;
+        if (!index.has(w)) {
+          index.set(w, counter); low.set(w, counter++); stack.push(w); on.add(w);
+          work.push([w, 0]);
+          advanced = true;
+          break;
+        }
+        if (on.has(w)) low.set(v, Math.min(low.get(v)!, index.get(w)!));
+      }
+      if (advanced) continue;
+      work.pop();
+      if (work.length) { const u = work[work.length - 1][0]; low.set(u, Math.min(low.get(u)!, low.get(v)!)); }
+      if (low.get(v) === index.get(v)) {
+        const comp: number[] = [];
+        for (;;) { const w = stack.pop()!; on.delete(w); comp.push(w); if (w === v) break; }
+        out.push(comp);
+      }
+    }
+  }
+  return out;
+}
+
+/** Maior conjunto de paradas visitáveis numa única sequência (cadeia de componentes). */
+export function feasibility(T: number[][], start: number, stops: number[], end: number | null): Feasibility {
+  const fin = (a: number, b: number) => isFinite(T[a][b]);
+  const excluded: Record<number, string> = {};
+  const cand: number[] = [];
+  for (const i of stops) {
+    if (!fin(start, i)) excluded[i] = "Sem caminho de pedestre a partir da origem.";
+    else if (end != null && !fin(i, end)) excluded[i] = end === start ? "Sem caminho de volta à origem (circular)." : "Sem caminho até o destino final.";
+    else cand.push(i);
+  }
+  const comps = scc(cand, fin); // ordem topológica reversa
+  const cid = new Map<number, number>();
+  comps.forEach((c, k) => c.forEach((v) => cid.set(v, k)));
+  const succ = comps.map(() => new Set<number>());
+  for (const a of cand) for (const b of cand) if (cid.get(a) !== cid.get(b) && fin(a, b)) succ[cid.get(a)!].add(cid.get(b)!);
+  const best = comps.map((c) => c.length), next = comps.map(() => -1);
+  for (let k = 0; k < comps.length; k++)
+    for (const s of succ[k]) if (best[s] + comps[k].length > best[k]) { best[k] = best[s] + comps[k].length; next[k] = s; }
+  const kept: number[] = [], compRank: Record<number, number> = {};
+  if (comps.length) {
+    let k = 0;
+    for (let c = 1; c < comps.length; c++) if (best[c] > best[k]) k = c;
+    let r = 0;
+    while (k !== -1) { for (const v of comps[k]) { compRank[v] = r; kept.push(v); } r++; k = next[k]; }
+  }
+  for (const v of cand)
+    if (!(v in compRank)) excluded[v] = "Sem caminho de pedestre que permita visitá-la na mesma sequência das demais (trecho de sentido único ou sem saída).";
+  return { kept, excluded, compRank };
+}
+
 export function solve(inp: SolveInput): { order: number[]; best: Candidate; candidates: Candidate[] } {
   const { T, D, start, stops } = inp;
   const end = inp.end ?? null;
@@ -60,45 +154,62 @@ export function solve(inp: SolveInput): { order: number[]; best: Candidate; cand
   const hasPrio = Object.values(prio).some((p) => p > 0);
   const sector = inp.sector;
   const limit = inp.timeLimitMs ?? 5000;
-  const rand = rng(inp.seed ?? 12345);
+  const rank = inp.compRank || {};
 
   const arc = (a: number, b: number) => {
     const t = T[a][b], d = D[a][b];
-    if (!isFinite(t) || !isFinite(d)) return BIG;
-    let c = t * 1000 + d;
-    if (sector && sector[a] != null && sector[b] != null && sector[a] !== sector[b]) c += SECTOR_SWITCH_S * 1000;
+    if (!isFinite(t) || !isFinite(d)) return Infinity;
+    let c = t + DIST_W * d;
+    if (sector && a !== start && sector[a] != null && sector[b] != null && sector[a] !== sector[b]) c += SECTOR_SWITCH_S;
     return c;
   };
-  const cost = (order: number[]): number => {
+  /** custo de busca (tempo + penalidades + desempate por distância), sem o atendimento constante */
+  const searchCost = (order: number[]): number => {
     let c = 0, clock = 0, prev = start;
     for (const i of order) {
       c += arc(prev, i);
       clock += T[prev][i];
-      if (hasPrio && prio[i]) c += prio[i] * clock * 1000;
+      if (hasPrio && prio[i]) c += prio[i] * clock;
       clock += svc(i);
       prev = i;
     }
     if (end != null) c += arc(prev, end);
     return c;
   };
+  const exactCost = (order: number[]): [number, number] => {
+    const e = evaluate(order, inp);
+    let pen = 0;
+    if (hasPrio) {
+      let clock = 0, prev = start;
+      for (const i of order) { clock += T[prev][i]; pen += (prio[i] || 0) * clock; clock += svc(i); prev = i; }
+    }
+    if (sector) { const seq = [start, ...order]; for (let k = 2; k < seq.length; k++) if (sector[seq[k - 1]] !== sector[seq[k]]) pen += SECTOR_SWITCH_S; }
+    return [e.time + pen, e.dist];
+  };
 
   const cands: Candidate[] = [];
-  const finish = (strategy: string, order: number[], t0: number) => {
-    const e = evaluate(order, inp);
-    const c: Candidate = {
-      strategy, order: [...order], objective: Math.round(cost(order)), time_s: e.time, distance_m: e.dist,
-      solve_ms: Math.round(performance.now() - t0),
-    };
-    cands.push(c);
-    return c;
+  const t0all = performance.now();
+  const add = (strategy: string, order: number[], t0: number) => {
+    let o = [...order];
+    let ok = validateRoute(o, T, start, stops, end).length === 0;
+    if (!ok && Object.keys(rank).length) {
+      o = [...o].sort((a, b) => (rank[a] ?? 0) - (rank[b] ?? 0));
+      ok = validateRoute(o, T, start, stops, end).length === 0;
+      strategy += "+reparo";
+    }
+    const e = evaluate(o, inp);
+    const [c] = exactCost(o);
+    const cand: Candidate = { strategy, order: o, time_s: e.time, distance_m: e.dist, cost_s: c, feasible: ok, solve_ms: Math.round(performance.now() - t0) };
+    cands.push(cand);
+    return cand;
   };
 
   if (!stops.length) {
-    const c: Candidate = { strategy: "trivial", order: [], objective: 0, time_s: 0, distance_m: 0, solve_ms: 0 };
+    const c: Candidate = { strategy: "trivial", order: [], time_s: 0, distance_m: 0, cost_s: 0, feasible: true, solve_ms: 0 };
     return { order: [], best: c, candidates: [c] };
   }
 
-  // 1) vizinho mais próximo (linha de base)
+  // 1) linhas de base
   let t0 = performance.now();
   const nn: number[] = [];
   {
@@ -106,19 +217,12 @@ export function solve(inp: SolveInput): { order: number[]; best: Candidate; cand
     let cur = start;
     while (left.size) {
       let best = -1, bc = Infinity;
-      for (const j of left) {
-        const c = arc(cur, j);
-        if (c < bc) {
-          bc = c;
-          best = j;
-        }
-      }
-      nn.push(best);
-      left.delete(best);
-      cur = best;
+      for (const j of left) { const c = arc(cur, j); if (best < 0 || c < bc) { bc = c; best = j; } }
+      nn.push(best); left.delete(best); cur = best;
     }
   }
-  finish("nearest_neighbor_baseline", nn, t0);
+  add("nearest_neighbor_baseline", nn, t0);
+  for (const [name, o] of Object.entries(inp.baselines || {})) add(`baseline:${name}`, o, performance.now());
 
   // 2) inserção mais barata
   t0 = performance.now();
@@ -132,11 +236,7 @@ export function solve(inp: SolveInput): { order: number[]; best: Candidate; cand
           const a = p === 0 ? start : ins[p - 1];
           const b = p < ins.length ? ins[p] : end;
           const delta = arc(a, j) + (b != null ? arc(j, b) - arc(a, b) : 0);
-          if (delta < bd) {
-            bd = delta;
-            bj = j;
-            bp = p;
-          }
+          if (bj < 0 || delta < bd) { bd = delta; bj = j; bp = p; }
         }
       }
       ins.splice(bp, 0, bj);
@@ -144,38 +244,87 @@ export function solve(inp: SolveInput): { order: number[]; best: Candidate; cand
     }
   }
 
-  const deadline = performance.now() + limit;
+  const deadline = t0all + limit;
+  const stop = () => performance.now() > deadline || (inp.shouldStop?.() ?? false);
+  const repair = (o: number[]) => (validateRoute(o, T, start, stops, end).length ? [...o].sort((a, b) => (rank[a] ?? 0) - (rank[b] ?? 0)) : o);
+
+  /** Busca local com avaliação incremental (sem prioridade) ou completa (com prioridade). */
   const localSearch = (order: number[]): number[] => {
-    let best = order.slice();
-    let bc = cost(best);
+    let s = repair(order);
+    if (hasPrio) {
+      let bc = searchCost(s), improved = true;
+      while (improved && !stop()) {
+        improved = false;
+        for (let i = 0; i < s.length - 1 && !stop(); i++)
+          for (let j = i + 1; j < s.length; j++) {
+            const c2 = s.slice(0, i).concat(s.slice(i, j + 1).reverse(), s.slice(j + 1));
+            const c = searchCost(c2);
+            if (c < bc - 1e-9) { s = c2; bc = c; improved = true; }
+          }
+        for (let len = 1; len <= 3; len++)
+          for (let i = 0; i + len <= s.length && !stop(); i++) {
+            const seg = s.slice(i, i + len), rest = s.slice(0, i).concat(s.slice(i + len));
+            for (let p = 0; p <= rest.length; p++) {
+              if (p === i) continue;
+              const c2 = rest.slice(0, p).concat(seg, rest.slice(p));
+              const c = searchCost(c2);
+              if (c < bc - 1e-9) { s = c2; bc = c; improved = true; break; }
+            }
+          }
+      }
+      return s;
+    }
+    // ---- incremental: seq = [start, ...s, end?]; x(k) = nó na posição k da seq
+    const hasEnd = end != null;
+    let seq: number[] = [start, ...s, ...(hasEnd ? [end!] : [])];
+    const n = s.length;
+    let F = new Float64Array(seq.length), Rf = new Float64Array(seq.length), Ri = new Int32Array(seq.length);
+    const build = () => {
+      F = new Float64Array(seq.length); Rf = new Float64Array(seq.length); Ri = new Int32Array(seq.length);
+      for (let k = 1; k < seq.length; k++) {
+        F[k] = F[k - 1] + arc(seq[k - 1], seq[k]);
+        const r = arc(seq[k], seq[k - 1]);
+        Rf[k] = Rf[k - 1] + (isFinite(r) ? r : 0);
+        Ri[k] = Ri[k - 1] + (isFinite(r) ? 0 : 1);
+      }
+    };
+    const A = (u: number, v: number | undefined) => (v === undefined ? 0 : arc(u, v));
+    build();
     let improved = true;
-    while (improved && performance.now() < deadline) {
+    while (improved && !stop()) {
       improved = false;
-      const n = best.length;
-      // 2-opt (inverte trecho; custo assimétrico avaliado por completo)
-      for (let i = 0; i < n - 1 && performance.now() < deadline; i++) {
-        for (let j = i + 1; j < n; j++) {
-          const cand = best.slice(0, i).concat(best.slice(i, j + 1).reverse(), best.slice(j + 1));
-          const c = cost(cand);
-          if (c < bc - 1e-6) {
-            best = cand;
-            bc = c;
+      // 2-opt: inverte seq[i..j] (posições 1..n)
+      outer2: for (let i = 1; i < n && !stop(); i++) {
+        for (let j = i + 1; j <= n; j++) {
+          const prev = seq[i - 1], first = seq[i], last = seq[j], nxt = seq[j + 1];
+          if (Ri[j] - Ri[i] > 0) continue; // trecho invertido teria par impossível
+          const oldC = arc(prev, first) + (F[j] - F[i]) + A(last, nxt);
+          const newC = arc(prev, last) + (Rf[j] - Rf[i]) + A(first, nxt);
+          if (newC < oldC - 1e-9) {
+            const mid = seq.slice(i, j + 1).reverse();
+            seq = seq.slice(0, i).concat(mid, seq.slice(j + 1));
+            build();
             improved = true;
+            break outer2;
           }
         }
       }
-      // Or-opt: move blocos de 1 a 3 paradas
-      for (let len = 1; len <= 3; len++) {
-        for (let i = 0; i + len <= best.length && performance.now() < deadline; i++) {
-          const seg = best.slice(i, i + len);
-          const rest = best.slice(0, i).concat(best.slice(i + len));
-          for (let p = 0; p <= rest.length; p++) {
-            if (p === i) continue;
-            const cand = rest.slice(0, p).concat(seg, rest.slice(p));
-            const c = cost(cand);
-            if (c < bc - 1e-6) {
-              best = cand;
-              bc = c;
+      // Or-opt: move bloco seq[i..i+L-1] (sem inverter) para entre seq[p-1] e seq[p]
+      for (let L = 1; L <= 3 && !stop(); L++) {
+        for (let i = 1; i + L - 1 <= n && !stop(); i++) {
+          const a = seq[i - 1], f = seq[i], l = seq[i + L - 1], b = seq[i + L];
+          const remGain = arc(a, f) + A(l, b) - A(a, b);
+          if (!isFinite(remGain)) continue;
+          for (let p = 1; p <= n + 1; p++) {
+            if (p >= i && p <= i + L) continue; // posição dentro/adjacente ao próprio bloco
+            const x = seq[p - 1], y = p <= n ? seq[p] : (hasEnd ? seq[p] : undefined);
+            const insCost = arc(x, f) + A(l, y) - A(x, y);
+            if (insCost - remGain < -1e-9) {
+              const block = seq.slice(i, i + L);
+              const rest = seq.slice(0, i).concat(seq.slice(i + L));
+              const pos = p > i ? p - L : p;
+              seq = rest.slice(0, pos).concat(block, rest.slice(pos));
+              build();
               improved = true;
               break;
             }
@@ -183,41 +332,43 @@ export function solve(inp: SolveInput): { order: number[]; best: Candidate; cand
         }
       }
     }
-    return best;
+    return seq.slice(1, 1 + n);
   };
 
   const lsIns = localSearch(ins);
-  finish("cheapest_insertion+local_search", lsIns, t0);
+  add("cheapest_insertion+local_search", lsIns, t0);
   const lsNN = localSearch(nn);
-  finish("nearest_neighbor+local_search", lsNN, t0);
+  add("nearest_neighbor+local_search", lsNN, t0);
 
-  // 3) busca local iterada (perturbação double-bridge) até o limite
-  let cur = cost(lsIns) <= cost(lsNN) ? lsIns : lsNN;
-  let curC = cost(cur);
-  let best = cur, bestC = curC;
-  let iters = 0;
-  while (performance.now() < deadline && cur.length >= 8) {
-    const n = cur.length;
-    const p = [1 + Math.floor(rand() * (n / 4)), 0, 0];
-    p[1] = p[0] + 1 + Math.floor(rand() * (n / 4));
-    p[2] = p[1] + 1 + Math.floor(rand() * (n / 4));
-    if (p[2] >= n) continue;
-    const pert = cur.slice(0, p[0]).concat(cur.slice(p[2]), cur.slice(p[1], p[2]), cur.slice(p[0], p[1]));
-    const ls = localSearch(pert);
-    const c = cost(ls);
-    if (c < curC) {
-      cur = ls;
-      curC = c;
-      if (c < bestC) {
-        best = ls;
-        bestC = c;
-      }
+  // 3) busca local iterada com várias sementes; para por tempo ou estagnação
+  const baseSeed = inp.seed ?? 12345;
+  let best = searchCost(lsIns) <= searchCost(lsNN) ? lsIns : lsNN;
+  let bestC = searchCost(best);
+  let iters = 0, sinceImprove = 0;
+  for (let seedK = 0; !stop() && best.length >= 8 && sinceImprove < 400; seedK++) {
+    const rand = rng(baseSeed + seedK * 7919);
+    let cur = best, curC = bestC;
+    for (let it = 0; it < 60 && !stop(); it++) {
+      const n = cur.length;
+      const a = 1 + Math.floor(rand() * (n / 4)), b = a + 1 + Math.floor(rand() * (n / 4)), c = b + 1 + Math.floor(rand() * (n / 4));
+      if (c >= n) continue;
+      const pert = cur.slice(0, a).concat(cur.slice(c), cur.slice(b, c), cur.slice(a, b));
+      const ls = localSearch(pert);
+      const cc = searchCost(ls);
+      iters++;
+      if (cc < curC - 1e-9) {
+        cur = ls; curC = cc;
+        if (cc < bestC - 1e-9) { best = ls; bestC = cc; sinceImprove = 0; } else sinceImprove++;
+      } else sinceImprove++;
     }
-    iters++;
   }
-  finish(`iterated_local_search(${iters})`, best, t0);
+  add(`iterated_local_search(${iters})`, best, t0);
 
-  const solved = cands.filter((c) => c.strategy !== "nearest_neighbor_baseline");
-  const winner = solved.reduce((a, b) => (b.objective < a.objective ? b : a));
-  return { order: winner.order, best: winner, candidates: cands };
+  const feasible = cands.filter((c) => c.feasible);
+  if (!feasible.length) throw new Error("Nenhuma sequência factível encontrada (há pares sem caminho na malha).");
+  const pick = feasible.reduce((x, y) => {
+    const cx = Math.round(x.cost_s * 1000), cy = Math.round(y.cost_s * 1000);
+    return cy < cx || (cy === cx && y.distance_m < x.distance_m) ? y : x;
+  });
+  return { order: pick.order, best: pick, candidates: cands };
 }

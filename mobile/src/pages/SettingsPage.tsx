@@ -3,7 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import type { Settings } from "../core/db";
 import { queryFor, search } from "../core/geocode";
 import { normalizeAddress, parseAddressLine } from "../core/normalize";
-import { backupJson, getSettings, restoreJson, saveSettings, shareFile } from "../core/service";
+import { backupJson, getSettings, restoreJson, saveSettings, shareFile, undoRestore, verifyIntegrity } from "../core/service";
+import { quotaUsed } from "../core/geocode";
 import { Button } from "../ui/button";
 import { Alert, Card, Input, Label, Select, Spinner } from "../ui/misc";
 import RouteMap from "../ui/RouteMap";
@@ -14,6 +15,8 @@ export function SettingsPage() {
   const [pin, setPin] = useState<{ lat: number; lon: number } | null>(null);
   const [cands, setCands] = useState<{ lat: number; lon: number; label: string }[]>([]);
   const [msg, setMsg] = useState<{ kind: "ok" | "error" | "warn" | "info"; text: string } | null>(null);
+  const [pwd, setPwd] = useState("");
+  const [mode, setMode] = useState<"merge" | "replace">("merge");
 
   useEffect(() => {
     getSettings().then((x) => { setS(x); if (x.start) setPin({ lat: x.start.lat, lon: x.start.lon }); });
@@ -53,8 +56,10 @@ export function SettingsPage() {
 
   async function restore(f: File) {
     try {
-      await restoreJson(await f.text());
-      setMsg({ kind: "ok", text: "Backup restaurado." });
+      if (mode === "replace" && !confirm("Substituir TODOS os dados atuais pelo backup? (um instantâneo do estado atual é guardado e pode ser desfeito)")) return;
+      const r = await restoreJson(await f.text(), { password: pwd || undefined, mode });
+      const problems = await verifyIntegrity();
+      setMsg({ kind: problems.length ? "warn" : "ok", text: `Backup restaurado: ${r.batches} lote(s), ${r.letters} carta(s), ${r.events} registro(s).${problems.length ? " Problemas: " + problems.join(" ") : " Integridade verificada."}` });
     } catch (e) {
       setMsg({ kind: "error", text: (e as Error).message });
     }
@@ -79,6 +84,8 @@ export function SettingsPage() {
         <div><Label htmlFor="svc2">+ por carta extra (s)</Label><Input id="svc2" type="number" value={s.perLetterService} onChange={num("perLetterService")} /></div>
         <div><Label htmlFor="ride">Pedalando (km/h)</Label><Input id="ride" type="number" step="0.5" value={s.profile.ride_speed_kmh} onChange={(e) => setS({ ...s, profile: { ...s.profile, ride_speed_kmh: +e.target.value } })} /></div>
         <div><Label htmlFor="walk">A pé c/ bicicleta (km/h)</Label><Input id="walk" type="number" step="0.5" value={s.profile.walk_speed_kmh} onChange={(e) => setS({ ...s, profile: { ...s.profile, walk_speed_kmh: +e.target.value } })} /></div>
+        <div className="col-span-2"><Label htmlFor="quota">Cota diária de consultas ao Nominatim público (usadas hoje: {quotaUsed()})</Label>
+          <Input id="quota" type="number" value={s.geocodeDailyQuota ?? 250} onChange={num("geocodeDailyQuota")} /></div>
         <div className="col-span-2"><Label htmlFor="mail">E-mail de contato p/ o Nominatim (recomendado)</Label><Input id="mail" type="email" value={s.nominatimEmail} onChange={(e) => setS({ ...s, nominatimEmail: e.target.value })} /></div>
         <div><Label htmlFor="rm">Rota padrão</Label>
           <Select id="rm" value={s.routeMode} onChange={(e) => setS({ ...s, routeMode: e.target.value as any })}><option value="open">Aberta</option><option value="circular">Circular</option></Select></div>
@@ -86,8 +93,17 @@ export function SettingsPage() {
       </Card>
       <Card className="space-y-2">
         <div className="font-semibold">Backup (os dados ficam só neste celular)</div>
-        <Button variant="secondary" onClick={async () => shareFile(`rota-santos-backup-${new Date().toISOString().slice(0, 10)}.json`, await backupJson(), "application/json")}>Exportar backup</Button>
+        <p className="text-xs muted">O arquivo contém nomes e endereços. Use uma senha: ele é cifrado (AES-256) e só abre com ela.</p>
+        <Input type="password" aria-label="Senha do backup" placeholder="Senha do backup (recomendado)" value={pwd} onChange={(e) => setPwd(e.target.value)} />
+        <Button variant="secondary" onClick={async () => shareFile(`rota-santos-backup-${new Date().toISOString().slice(0, 10)}${pwd ? "-cifrado" : ""}.json`, await backupJson(pwd || undefined), "application/json")}>Exportar backup{pwd ? " cifrado" : " (sem senha)"}</Button>
+        <div className="grid grid-cols-2 gap-2">
+          <Select aria-label="Modo de restauração" value={mode} onChange={(e) => setMode(e.target.value as any)}>
+            <option value="merge">Mesclar com os dados atuais</option><option value="replace">Substituir tudo</option>
+          </Select>
+          <Button variant="ghost" size="sm" onClick={async () => { try { await undoRestore(); setMsg({ kind: "ok", text: "Restauração desfeita." }); } catch (e) { setMsg({ kind: "error", text: (e as Error).message }); } }}>Desfazer última restauração</Button>
+        </div>
         <label className="block text-sm">Restaurar backup: <input type="file" accept=".json,application/json" onChange={(e) => e.target.files?.[0] && restore(e.target.files[0])} /></label>
+        <Button variant="ghost" size="sm" onClick={async () => { const p = await verifyIntegrity(); setMsg({ kind: p.length ? "warn" : "ok", text: p.length ? p.join(" ") : "Integridade OK: nenhuma carta perdida." }); }}>Verificar integridade dos dados</Button>
       </Card>
       <p className="px-1 text-xs muted">Malha de pedestres e mapa: © colaboradores do OpenStreetMap (ODbL) · mapa-base OpenFreeMap · endereços: Nominatim (1 consulta/s). Tempos e distâncias são estimativas.</p>
     </div>

@@ -1,16 +1,16 @@
 import { CheckCircle2, RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
-import type { Address } from "../core/db";
+import { type Address, db } from "../core/db";
 import { confirmAddress, resolve } from "../core/geocode";
 import { normalizeAddress } from "../core/normalize";
-import { geocodeBatch, getSettings, stopsOf } from "../core/service";
+import { geocodeBatch, getSettings, importPositions, stopsOf } from "../core/service";
 import { Button } from "../ui/button";
 import { useAsync } from "../ui/hooks";
 import { Alert, Badge, Card, Progress, Select, Spinner } from "../ui/misc";
 import RouteMap from "../ui/RouteMap";
 import { PRECISION_LABEL } from "../ui/utils";
 
-const PCOLOR: Record<string, string> = { exact: "#16a34a", manual: "#16a34a", interpolated: "#2563eb", street: "#b45309", neighborhood: "#dc2626", not_found: "#dc2626", pending: "#6b7280" };
+const PCOLOR: Record<string, string> = { test: "#b45309", exact: "#16a34a", manual: "#16a34a", interpolated: "#2563eb", street: "#b45309", neighborhood: "#dc2626", not_found: "#dc2626", pending: "#6b7280" };
 
 export function AddressesPage({ batchId }: { batchId: string }) {
   const [filter, setFilter] = useState<"review" | "all">("review");
@@ -25,7 +25,20 @@ export function AddressesPage({ batchId }: { batchId: string }) {
     data?.letters.forEach((l) => l.addressKey && m.set(l.addressKey, (m.get(l.addressKey) || 0) + 1));
     return m;
   }, [data]);
-  const list = (data?.addresses || []).filter((a) => filter === "all" || a.needsReview).sort((a, b) => a.display.localeCompare(b.display));
+  // chaves ainda sem consulta aparecem como "Aguardando" (nunca somem da revisão)
+  const pendingKeys = useMemo(() => {
+    const have = new Set((data?.addresses || []).map((a) => a.key));
+    const out = new Map<string, Address>();
+    for (const l of data?.letters || []) {
+      if (!l.addressKey || have.has(l.addressKey) || out.has(l.addressKey)) continue;
+      const na = normalizeAddress(l.street, l.number, l.neighborhood, l.city, l.cep);
+      out.set(l.addressKey, { key: na.key, display: na.display, original: na.original, street: na.street, number: na.number,
+        neighborhood: na.neighborhood, city: na.city, cep: na.cep, lat: null, lon: null, precision: "pending", confidence: 0,
+        source: null, candidates: [], needsReview: true, reason: "Ainda não localizado.", verifiedAt: null, confirmedAt: null });
+    }
+    return [...out.values()];
+  }, [data]);
+  const list = [...(data?.addresses || []), ...pendingKeys].filter((a) => filter === "all" || a.needsReview).sort((a, b) => a.display.localeCompare(b.display));
   const noAddr = data?.letters.filter((l) => !l.addressKey && !l.excluded) ?? [];
   const candidates = useMemo(() => (sel?.candidates || []).map((c) => ({ lat: c.lat, lon: c.lon, label: `${c.label} (${PRECISION_LABEL[c.precision]})` })), [sel]);
 
@@ -53,6 +66,7 @@ export function AddressesPage({ batchId }: { batchId: string }) {
 
   async function confirm() {
     if (!sel || !pin) return;
+    if (sel.precision === "pending") await db.addresses.put({ ...sel, lat: pin.lat, lon: pin.lon });
     await confirmAddress(sel.key, pin.lat, pin.lon);
     setMsg({ kind: "ok", text: `Posição confirmada: ${sel.display}. Fica salva para as próximas jornadas.` });
     setSel(null);
@@ -69,6 +83,18 @@ export function AddressesPage({ batchId }: { batchId: string }) {
         </Select>
         <Button variant="secondary" onClick={geocodeAll} disabled={progress !== null}><RefreshCw className="h-4 w-4" /> Localizar</Button>
       </div>
+      <label className="block text-sm">
+        Importar coordenadas (CSV: logradouro;numero;lat;lon[;aviso]):{" "}
+        <input type="file" accept=".csv,.txt" aria-label="Importar coordenadas" onChange={async (e) => {
+          const f = e.target.files?.[0];
+          if (!f) return;
+          try {
+            const r = await importPositions(await f.text());
+            setMsg({ kind: "ok", text: `Coordenadas: ${r.matched} atualizadas, ${r.created} novas, ${r.invalid} inválidas.` });
+            reload();
+          } catch (err) { setMsg({ kind: "error", text: (err as Error).message }); }
+        }} />
+      </label>
       {progress !== null && <Progress value={progress} />}
       {msg && <Alert kind={msg.kind}>{msg.text}</Alert>}
       {noAddr.length > 0 && <Alert kind="warn">{noAddr.length} carta(s) sem logradouro válido (linhas {noAddr.map((l) => l.row).join(", ")}). Corrija na planilha ou cadastre manualmente.</Alert>}

@@ -1,13 +1,21 @@
 
 import * as maplibregl from "maplibre-gl";
 import type { GeoJSONSource, Map as MLMap } from "maplibre-gl";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // O worker do MapLibre é servido de /public (copiado no postinstall): o bundler
 // do Next não resolve o import.meta.url usado pela biblioteca para achá-lo.
 maplibregl.setWorkerUrl(new URL("maplibre-gl-worker.mjs", document.baseURI).href);
 
 const STYLE = "https://tiles.openfreemap.org/styles/liberty";
+/** Estilo de contingência SEM internet: fundo liso + fonte local para os números das paradas.
+ * O roteamento é offline; o mapa-base (ruas desenhadas) depende de internet. */
+const fallbackStyle = (): any => ({
+  version: 8,
+  glyphs: new URL("fonts/{fontstack}/{range}.pbf", document.baseURI).href.replace("%7Bfontstack%7D", "{fontstack}").replace("%7Brange%7D", "{range}"),
+  sources: {},
+  layers: [{ id: "bg", type: "background", paint: { "background-color": "#e8edf3" } }],
+});
 const SANTOS: [number, number] = [-46.333, -23.962];
 
 export const COLORS = {
@@ -51,9 +59,12 @@ type Props = {
   me?: { lat: number; lon: number } | null;
   focus?: { lat: number; lon: number } | null;
   className?: string;
+  onBaseMap?: (status: "online" | "offline") => void;
 };
 
-export default function RouteMap({ stops = [], route, start, candidates = [], pin, onPinMove, onStopClick, me, focus, className }: Props) {
+export default function RouteMap({ stops = [], route, start, candidates = [], pin, onPinMove, onStopClick, me, focus, className, onBaseMap }: Props) {
+  const [offline, setOffline] = useState(false);
+  const applyRef = useRef<(() => void) | null>(null);
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<MLMap | null>(null);
   const ready = useRef(false);
@@ -67,7 +78,23 @@ export default function RouteMap({ stops = [], route, start, candidates = [], pi
     if (!el.current) return;
     const m = new maplibregl.Map({ container: el.current, style: STYLE, center: SANTOS, zoom: 13, attributionControl: { compact: true } });
     m.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
-    m.on("load", () => {
+    let usingFallback = false, handlers = false;
+    const toFallback = () => {
+      if (usingFallback) return;
+      usingFallback = true;
+      ready.current = false;
+      setOffline(true);
+      onBaseMap?.("offline");
+      m.setStyle(fallbackStyle());
+    };
+    const timer = setTimeout(() => { if (!m.isStyleLoaded()) toFallback(); }, 10000);
+    m.on("error", (e: any) => {
+      // estilo/ fontes do mapa-base inacessíveis (sem internet): mantém rota e paradas visíveis
+      if (!m.isStyleLoaded() || /style|Failed to fetch|NetworkError/i.test(String(e?.error?.message || ""))) toFallback();
+    });
+    m.on("style.load", () => {
+      clearTimeout(timer);
+      if (!usingFallback) onBaseMap?.("online");
       m.addSource("route", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       m.addSource("stops", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       m.addLayer({
@@ -107,13 +134,17 @@ export default function RouteMap({ stops = [], route, start, candidates = [], pi
         layout: { "text-field": ["to-string", ["coalesce", ["get", "seq"], "•"]], "text-size": 12, "text-font": ["Noto Sans Bold"], "text-allow-overlap": true },
         paint: { "text-color": ["case", ["==", ["get", "color"], COLORS.pending], COLORS.route, ["==", ["get", "color"], COLORS.uncertain], "#111827", "#ffffff"] },
       });
-      m.on("click", "stops-circle", (e: any) => {
-        const id = e.features?.[0]?.properties?.id;
-        if (id) clickRef.current?.(String(id));
-      });
-      m.on("mouseenter", "stops-circle", () => (m.getCanvas().style.cursor = "pointer"));
-      m.on("mouseleave", "stops-circle", () => (m.getCanvas().style.cursor = ""));
+      if (!handlers) {
+        handlers = true;
+        m.on("click", "stops-circle", (e: any) => {
+          const id = e.features?.[0]?.properties?.id;
+          if (id) clickRef.current?.(String(id));
+        });
+        m.on("mouseenter", "stops-circle", () => (m.getCanvas().style.cursor = "pointer"));
+        m.on("mouseleave", "stops-circle", () => (m.getCanvas().style.cursor = ""));
+      }
       ready.current = true;
+      applyRef.current?.();
       m.fire("data-ready" as any);
     });
     map.current = m;
@@ -148,6 +179,7 @@ export default function RouteMap({ stops = [], route, start, candidates = [], pi
         if (!b.isEmpty()) m.fitBounds(b, { padding: 60, maxZoom: 17, duration: 0 });
       }
     };
+    applyRef.current = () => { fitted.current = ""; apply(); };
     if (ready.current) apply();
     else m.once("data-ready" as any, apply);
   }, [stops, route, start, candidates, pin]);
@@ -190,7 +222,16 @@ export default function RouteMap({ stops = [], route, start, candidates = [], pi
     if (focus && map.current) map.current.easeTo({ center: [focus.lon, focus.lat], zoom: Math.max(map.current.getZoom(), 16), duration: 300 });
   }, [focus]);
 
-  return <div ref={el} className={className ?? "h-[60vh] w-full rounded-2xl overflow-hidden"} role="application" aria-label="Mapa da rota" />;
+  return (
+    <div className="relative">
+      <div ref={el} className={className ?? "h-[60vh] w-full rounded-2xl overflow-hidden"} role="application" aria-label="Mapa da rota" />
+      {offline && (
+        <div role="status" className="pointer-events-none absolute bottom-8 left-2 right-2 rounded-lg bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-900">
+          Mapa-base indisponível (sem internet). Rota e paradas continuam visíveis; o desenho das ruas volta com a conexão.
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function MapLegend() {

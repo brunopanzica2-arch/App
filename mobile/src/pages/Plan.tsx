@@ -2,7 +2,7 @@ import { Play, Zap } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { Nav } from "../App";
 import { db, type Route } from "../core/db";
-import { activateRoute, getSettings, planBatch, saveSettings, stopsOf } from "../core/service";
+import { activateRoute, cancelPlan, getSettings, planBatch, saveSettings, stopsOf } from "../core/service";
 import { Button } from "../ui/button";
 import { useAsync } from "../ui/hooks";
 import { Alert, Card, Input, Label, Progress, Select, Stat } from "../ui/misc";
@@ -84,7 +84,9 @@ export function PlanPage({ batchId, nav }: { batchId: string; nav: Nav }) {
           </div>
         )}
         {error && <Alert kind="error">{error}</Alert>}
-        {busy ? <div><div className="mb-1 text-sm">Calculando: {busy}</div><Progress value={0.5} /></div>
+        {busy ? <div><div className="mb-1 flex items-center justify-between text-sm"><span>Calculando: {busy}</span>
+            <button className="underline" onClick={() => { cancelPlan(); setBusy(null); setError("Cálculo cancelado."); }}>Cancelar</button></div>
+            <Progress value={(() => { const m = busy.match(/(\d+)%/); return m ? +m[1] / 100 : 0.05; })()} /></div>
           : <Button size="lg" className="w-full" onClick={run}><Zap className="h-5 w-5" /> Calcular rota</Button>}
       </Card>
 
@@ -101,12 +103,19 @@ export function PlanPage({ batchId, nav }: { batchId: string; nav: Nav }) {
           <Card className="text-sm">
             <div className="mb-1 font-semibold">Soluções comparadas</div>
             {sel.candidates.map((c: any) => (
-              <div key={c.strategy} className={`flex justify-between ${c.strategy === sel.metrics.strategy ? "font-bold text-brand" : ""}`}>
+              <div key={c.strategy} className={`flex justify-between ${c.strategy === sel.metrics.strategy ? "font-bold text-brand" : c.feasible === false ? "text-problem line-through" : ""}`}>
                 <span className="truncate">{c.strategy}</span><span>{fmtTime(c.time_s)} · {fmtDist(c.distance_m)}</span>
               </div>
             ))}
             <p className="mt-2 text-xs muted">Busca local no aparelho; não garante ótimo global. {sel.metrics.note}</p>
           </Card>
+          {sel.metrics.status === "partial" && (
+            <Alert kind="error"><b>ROTA PARCIAL:</b> {sel.metrics.notRoutedLetters} carta(s) pendente(s) fora do roteiro. Tempo e distância NÃO incluem essas entregas.
+              <ul className="list-disc pl-4">{(sel.metrics.excluded || []).map((e: any) => <li key={e.key}>{e.key.split("|").slice(1, 3).join(", ")}: {e.reason}</li>)}</ul></Alert>
+          )}
+          {(sel.metrics.snapReview?.length ?? 0) > 0 && (
+            <Alert kind="warn">{sel.metrics.snapReview.length} parada(s) com posição a revisar (mais de 30 m da via, acesso cruzando outra via ou via mais próxima desconectada). Acesso a pé incluído no tempo: {fmtTime(sel.metrics.accessTime)}.</Alert>
+          )}
           {sel.warnings.length > 0 && <Alert kind="warn"><ul className="list-disc pl-4">{sel.warnings.map((w, i) => <li key={i}>{w}</li>)}</ul></Alert>}
           {routes && routes.length > 1 && (
             <Card className="text-sm"><div className="mb-1 font-semibold">Versões</div>

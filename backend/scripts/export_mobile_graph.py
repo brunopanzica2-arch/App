@@ -60,7 +60,11 @@ if __name__ == "__main__":
     out.parent.mkdir(parents=True, exist_ok=True)
     eng = InternalEngine(get_settings())
     info = export(eng.network(), out)
+    import hashlib
+    from datetime import date
+
     meta = {**info, "version": eng.network_version(), "bbox": get_settings().operation_bbox,
-            "source": "OpenStreetMap (ODbL) — malha de pedestres"}
+            "sha256": hashlib.sha256(out.read_bytes()).hexdigest(), "exported": date.today().isoformat(),
+            "source": "OpenStreetMap (ODbL) — malha de pedestres", "osm_extraction": "API 0.6 do OSM (cache local)"}
     out.with_suffix(".json").write_text(json.dumps(meta, ensure_ascii=False, indent=1))
     print(meta)

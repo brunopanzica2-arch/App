@@ -1,0 +1,38 @@
+E       KeyError: 'status'
+tests/test_audit_v2.py:88: KeyError
+E       assert False
+E        +  where False = all(<generator object test_A_solver_never_returns_impossible_arc.<locals>.<genexpr> at 0x7f19109e62f0>)
+tests/test_audit_v2.py:100: AssertionError
+E           app.services.planner.PlanError: Ponto de partida fora da malha: Ponto (0.000000, 0.020000) está a mais de 150 m da malha de circulação acessível.
+E           app.services.planner.PlanError: Ponto de partida fora da malha: Ponto (0.000000, 0.020000) está a mais de 150 m da malha de circulação acessível.
+E       KeyError: 'snap_review'
+tests/test_audit_v2.py:157: KeyError
+E       KeyError: 'access_time_s'
+tests/test_audit_v2.py:166: KeyError
+E       AssertionError: assert ['\ufeffid;ru...;complemento'] == ['id', 'rua',...'complemento']
+E         
+E         At index 0 diff: '\ufeffid;rua;numero;complemento' != 'id'
+E         Right contains 3 more items, first extra item: 'rua'
+E         Use -v to get more diff
+tests/test_audit_v2.py:176: AssertionError
+E           assert (';+55' not in 'id;obs\r\n1...6;normal\r\n'
+E             
+E             ';+55' is contained here:
+E               id;obs
+E               1;"=HYPERLINK(""http://x"")"
+E               2;+55 11
+E             ?  ++++
+E               3;-2+3...
+E             
+E             ...Full output truncated (3 lines hidden), use '-vv' to show)
+tests/test_audit_v2.py:218: AssertionError
+FAILED tests/test_audit_v2.py::test_A_infeasible_pair_yields_partial_route_not_crash
+FAILED tests/test_audit_v2.py::test_A_solver_never_returns_impossible_arc - a...
+FAILED tests/test_audit_v2.py::test_B_origin_in_smaller_component_routes_there
+FAILED tests/test_audit_v2.py::test_B_stop_in_other_component_is_excluded_with_reason
+FAILED tests/test_audit_v2.py::test_C_access_crossing_other_street_is_flagged
+FAILED tests/test_audit_v2.py::test_C_access_time_included_in_eta - KeyError:...
+FAILED tests/test_audit_v2.py::test_D_csv_quoted_newline_is_one_record - Asse...
+FAILED tests/test_audit_v2.py::test_H_csv_xlsx_formula_injection_neutralized
+8 failed, 1 passed, 4 deselected in 5.19s
+[F] mobile/src/core/optimizer.ts (42d7976): T=[[0,5,5],[inf,0,inf],[inf,inf,0]] -> ORDEM_ANTIGA [2,1] arcos: 5,Infinity tempo: Infinity estrategia: cheapest_insertion+local_search (sequência impossível aceita como melhor)

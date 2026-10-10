@@ -3,7 +3,7 @@ import Dexie, { type Table } from "dexie";
 import type { Profile } from "./router";
 
 export type LetterStatus = "pending" | "in_route" | "delivered" | "not_delivered" | "postponed" | "returned" | "address_not_found";
-export type Precision = "exact" | "interpolated" | "street" | "neighborhood" | "not_found" | "manual" | "pending";
+export type Precision = "exact" | "interpolated" | "street" | "neighborhood" | "not_found" | "manual" | "test" | "pending";
 
 export interface Batch {
   id: string;
@@ -13,6 +13,7 @@ export interface Batch {
   sourceType: "csv" | "xlsx" | "text" | "manual";
   filename?: string;
   original: string; // entrada original preservada
+  importHash?: string; // SHA-256 do conteúdo importado (detecta reimportação)
   report: { inserted: number; duplicates: { row: number; externalId: string }[]; withErrors: { row: number; errors: string[] }[] };
 }
 
@@ -77,6 +78,9 @@ export interface RouteStop {
   legDistance: number;
   legTime: number;
   snapDistance: number;
+  access?: number;       // ida e volta a pé até o ponto (s)
+  confidence?: string;   // alta | boa | media | baixa
+  flags?: string[];
 }
 
 export interface Route {
@@ -111,6 +115,7 @@ export interface DeliveryEvent {
   reason: string | null;
   notes: string | null;
   at: string;
+  undoneAt?: string | null; // desfeito pelo usuário (o evento permanece no histórico)
 }
 
 export interface Settings {
@@ -122,6 +127,7 @@ export interface Settings {
   perLetterService: number;
   routeMode: "open" | "circular";
   nominatimEmail: string;
+  geocodeDailyQuota?: number; // consultas públicas por dia (padrão 250)
   currentBatch: string | null;
 }
 
@@ -133,6 +139,7 @@ class RotaDB extends Dexie {
   routes!: Table<Route, string>;
   events!: Table<DeliveryEvent, string>;
   settings!: Table<Settings, string>;
+  snapshots!: Table<{ id: string; at: string; reason: string; json: string }, string>;
 
   constructor() {
     super("rota-santos");
@@ -144,6 +151,15 @@ class RotaDB extends Dexie {
       routes: "id, batchId, version, status",
       events: "id, letterId, batchId, at",
       settings: "key",
+    });
+    // v2 (auditoria V2): hash de importação e marcação de "desfazer". Migração sem perda:
+    // dados da v1 permanecem; campos novos recebem valores padrão.
+    this.version(2).stores({
+      batches: "id, date, createdAt, importHash",
+      events: "id, letterId, batchId, at",
+      snapshots: "id, at",
+    }).upgrade(async (tx) => {
+      await tx.table("events").toCollection().modify((e: any) => { if (e.undoneAt === undefined) e.undoneAt = null; });
     });
   }
 }

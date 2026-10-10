@@ -27,35 +27,59 @@ export interface Table {
   hasHeader: boolean;
 }
 
-function csvSplit(text: string, d: string): string[][] {
+/** RFC 4180: aspas, aspas duplicadas, delimitador e QUEBRA DE LINHA dentro de campo citado, CRLF. */
+export function csvRecords(text: string, d: string): string[][] {
   const out: string[][] = [];
-  let row: string[] = [], cell = "", q = false;
+  let row: string[] = [], cell = "", q = false, quotedCell = false;
+  const push = () => {
+    const v = cell.replace(/\r\n?/g, "\n");
+    row.push(v.includes("\n") ? v.split("\n").map(clean).join("\n") : clean(v));
+    cell = ""; quotedCell = false;
+  };
   for (let i = 0; i < text.length; i++) {
     const c = text[i];
     if (q) {
       if (c === '"' && text[i + 1] === '"') { cell += '"'; i++; }
       else if (c === '"') q = false;
       else cell += c;
-    } else if (c === '"') q = true;
-    else if (c === d) { row.push(clean(cell)); cell = ""; }
-    else if (c === "\n") { row.push(clean(cell)); out.push(row); row = []; cell = ""; }
-    else if (c !== "\r") cell += c;
+    } else if (c === '"' && !cell.trim()) { q = true; quotedCell = true; cell = ""; }
+    else if (c === d) push();
+    else if (c === "\n" || c === "\r") {
+      if (c === "\r" && text[i + 1] === "\n") i++;
+      push();
+      if (row.some((x) => x)) out.push(row);
+      row = [];
+    } else cell += c;
   }
-  if (cell || row.length) { row.push(clean(cell)); out.push(row); }
-  return out.filter((r) => r.some((x) => x));
+  if (cell || quotedCell || row.length) { push(); if (row.some((x) => x)) out.push(row); }
+  return out;
+}
+
+/** Separador escolhido pela contagem de CAMPOS por registro (respeitando aspas). */
+export function detectDelimiter(text: string, hasHeader: boolean): string | null {
+  let best: [string, number, number] | null = null;
+  for (const d of [";", "\t", "|", ","]) {
+    const recs = csvRecords(text.slice(0, 200000), d).slice(0, 50);
+    if (!recs.length) continue;
+    const widths = recs.map((r) => r.length);
+    const count = new Map<number, number>();
+    widths.forEach((w) => count.set(w, (count.get(w) || 0) + 1));
+    let common = 0, cn = 0;
+    count.forEach((n, w) => { if (n > cn || (n === cn && w > common)) { cn = n; common = w; } });
+    const share = cn / widths.length;
+    if (common < 2 || share < 0.8) continue;
+    if (d === "," && !hasHeader) continue; // "Rua X, 123" sem cabeçalho é ambíguo
+    if (!best || share > best[1] || (share === best[1] && common > best[2])) best = [d, share, common];
+  }
+  return best ? best[0] : null;
 }
 
 export function parseText(text: string, delimiter = "auto", hasHeader = true): Table {
-  const lines = text.replace(/\r\n?/g, "\n").split("\n").filter((l) => l.trim());
-  if (!lines.length) throw new Error("Conteúdo vazio.");
-  let d: string | null = delimiter === "auto" ? null : delimiter;
-  if (delimiter === "auto") {
-    for (const c of [";", "\t", "|", ","]) {
-      const counts = new Set(lines.slice(0, 30).map((l) => l.split(c).length - 1));
-      if (Math.min(...counts) > 0 && (c !== "," || (hasHeader && counts.size === 1))) { d = c; break; }
-    }
-  }
-  let rows = d ? csvSplit(lines.join("\n"), d) : lines.map((l) => [clean(l)]);
+  text = text.replace(/^\ufeff/, "");
+  if (!text.trim()) throw new Error("Conteúdo vazio.");
+  const d = delimiter === "auto" ? detectDelimiter(text, hasHeader) : delimiter;
+  let rows = d ? csvRecords(text, d) : text.split(/\r\n?|\n/).filter((l) => l.trim()).map((l) => [clean(l)]);
+  if (!rows.length) throw new Error("Conteúdo vazio.");
   let headers: string[];
   if (hasHeader) { headers = rows[0]; rows = rows.slice(1); }
   else headers = Array.from({ length: Math.max(...rows.map((r) => r.length)) }, (_, i) => `coluna_${i + 1}`);
@@ -137,15 +161,31 @@ export function preview(t: Table, mapping: Record<string, string | null>) {
   };
 }
 
+export class DuplicateImportError extends Error {
+  constructor(public existing: Batch) {
+    super(`Este conteúdo já foi importado no lote "${existing.reference}" (${existing.date}).`);
+  }
+}
+
+export async function sha256(text: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 export async function commitImport(t: Table, mapping: Record<string, string | null>, reference: string, date: string,
-  sourceType: Batch["sourceType"], filename?: string, batchId?: string): Promise<Batch> {
+  sourceType: Batch["sourceType"], filename?: string, batchId?: string, allowSameContent = false): Promise<Batch> {
   const rows = mapRows(t, mapping);
+  const importHash = await sha256(t.original);
+  if (!batchId && !allowSameContent) {
+    const same = await db.batches.where("importHash").equals(importHash).first();
+    if (same) throw new DuplicateImportError(same);
+  }
   const existingIds = new Set((await db.letters.toArray()).map((l) => l.externalId).filter(Boolean));
   const seen = new Set<string>();
   const report: Batch["report"] = { inserted: 0, duplicates: [], withErrors: [] };
   const letters: Letter[] = [];
   let batch = batchId ? await db.batches.get(batchId) : undefined;
-  if (!batch) batch = { id: uid(), reference, date, createdAt: new Date().toISOString(), sourceType, filename, original: t.original, report };
+  if (!batch) batch = { id: uid(), reference, date, createdAt: new Date().toISOString(), sourceType, filename, original: t.original, importHash, report };
   const startRow = batchId ? (await db.letters.where("batchId").equals(batch.id).count()) : 0;
   for (const r of rows) {
     const ext = r.values.external_id;

@@ -1,0 +1,4 @@
+Noto Sans Bold (intervalo 0-255, formato PBF de glifos do MapLibre), obtido de
+https://tiles.openfreemap.org/fonts/Noto%20Sans%20Bold/0-255.pbf
+Fonte Noto © Google, licença SIL Open Font License 1.1 (https://openfontlicense.org).
+Usado apenas para rótulos numéricos das paradas no mapa de contingência offline.

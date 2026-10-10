@@ -2,7 +2,7 @@ import { ClipboardPaste, FileSpreadsheet, PencilLine } from "lucide-react";
 import { useState } from "react";
 import type { Nav } from "../App";
 import { type Batch } from "../core/db";
-import { commitImport, FIELDS, parseFile, parseText, preview, suggestMapping, type Table } from "../core/importer";
+import { commitImport, DuplicateImportError, FIELDS, parseFile, parseText, preview, suggestMapping, type Table } from "../core/importer";
 import { geocodeBatch, saveSettings } from "../core/service";
 import { Button } from "../ui/button";
 import { Alert, Card, Input, Label, Progress, Select } from "../ui/misc";
@@ -44,15 +44,22 @@ export function ImportPage({ nav }: { nav: Nav }) {
     setProgress(null);
   }
 
-  async function commit() {
+  async function commit(allowSame = false) {
     setBusy(true);
     setError(null);
     try {
-      const b = await commitImport(table!, mapping, reference, date, mode === "file" ? (/\.xlsx$/i.test(file!.name) ? "xlsx" : "csv") : "text", file?.name);
+      const b = await commitImport(table!, mapping, reference, date, mode === "file" ? (/\.xlsx$/i.test(file!.name) ? "xlsx" : "csv") : "text", file?.name, undefined, allowSame);
       await saveSettings({ currentBatch: b.id });
       setResult(b);
-      await geocode(b);
+      // Lotes grandes não disparam centenas de consultas ao serviço público automaticamente.
+      const nAddr = preview(table!, mapping).uniqueAddresses;
+      if (nAddr <= 20) await geocode(b);
     } catch (e) {
+      if (e instanceof DuplicateImportError) {
+        setBusy(false);
+        if (confirm(`${e.message}\n\nImportar mesmo assim? Cartas com o mesmo identificador NÃO serão duplicadas (ficam no relatório como duplicadas).`)) return commit(true);
+        return;
+      }
       setError((e as Error).message);
     } finally {
       setBusy(false);
@@ -155,7 +162,7 @@ export function ImportPage({ nav }: { nav: Nav }) {
                   </div>
                 ))}
               </div>
-              <Button size="lg" onClick={commit} disabled={busy}>Confirmar e localizar endereços</Button>
+              <Button size="lg" onClick={() => commit()} disabled={busy}>Confirmar e localizar endereços</Button>
             </>
           )}
         </Card>
@@ -166,6 +173,10 @@ export function ImportPage({ nav }: { nav: Nav }) {
           <div className="text-lg font-bold">Lote: {result.reference}</div>
           <div className="text-sm">Inseridas: <b>{result.report.inserted}</b> · com erro: <b>{result.report.withErrors.length}</b> · duplicadas: <b>{result.report.duplicates.length}</b></div>
           {progress && (<div><div className="mb-1 text-sm">Localizando endereços ({progress[0]}/{progress[1]}) — 1 por segundo…</div><Progress value={progress[0] / Math.max(progress[1], 1)} /></div>)}
+          {!result.geo && !progress && (
+            <Alert kind="info">Endereços ainda NÃO localizados. Para lotes grandes, localize em “Revisar endereços” (1 consulta/s ao serviço público, com cota diária) ou importe coordenadas.
+              <Button className="mt-2" size="sm" variant="secondary" onClick={() => geocode(result)}>Localizar agora</Button></Alert>
+          )}
           {result.geo && <Alert kind={result.geo.errors.length ? "warn" : "ok"}>{result.geo.addresses} imóveis consultados{result.geo.errors.length ? ` · ${result.geo.errors.length} falha(s) de rede (tente de novo em Validar endereços)` : ""}.</Alert>}
           <div className="grid gap-2">
             <Button onClick={() => nav(`/enderecos/${result.id}`)}>Revisar endereços</Button>
