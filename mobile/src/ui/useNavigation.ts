@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Route } from "../core/db";
+import { db, type Route } from "../core/db";
 import { buildNavRoute, type NavRoute, type StopMeta } from "../core/navroute";
-import { getNavPrefs, journalNav, rerouteFrom, stopsOf, type StopView } from "../core/service";
+import { getNavPrefs, getSettings, journalNav, rerouteFrom, stopsOf, type StopView } from "../core/service";
+import { log } from "../core/log";
 import { drainEvents, type NavFix, type NavState, nav, onNavEvent } from "../native/rotaNav";
 
 const REROUTE_COOLDOWN_MS = 45_000; // histerese: no máx. 1 recálculo por desvio a cada 45 s
@@ -12,14 +13,19 @@ export function stopMeta(s: StopView): StopMeta {
     precision: code === "test" ? "street" : code };
 }
 
+export type GpsState = "idle" | "needs_permission" | "asking" | "denied" | "disabled" | "searching" | "ok" | "stale" | "error";
+export const STALE_MS = 15_000;
+const ASKED_KEY = "rota.locAsked";
+
 export interface NavUi {
+  gps: GpsState; gpsMsg: string;
   active: boolean; paused: boolean; backend: string;
   fix: NavFix | null; state: NavState | null; instruction: string; nearStopKey: string | null; nearStopText: string;
   offRoute: boolean; rerouting: boolean; error: string | null; route: NavRoute | null;
   /** trecho restante [lon,lat][] */ ahead: [number, number][] | null;
 }
 
-const IDLE: NavUi = { active: false, paused: false, backend: "", fix: null, state: null, instruction: "", nearStopKey: null, nearStopText: "", offRoute: false, rerouting: false, error: null, route: null, ahead: null };
+const IDLE: NavUi = { gps: "idle", gpsMsg: "", active: false, paused: false, backend: "", fix: null, state: null, instruction: "", nearStopKey: null, nearStopText: "", offRoute: false, rerouting: false, error: null, route: null, ahead: null };
 
 /** Recorta o trecho restante a partir do progresso (m). */
 export function aheadFrom(r: NavRoute, progress: number): [number, number][] {
@@ -42,6 +48,7 @@ export function useNavigation(onRerouted?: (r: Route) => void) {
   const lastReroute = useRef(0);
   const lastAhead = useRef(0);
   const fixRef = useRef<NavFix | null>(null);
+  const waiters = useRef<((f: NavFix) => void)[]>([]);
   const cb = useRef(onRerouted);
   cb.current = onRerouted;
 
@@ -56,7 +63,12 @@ export function useNavigation(onRerouted?: (r: Route) => void) {
   useEffect(() => {
     const off = onNavEvent((name, d) => {
       switch (name) {
-        case "location": fixRef.current = d; setUi((u) => (u.active || !u.route ? { ...u, fix: d } : u)); break;
+        case "location": {
+          fixRef.current = d;
+          waiters.current.splice(0).forEach((w) => w(d));
+          setUi((u) => ({ ...u, fix: d, gps: d.accuracy > 150 ? "searching" : "ok", gpsMsg: d.accuracy > 150 ? `sinal impreciso (±${Math.round(d.accuracy)} m)` : "" }));
+          break;
+        }
         case "navState": {
           const now = Date.now();
           setUi((u) => {
@@ -68,11 +80,16 @@ export function useNavigation(onRerouted?: (r: Route) => void) {
         }
         case "instruction": setUi((u) => ({ ...u, instruction: d.text })); break;
         case "nearStop": setUi((u) => ({ ...u, nearStopKey: d.stopKey, nearStopText: d.text, instruction: d.text })); break;
-        case "locationError": setUi((u) => ({ ...u, error: d.message })); break;
+        case "locationError": {
+          const off = /desligad|disabled/i.test(String(d.message));
+          log("gps", "erro", { msg: String(d.message).slice(0, 80) });
+          setUi((u) => ({ ...u, gps: off ? "disabled" : "error", gpsMsg: String(d.message) }));
+          break;
+        }
         case "navigation":
           if (d.status === "paused") setUi((u) => ({ ...u, paused: true }));
           if (d.status === "resumed") setUi((u) => ({ ...u, paused: false }));
-          if (d.status === "stopped") setUi((u) => ({ ...IDLE, fix: u.fix }));
+          if (d.status === "stopped") setUi((u) => ({ ...IDLE, fix: u.fix, gps: u.gps }));
           break;
         case "routeEnd": setUi((u) => ({ ...u, instruction: "Rota concluída." })); break;
         case "offRoute": {
@@ -124,16 +141,58 @@ export function useNavigation(onRerouted?: (r: Route) => void) {
     await journalNav(null);
     routeDoc.current = null;
     navRoute.current = null;
-    setUi((u) => ({ ...IDLE, fix: u.fix }));
+    setUi((u) => ({ ...IDLE, fix: u.fix, gps: u.gps }));
   }, []);
 
-  /** Posição sem rota (botão "minha localização"). */
-  const locate = useCallback(async () => {
-    const p = await nav.requestPermissions();
-    if (p.location !== "granted" && nav.isNative()) { setUi((u) => ({ ...u, error: "Sem permissão de localização." })); return; }
-    try { await nav.startLocation(); } catch (e) { setUi((u) => ({ ...u, error: (e as Error).message })); }
+  /** Espera o PRÓXIMO fix (evento), nunca lê o estado antes do primeiro evento. Rejeita no timeout. */
+  const awaitFirstFix = useCallback((timeoutMs = 15_000) => new Promise<NavFix>((resolve, reject) => {
+    const f = fixRef.current;
+    if (f && Date.now() - f.time < STALE_MS) return resolve(f);
+    const t = setTimeout(() => { waiters.current = waiters.current.filter((w) => w !== h); reject(new Error("sem sinal de GPS")); }, timeoutMs);
+    const h = (x: NavFix) => { clearTimeout(t); resolve(x); };
+    waiters.current.push(h);
+  }), []);
+
+  /** Posição contínua sem rota. `ask`: pede permissão se ainda não foi pedida (uma vez por instalação, em contexto: ao abrir o mapa). */
+  const locate = useCallback(async (opts: { ask?: boolean } = {}) => {
+    const perms = await nav.permissions();
+    let loc = perms.location;
+    if (loc !== "granted") {
+      const asked = (() => { try { return localStorage.getItem(ASKED_KEY) === "1"; } catch { return false; } })();
+      if (loc === "denied" || (asked && !opts.ask)) { setUi((u) => ({ ...u, gps: loc === "denied" ? "denied" : "needs_permission", gpsMsg: "" })); log("gps", "sem_permissao", { loc }); return; }
+      if (!opts.ask && !nav.isNative() && loc === "prompt") { /* navegador: o próprio prompt aparece ao iniciar */ }
+      setUi((u) => ({ ...u, gps: "asking" }));
+      try { localStorage.setItem(ASKED_KEY, "1"); } catch { /* ignore */ }
+      loc = (await nav.requestPermissions()).location;
+      if (loc !== "granted" && nav.isNative()) { setUi((u) => ({ ...u, gps: loc === "denied" ? "denied" : "needs_permission" })); return; }
+    }
+    setUi((u) => ({ ...u, gps: u.fix ? u.gps : "searching", gpsMsg: "" }));
+    try { const backend = await nav.startLocation(); log("gps", "iniciado", { backend }); } catch (e) { setUi((u) => ({ ...u, gps: "error", gpsMsg: (e as Error).message })); }
   }, []);
 
-  return { ui, start, stop, locate, pause: () => nav.pause(), resume: () => nav.resume(), repeat: () => nav.repeat(),
+  /** Ao reabrir a tela com a navegação nativa viva (Activity recriada): reconstrói o estado a partir do diário. */
+  const attach = useCallback(async () => {
+    try {
+      const st = await nav.status();
+      if (!st.navigating) return false;
+      const j = (await getSettings()).navSession;
+      const r = j ? await db.routes.get(j.routeId) : null;
+      if (!r) return false;
+      const { nr } = await build(r);
+      routeDoc.current = r; navRoute.current = nr;
+      setUi((u) => ({ ...u, active: true, paused: !!st.paused, route: nr, ahead: aheadFrom(nr, 0), backend: st.backend }));
+      log("nav", "reanexado", { stopIndex: st.stopIndex });
+      await drainEvents();
+      return true;
+    } catch { return false; }
+  }, [build]);
+
+  // idade do fix: marca "stale" quando para de chegar posição
+  useEffect(() => {
+    const t = setInterval(() => setUi((u) => (u.fix && u.gps === "ok" && Date.now() - u.fix.time > STALE_MS ? { ...u, gps: "stale" } : u)), 2000);
+    return () => clearInterval(t);
+  }, []);
+
+  return { ui, start, stop, locate, awaitFirstFix, attach, pause: () => nav.pause(), resume: () => nav.resume(), repeat: () => nav.repeat(),
     advance: () => nav.advanceStop(), dismissNear: () => setUi((u) => ({ ...u, nearStopKey: null, nearStopText: "" })), getFix: () => fixRef.current };
 }

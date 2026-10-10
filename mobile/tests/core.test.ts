@@ -7,7 +7,7 @@ import { DEFAULT_PROFILE, Router, SnapError } from "../src/core/router";
 const buf = readFileSync(new URL("../public/santos-graph.bin", import.meta.url));
 const graph = parseGraph(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
 const cases = JSON.parse(readFileSync(new URL("./fixtures/santos-matrices.json", import.meta.url), "utf8"));
-const router = new Router(graph, DEFAULT_PROFILE);
+const router = new Router(graph, { ...DEFAULT_PROFILE, pedestrian: false });
 
 describe("malha real de Santos no aparelho", () => {
   it("carrega a malha exportada", () => {

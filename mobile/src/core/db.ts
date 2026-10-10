@@ -14,7 +14,7 @@ export interface Batch {
   filename?: string;
   original: string; // entrada original preservada
   importHash?: string; // SHA-256 do conteúdo importado (detecta reimportação)
-  report: { inserted: number; duplicates: { row: number; externalId: string; reason?: string }[]; withErrors: { row: number; errors: string[] }[]; warnings?: string[] };
+  report: { inserted: number; duplicates: { row: number; externalId: string; reason?: string }[]; withErrors: { row: number; errors: string[]; raw?: string[] }[]; warnings?: string[] };
   /** esquema inferido na importação (campo → coluna), confiança e avisos */
   schema?: { hasHeader: boolean; delimiter: string | null; confidence: number; columns: { index: number; field: string | null; score: number }[] };
 }

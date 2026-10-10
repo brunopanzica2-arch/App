@@ -24,6 +24,8 @@ export interface Profile {
   barrier_policy: Policy;
   barrier_penalty_s: number;
   contraflow_factor: number;
+  /** padrão: pedestre. Todo trecho que não é escada é percorrido a pé (walk_speed_kmh). `false` = perfil de bicicleta (paridade com o backend). */
+  pedestrian?: boolean;
 }
 
 export const DEFAULT_PROFILE: Profile = {
@@ -38,6 +40,7 @@ export const DEFAULT_PROFILE: Profile = {
   barrier_policy: "penalize",
   barrier_penalty_s: 20,
   contraflow_factor: 1,
+  pedestrian: true,
 };
 
 export type Mode = "ride" | "walk" | "steps";
@@ -48,6 +51,7 @@ const M_PER_DEG = 111320;
 
 export function edgeMode(flags: number, p: Profile): Mode {
   if (flags & F_STEPS) return "steps";
+  if (p.pedestrian !== false) return "walk";
   if (flags & F_DISMOUNT) return "walk";
   if (flags & F_SIDEWALK) return p.sidewalk_mode;
   return "ride";

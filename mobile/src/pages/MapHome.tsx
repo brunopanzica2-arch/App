@@ -1,7 +1,7 @@
 import {
   ArrowUp, CornerUpLeft, CornerUpRight, Crosshair, Download, Info, ListChecks, Mic, Navigation, Pause, Play, Repeat, Search, SkipForward, Square, Undo2, Upload, Volume2, VolumeX, X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Nav } from "../App";
 import { routePoint } from "../core/address";
 import { db, type Letter, type Route } from "../core/db";
@@ -11,7 +11,7 @@ import { nav as navApi, parseVoiceCommand } from "../native/rotaNav";
 import { Button } from "../ui/button";
 import { useCurrentBatch } from "../ui/hooks";
 import { Alert, Badge, Spinner } from "../ui/misc";
-import RouteMap from "../ui/RouteMap";
+import RouteMap, { type MapState } from "../ui/RouteMap";
 import { useNavigation } from "../ui/useNavigation";
 import { cn, fmtDist, fmtTime, REASON_LABEL } from "../ui/utils";
 
@@ -35,6 +35,11 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
   const [q, setQ] = useState("");
   const [confirmDeliver, setConfirmDeliver] = useState<string | null>(null);
   const [baseMap, setBaseMap] = useState<string | null>(null);
+  const [mapState, setMapState] = useState<MapState>("init");
+  const [sheetMode, setSheetMode] = useState<"normal" | "compact">("normal");
+  const [sheetH, setSheetH] = useState(180);
+  const sheetRef = useRef<HTMLElement>(null);
+  const centered = useRef(false);
 
   const reload = useCallback(async () => {
     if (!batchId) { setLoaded(true); return; }
@@ -51,6 +56,27 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
   const N = useNavigation(() => void reload());
   const { ui } = N;
   const navigating = ui.active;
+  const navigatingRef = useRef(false);
+  navigatingRef.current = navigating;
+
+  // GPS automático ao entrar no mapa; retoma ao voltar do segundo plano (permissão pode ter mudado)
+  useEffect(() => {
+    void N.attach().then((att) => { if (!att) void N.locate({ ask: true }); });
+    const vis = () => { if (document.visibilityState === "visible" && !navigatingRef.current) void N.locate(); };
+    document.addEventListener("visibilitychange", vis);
+    return () => { document.removeEventListener("visibilitychange", vis); if (!navigatingRef.current) void navApi.stopLocation(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // primeiro fix válido: centraliza e passa a seguir (o gesto do usuário desliga)
+  useEffect(() => { if (ui.fix && ui.gps === "ok" && !centered.current && !sel && !navigating) { centered.current = true; setFollow("2d"); } }, [ui.fix, ui.gps, sel, navigating]);
+  // altura real do painel: controles e atribuição do mapa ficam acima dele
+  useEffect(() => {
+    const el = sheetRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setSheetH(Math.round(el.getBoundingClientRect().height)));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [loaded]);
 
   const byKey = useMemo(() => new Map(data?.stops.map((s) => [s.key, s]) ?? []), [data]);
   const items = useMemo(() => (route?.stops ?? []).map((rs) => ({ rs, stop: byKey.get(rs.key)! })).filter((x) => x.stop), [route, byKey]);
@@ -68,6 +94,7 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
   })), [items, next]);
 
   // seguir a posição ao iniciar; gesto do usuário desliga
+  useEffect(() => { setSheetMode(navigating ? "compact" : "normal"); }, [navigating]);
   useEffect(() => { if (navigating) getNavPrefs().then((p) => setFollow(p.camera3d ? "3d" : "2d")); else setFollow("off"); }, [navigating]);
 
   const [kw, setKw] = useState(0);
@@ -77,8 +104,9 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
     if (!batchId) return;
     setBusy("Calculando rota…");
     try {
+      // origem: GPS atual (fix recente) se houver; senão o ponto de partida confirmado em Ajustes
       let here: { lat: number; lon: number } | null = null;
-      try { const p = await navApi.requestPermissions(); if (p.location === "granted" || !navApi.isNative()) { await N.locate(); here = N.getFix(); } } catch { /* usa o ponto de partida salvo */ }
+      try { const f = await N.awaitFirstFix(ui.gps === "ok" ? 1000 : 6000); here = { lat: f.lat, lon: f.lon }; } catch { /* sem GPS: usa a partida salva */ }
       await quickPlan(batchId, here, (st, p) => setBusy(`${st} ${Math.round(p * 100)}%`));
       await reload();
     } catch (e) { setToast({ text: (e as Error).message }); }
@@ -148,9 +176,10 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
   const selectedPoint = cur ? routePoint(cur.address) : null;
 
   return (
-    <div className="fixed inset-x-0 top-0 z-0" style={{ bottom: "calc(3.5rem + env(safe-area-inset-bottom))", paddingTop: "env(safe-area-inset-top)" }} data-testid="map-home">
+    <div className="fixed inset-x-0 top-0 z-0" style={{ bottom: "calc(3.5rem + env(safe-area-inset-bottom))", paddingTop: "env(safe-area-inset-top)", ["--sheet-h" as any]: `${sheetH}px` }} data-testid="map-home"
+      data-map-state={mapState} data-gps-state={ui.gps} data-nav={navigating ? "on" : "off"} data-fix={ui.fix ? `${ui.fix.lat.toFixed(5)},${ui.fix.lon.toFixed(5)}` : ""}>
       <RouteMap className="absolute inset-0 h-full w-full" stops={mapStops} route={route?.geojson} start={route?.start} fix={ui.fix} follow={follow}
-        ahead={ui.ahead} onUserMove={() => setFollow("off")} bottomPad={navigating ? 260 : 160} onBaseMap={setBaseMap}
+        ahead={ui.ahead} onUserMove={() => setFollow("off")} bottomPad={sheetH + 16} onBaseMap={setBaseMap} onMapState={(st) => setMapState(st)}
         onStopClick={(k) => { setSel(k); setFollow("off"); }} focus={sel && selectedPoint && follow === "off" ? selectedPoint : null} />
 
       {/* topo: HUD de manobra ou busca */}
@@ -166,11 +195,12 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
         ) : !navigating && (
           <div className="pointer-events-auto flex gap-2">
             <button onClick={() => setSearchOpen(true)} className="card flex flex-1 items-center gap-2 px-3 py-3 text-left shadow-lg" aria-label="Buscar entrega">
-              <Search className="h-5 w-5" /> <span className="muted">Buscar rua, número, código…</span>
+              <Search className="h-5 w-5" /> <span className="muted truncate">Buscar entrega</span>
             </button>
             <Button variant="secondary" size="lg" onClick={() => nav("/importar")} aria-label="Importar cartas"><Upload className="h-5 w-5" /> Importar</Button>
           </div>
         )}
+        <GpsChip ui={ui} onRetry={() => void N.locate({ ask: true })} />
         {navigating && ui.rerouting && <div className="pointer-events-auto mt-2 rounded-xl bg-amber-100 p-2 text-sm font-semibold text-amber-900" role="status">Recalculando a rota…</div>}
         {navigating && ui.offRoute && !ui.rerouting && <div className="pointer-events-auto mt-2 rounded-xl bg-amber-100 p-2 text-sm font-semibold text-amber-900" role="status">Você saiu da rota.</div>}
         {navigating && st?.lowAccuracy && <div className="pointer-events-auto mt-2 rounded-xl bg-amber-100 p-2 text-sm font-semibold text-amber-900" role="status">Sinal de GPS fraco — as instruções podem atrasar.</div>}
@@ -179,7 +209,7 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
       </div>
 
       {/* controles flutuantes */}
-      <div className="absolute right-2 flex flex-col gap-2" style={{ bottom: navigating ? "17.5rem" : "11rem" }}>
+      <div className="absolute right-2 flex flex-col gap-2" style={{ bottom: sheetH + 12 }}>
         <Fab label={follow === "off" ? "Centralizar em mim" : follow === "3d" ? "Câmera 3D (tocar para 2D)" : "Câmera 2D (tocar para 3D)"}
           onClick={() => { if (!ui.fix && !navigating) void N.locate(); setFollow(follow === "off" ? "3d" : follow === "3d" ? "2d" : "3d"); }} active={follow !== "off"}>
           <Crosshair className="h-6 w-6" />{follow !== "off" && <span className="text-[10px] font-bold">{follow.toUpperCase()}</span>}
@@ -194,7 +224,7 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
       </div>
 
       {toast && (
-        <div role="status" className="absolute inset-x-2 z-30 flex items-center gap-2 rounded-xl bg-neutral-900 p-3 text-sm text-white shadow-xl" style={{ top: navigating ? "calc(env(safe-area-inset-top) + 7.5rem)" : "calc(env(safe-area-inset-top) + 4.75rem)" }}>
+        <div role="status" className="absolute inset-x-2 z-30 flex items-center gap-2 rounded-xl bg-neutral-900 p-3 text-sm text-white shadow-xl" style={{ top: navigating ? "calc(env(safe-area-inset-top) + 9.5rem)" : "calc(env(safe-area-inset-top) + 7rem)" }}>
           <span className="flex-1">{toast.text}</span>
           {toast.undo && <button className="font-bold underline" onClick={() => { setToast(null); void undo(); }}>Desfazer</button>}
           <button aria-label="Fechar aviso" onClick={() => setToast(null)}><X className="h-5 w-5" /></button>
@@ -202,8 +232,9 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
       )}
 
       {/* painel inferior */}
-      <section className="absolute inset-x-0 bottom-0 max-h-[75%] overflow-y-auto rounded-t-3xl border-t border-app bg-[var(--card)] p-3 shadow-[0_-8px_24px_rgba(0,0,0,.18)]" aria-label="Entrega atual" data-testid="sheet">
-        <div className="mx-auto mb-2 h-1.5 w-10 rounded-full bg-neutral-300" aria-hidden />
+      <section ref={sheetRef} className="absolute inset-x-0 bottom-0 max-h-[70%] overflow-y-auto rounded-t-3xl border-t border-app bg-[var(--card)] p-3 shadow-[0_-8px_24px_rgba(0,0,0,.18)]" aria-label="Entrega atual" data-testid="sheet">
+        <button onClick={() => setSheetMode(sheetMode === "compact" ? "normal" : "compact")} aria-label={sheetMode === "compact" ? "Expandir painel" : "Recolher painel"} aria-expanded={sheetMode !== "compact"}
+          className="mx-auto mb-1 grid h-6 w-24 place-items-center"><span className="h-1.5 w-10 rounded-full bg-neutral-400" aria-hidden /></button>
         {busy && <div className="mb-2"><Spinner label={busy} /></div>}
 
         {!data || (data.letters.length === 0) ? (
@@ -230,7 +261,7 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
                 <span className="text-lg font-bold">Retomar {resume.letters} entrega(s) em {resume.stops} parada(s)</span>
               </button>
             )}
-            <Counters letters={data.letters.length} stops={data.stops.length} unlocated={unlocated} done={doneLetters} pending={pendingLetters} />
+            {sheetMode !== "compact" && <Counters letters={data.letters.length} stops={data.stops.length} unlocated={unlocated} done={doneLetters} pending={pendingLetters} />}
             {cur ? (
               <>
                 <div>
@@ -240,7 +271,7 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
                     {cur.address.neighborhood ?? ""} · {curLetters.length} carta(s)
                     {navigating && st && st.stopKey === current!.rs.key && st.stopDist >= 0 && <b> · a {fmtDist(st.stopDist)}</b>}
                   </div>
-                  <div className="mt-1 flex flex-wrap gap-1"><Badge color={cur.trust.approximate ? "#b45309" : "#16a34a"}>{cur.trust.label}</Badge></div>
+                  {sheetMode !== "compact" && <div className="mt-1 flex flex-wrap gap-1"><Badge color={cur.trust.approximate ? "#b45309" : "#16a34a"}>{cur.trust.label}</Badge></div>}
                   {note && <p className="mt-1 text-sm text-amber-700" role="note">{note}</p>}
                 </div>
                 {navigating && ui.nearStopKey === current!.rs.key && ui.nearStopText && (
@@ -252,8 +283,9 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
                     {curLetters.length > 1 ? `Entregar todas (${curLetters.length})` : "Entregue"}
                   </Button>
                   <Button variant="danger" size="lg" className="h-16 whitespace-normal text-lg leading-tight" disabled={!curLetters.length} onClick={() => setReasonOpen(true)}>Não consegui</Button>
+                  {sheetMode !== "compact" && <>
                   <Button variant="secondary" size="lg" className="h-14 whitespace-normal" disabled={!curLetters.length} onClick={() => mark(curLetters, "postponed")}><SkipForward className="h-5 w-5" /> Pular</Button>
-                  <Button variant="secondary" size="lg" className="h-14 whitespace-normal" onClick={() => setDetail(!detail)}><Info className="h-5 w-5" /> Detalhes</Button>
+                  <Button variant="secondary" size="lg" className="h-14 whitespace-normal" onClick={() => setDetail(!detail)}><Info className="h-5 w-5" /> Detalhes</Button></>}
                 </div>
                 {detail && <Details stop={cur} onMark={(l, s) => mark([l], s)} nav={nav} batchId={batchId!} reload={reload} />}
               </>
@@ -267,8 +299,9 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
                 {ui.paused ? <Button variant="secondary" onClick={N.resume}><Play className="h-5 w-5" /> Retomar</Button> : <Button variant="secondary" onClick={N.pause}><Pause className="h-5 w-5" /> Pausar</Button>}
                 <Button variant="secondary" onClick={() => void N.stop()}><Square className="h-5 w-5" /> Encerrar</Button>
               </>)}
+              {sheetMode !== "compact" && <>
               <Button variant="ghost" onClick={undo}><Undo2 className="h-5 w-5" /> Desfazer</Button>
-              <Button variant="ghost" onClick={() => nav("/entregas")}><ListChecks className="h-5 w-5" /> Todas as entregas</Button>
+              <Button variant="ghost" onClick={() => nav("/entregas")}><ListChecks className="h-5 w-5" /> Todas as entregas</Button></>}
             </div>
             {navigating && st && <div className="text-center text-xs muted">{fmtDist(st.total - st.progress)} restantes · {st.stopsLeft} parada(s) · GPS ±{Math.round(st.accuracy)} m</div>}
             {route && !navigating && <div className="text-center text-xs muted">{stopsDone}/{items.length} paradas · {fmtDist(route.totalDistance)} · {fmtTime(route.totalTime)} (estimativa)</div>}
@@ -307,6 +340,30 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
           </ul>
         </Modal>
       )}
+    </div>
+  );
+}
+
+function GpsChip({ ui, onRetry }: { ui: ReturnType<typeof useNavigation>["ui"]; onRetry: () => void }) {
+  const age = ui.fix ? Math.max(0, Math.round((Date.now() - ui.fix.time) / 1000)) : null;
+  const m: Record<string, [string, string, boolean]> = {
+    idle: ["GPS inativo", "#6b7280", false],
+    needs_permission: ["Permitir localização", "#b45309", true],
+    asking: ["Pedindo permissão…", "#2563eb", false],
+    denied: ["Localização negada — ative em Ajustes do Android › Apps › Rota Santos › Permissões", "#dc2626", false],
+    disabled: ["GPS desligado — ative a localização do aparelho", "#dc2626", true],
+    searching: [`Procurando GPS…${ui.gpsMsg ? " " + ui.gpsMsg : ""}`, "#2563eb", false],
+    ok: [`GPS ±${Math.round(ui.fix?.accuracy ?? 0)} m${age != null && age > 3 ? ` · há ${age} s` : ""}`, "#15803d", false],
+    stale: [`Sinal de GPS antigo${age != null ? ` (${age} s)` : ""}`, "#b45309", true],
+    error: [`GPS com erro: ${ui.gpsMsg}`, "#dc2626", true],
+  };
+  const [text, color, retry] = m[ui.gps] ?? m.idle;
+  return (
+    <div className="pointer-events-auto mt-2 flex items-center gap-2" data-testid="gps-chip" data-state={ui.gps}>
+      <span className="inline-flex max-w-full items-center gap-2 rounded-full bg-[var(--card)] px-3 py-1 text-sm font-semibold shadow-md" style={{ color }}>
+        <span className="h-2.5 w-2.5 rounded-full" style={{ background: color }} aria-hidden /> <span className="break-words">{text}</span>
+      </span>
+      {retry && <button className="rounded-full bg-brand px-3 py-1 text-sm font-semibold text-white" onClick={onRetry}>Tentar</button>}
     </div>
   );
 }

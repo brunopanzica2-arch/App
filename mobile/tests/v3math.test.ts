@@ -76,7 +76,7 @@ describe("[V3 §7.1] decomposição do tempo no app", () => {
     const P = JSON.parse(readFileSync(new URL("../../test-data/resultados/paridade_150_open.json", import.meta.url), "utf8"));
     const pts: number[][] = P.points.slice(0, 31);
     const res = computePlan(g, {
-      start: { lat: pts[0][0], lon: pts[0][1] }, mode: "open", strategy: "global", profile: { ...DEFAULT_PROFILE, ride_speed_kmh: 15 },
+      start: { lat: pts[0][0], lon: pts[0][1] }, mode: "open", strategy: "global", profile: { ...DEFAULT_PROFILE, ride_speed_kmh: 15, pedestrian: false },
       timeLimitMs: 800, maxSnap: 150,
       stops: pts.slice(1).map((p, i) => ({ key: `K${i}`, lat: p[0] + (i === 3 ? 0.00015 : 0), lon: p[1], service: 45, priority: i < 2 ? 2 : 0 })),
     });

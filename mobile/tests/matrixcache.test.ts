@@ -9,7 +9,7 @@ const buf = readFileSync(new URL("../public/santos-graph.bin", import.meta.url))
 const graph = parseGraph(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
 const P = JSON.parse(readFileSync(new URL("../../test-data/resultados/paridade_150_open.json", import.meta.url), "utf8"));
 const PTS: number[][] = P.points; // [0] = origem TESTE, depois 150 posições TESTE
-const profile = { ...DEFAULT_PROFILE, ride_speed_kmh: 15 };
+const profile = { ...DEFAULT_PROFILE, ride_speed_kmh: 15, pedestrian: false };
 const key = () => `${graphKey(graph)}|${JSON.stringify(profile)}`;
 
 function build(points: number[][]) {

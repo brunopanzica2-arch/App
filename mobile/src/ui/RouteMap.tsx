@@ -3,6 +3,8 @@ import * as maplibregl from "maplibre-gl";
 import type { GeoJSONSource, Map as MLMap } from "maplibre-gl";
 import { useEffect, useRef, useState } from "react";
 import { loadOfflineStyle } from "./offlineMap";
+import { cn } from "./utils";
+import { log } from "../core/log";
 
 // O worker do MapLibre é servido de /public (copiado no postinstall): o bundler
 // do Next não resolve o import.meta.url usado pela biblioteca para achá-lo.
@@ -85,9 +87,19 @@ type Props = {
   focus?: { lat: number; lon: number } | null;
   className?: string;
   onBaseMap?: (status: "online" | "offline" | "pack") => void;
+  /** estado real do mapa: nunca 'ok' só porque o evento load disparou */
+  onMapState?: (s: MapState, detail?: string) => void;
 };
 
-export default function RouteMap({ stops = [], route, start, candidates = [], pin, onPinMove, onStopClick, me, fix, follow = "off", ahead, onUserMove, bottomPad = 0, focus, className, onBaseMap }: Props) {
+export type MapState = "init" | "loading" | "style" | "rendered" | "operational" | "error";
+
+export default function RouteMap({ stops = [], route, start, candidates = [], pin, onPinMove, onStopClick, me, fix, follow = "off", ahead, onUserMove, bottomPad = 0, focus, className, onBaseMap, onMapState }: Props) {
+  const [mapState, setMapState] = useState<MapState>("init");
+  const [mapErr, setMapErr] = useState<string | null>(null);
+  const [retry, setRetry] = useState(0);
+  const stateRef = useRef(onMapState);
+  stateRef.current = onMapState;
+  const setState = (st: MapState, detail?: string) => { setMapState(st); if (st === "error") setMapErr(detail ?? "erro desconhecido"); else setMapErr(null); log("map", st, detail ? { detail } : undefined); stateRef.current?.(st, detail); };
   const [offline, setOffline] = useState(false);
   const applyRef = useRef<(() => void) | null>(null);
   const el = useRef<HTMLDivElement>(null);
@@ -120,6 +132,15 @@ export default function RouteMap({ stops = [], route, start, candidates = [], pi
   useEffect(() => {
     if (!el.current) return;
     let disposed = false, cleanup = () => {};
+    setState("loading");
+    // WebGL é pré-requisito do MapLibre: sem contexto, mostrar erro explícito (nunca tela vazia como se fosse mapa)
+    try {
+      const c = document.createElement("canvas");
+      if (!(c.getContext("webgl2") || c.getContext("webgl"))) throw new Error("contexto WebGL indisponível");
+    } catch (e) {
+      setState("error", `WebGL indisponível: ${(e as Error).message}`);
+      return;
+    }
     // 1º pacote offline de Santos (sem rede); 2º estilo online; 3º fundo liso (ver toFallback)
     loadOfflineStyle().then((pack) => {
       if (disposed || !el.current) return;
@@ -128,17 +149,24 @@ export default function RouteMap({ stops = [], route, start, candidates = [], pi
     return () => { disposed = true; cleanup(); };
     function createMap(pack: Awaited<ReturnType<typeof loadOfflineStyle>>) {
     const m = new maplibregl.Map({ container: el.current!, style: pack ? pack.style : STYLE, center: SANTOS, zoom: 13, attributionControl: { compact: true } });
-    m.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
-    let usingFallback = false, handlers = false;
+        let usingFallback = false, handlers = false;
     const toFallback = () => {
       if (usingFallback) return;
       usingFallback = true;
       ready.current = false;
       setOffline(true);
       onBaseMap?.("offline");
+      setState("error", "mapa-base indisponível; exibindo apenas rota e paradas");
       m.setStyle(fallbackStyle());
     };
-    const timer = setTimeout(() => { if (!m.isStyleLoaded()) toFallback(); }, pack ? 3000 : 10000);
+    const timer = setTimeout(() => { if (!m.isStyleLoaded()) toFallback(); }, pack ? 8000 : 10000);
+    // "operacional" só depois de o mapa ficar ocioso com tiles carregados e canvas com tamanho real
+    m.once("idle", () => {
+      const cv = m.getCanvas();
+      if (!cv.clientWidth || !cv.clientHeight) { setState("error", `contêiner do mapa com tamanho zero (${cv.clientWidth}x${cv.clientHeight})`); return; }
+      if (usingFallback) { setState("error", "mapa-base indisponível (estilo/tiles não carregaram)"); return; }
+      setState(m.areTilesLoaded() ? "operational" : "rendered");
+    });
     m.on("error", (e: any) => {
       console.warn("[mapa] erro:", String(e?.error?.message || e?.message || e).slice(0, 200));
       // estilo/ fontes do mapa-base inacessíveis (sem internet): mantém rota e paradas visíveis
@@ -146,6 +174,7 @@ export default function RouteMap({ stops = [], route, start, candidates = [], pi
     });
     m.on("style.load", () => {
       clearTimeout(timer);
+      if (!usingFallback) setState("style");
       if (!usingFallback) onBaseMap?.(pack ? "pack" : "online");
       m.addSource("route", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       m.addSource("stops", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
@@ -158,13 +187,13 @@ export default function RouteMap({ stops = [], route, start, candidates = [], pi
       });
       m.addLayer({
         id: "route-line", type: "line", source: "route",
-        filter: ["all", ["==", ["get", "kind"], "path"], ["==", ["get", "mode"], "ride"]],
+        filter: ["all", ["==", ["get", "kind"], "path"], ["!=", ["get", "mode"], "steps"]],
         paint: { "line-color": COLORS.route, "line-width": 5 },
         layout: { "line-cap": "round", "line-join": "round" },
       });
       m.addLayer({
         id: "route-walk", type: "line", source: "route",
-        filter: ["all", ["==", ["get", "kind"], "path"], ["!=", ["get", "mode"], "ride"]],
+        filter: ["all", ["==", ["get", "kind"], "path"], ["==", ["get", "mode"], "steps"]],
         paint: { "line-color": COLORS.walk, "line-width": 5, "line-dasharray": [1.2, 1.2] },
       });
       m.addLayer({
@@ -213,12 +242,18 @@ export default function RouteMap({ stops = [], route, start, candidates = [], pi
       m.fire("data-ready" as any);
     });
     map.current = m;
+    const ro = new ResizeObserver(() => m.resize());
+    ro.observe(el.current!);
+    const onVis = () => { if (document.visibilityState === "visible") m.resize(); };
+    document.addEventListener("visibilitychange", onVis);
     return () => {
+      ro.disconnect();
+      document.removeEventListener("visibilitychange", onVis);
       ready.current = false;
       m.remove();
     };
     }
-  }, []);
+  }, [retry]);
 
   // dados
   useEffect(() => {
@@ -311,11 +346,13 @@ export default function RouteMap({ stops = [], route, start, candidates = [], pi
   }, [focus]);
 
   return (
-    <div className="relative">
-      <div ref={el} className={className ?? "h-[60vh] w-full rounded-2xl overflow-hidden"} role="application" aria-label="Mapa da rota" />
-      {offline && (
-        <div role="status" className="pointer-events-none absolute bottom-8 left-2 right-2 rounded-lg bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-900">
-          Mapa-base indisponível (sem internet). Rota e paradas continuam visíveis; o desenho das ruas volta com a conexão.
+    <div className={cn("relative", className ?? "h-[60vh] w-full rounded-2xl overflow-hidden")} data-map-state={mapState}>
+      <div ref={el} style={{ position: "absolute", inset: 0 }} role="application" aria-label="Mapa da rota" />
+      {mapState === "error" && (
+        <div role="alert" data-testid="map-error" className="absolute inset-x-3 top-1/3 z-10 rounded-2xl border border-app bg-[var(--card)] p-4 text-center shadow-xl">
+          <div className="text-base font-bold">Mapa indisponível</div>
+          <p className="mt-1 text-sm">{mapErr}. Rota e paradas continuam registradas, mas o desenho das ruas não está disponível.</p>
+          <button className="mt-3 rounded-xl bg-brand px-4 py-3 font-semibold text-white" onClick={() => { setOffline(false); setRetry((n) => n + 1); }}>Tentar novamente</button>
         </div>
       )}
     </div>
@@ -324,8 +361,8 @@ export default function RouteMap({ stops = [], route, start, candidates = [], pi
 
 export function MapLegend() {
   const items = [
-    [COLORS.route, "Percurso pedalável"],
-    [COLORS.walk, "Conduzir a bicicleta a pé (tracejado)"],
+    [COLORS.route, "Percurso a pé"],
+    [COLORS.walk, "Escadas (tracejado)"],
     [COLORS.next, "Próxima parada"],
     [COLORS.completed, "Concluída"],
     [COLORS.uncertain, "Endereço incerto"],

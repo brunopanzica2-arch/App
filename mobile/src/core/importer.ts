@@ -214,7 +214,7 @@ export function preview(t: Table, mapping: Record<string, string | null>) {
     warningRows: rows.filter((r) => r.warnings.length).length,
     duplicateIds: [...new Set(ids.filter((x, i) => ids.indexOf(x) !== i))],
     uniqueAddresses: new Set(rows.map((r) => r.key).filter(Boolean)).size,
-    rows: rows.slice(0, 30),
+    rows: [...rows.filter((r) => r.errors.length), ...rows.filter((r) => !r.errors.length)].slice(0, 30), // inválidas primeiro (revisão)
   };
 }
 
@@ -269,7 +269,8 @@ export async function commitImport(t: Table, mapping0: Record<string, string | n
       if (g) warnings.push(`Identificador ${ext} já existe com conteúdo diferente: carta mantida; confira se é a mesma correspondência.`);
       (g ?? known.set(ext, new Set()).get(ext)!).add(s);
     }
-    if (r.errors.length) report.withErrors.push({ row: r.row, errors: r.errors });
+    // linha inválida (ex.: logradouro que é só um número) NÃO é gravada: fica no relatório, com a linha original, para correção
+    if (r.errors.length) { report.withErrors.push({ row: r.row, errors: r.errors, raw: r.raw }); continue; }
     letters.push({
       id: uid(), batchId: batch.id, row: startRow + r.row, externalId: ext, recipient: r.values.recipient,
       street: r.values.street, number: r.values.number, complement: r.values.complement,

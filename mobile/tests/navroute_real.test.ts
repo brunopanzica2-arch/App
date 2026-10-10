@@ -14,7 +14,7 @@ describe.skipIf(!existsSync(FILE))("manobras em rota real (150 paradas)", () => 
   it("geometria, manobras e paradas coerentes", () => {
     const P = JSON.parse(readFileSync(FILE, "utf8"));
     const plan = computePlan(graph, {
-      start: { lat: P.points[0][0], lon: P.points[0][1] }, mode: "open", strategy: "global", profile: { ...DEFAULT_PROFILE, ride_speed_kmh: 15 }, timeLimitMs: 3000, maxSnap: 150,
+      start: { lat: P.points[0][0], lon: P.points[0][1] }, mode: "open", strategy: "global", profile: { ...DEFAULT_PROFILE }, timeLimitMs: 3000, maxSnap: 150,
       stops: P.points.slice(1).map((p: number[], i: number) => ({ key: `K${i + 1}`, lat: p[0], lon: p[1], service: 45 })),
     });
     const r = buildNavRoute(plan, { lat: P.points[0][0], lon: P.points[0][1] }, new Map());
@@ -29,5 +29,19 @@ describe.skipIf(!existsSync(FILE))("manobras em rota real (150 paradas)", () => 
     console.log(`rota real: ${(r.length / 1000).toFixed(2)} km, ${r.lat.length} vértices, ${r.maneuvers.length} manobras (${(r.length / r.maneuvers.length).toFixed(0)} m/manobra), com nome de rua ${(named * 100).toFixed(0)}%`, JSON.stringify(kinds));
     expect(r.maneuvers.length).toBeGreaterThan(50);
     expect(r.length / r.maneuvers.length).toBeGreaterThan(25); // sem enxurrada de instruções
+  });
+});
+
+describe.skipIf(!existsSync(FILE))("perfil de pedestre (2.0.1)", () => {
+  it("nenhum trecho é 'ride' e o tempo de deslocamento usa a velocidade de caminhada", () => {
+    const P = JSON.parse(readFileSync(FILE, "utf8"));
+    const plan = computePlan(graph, {
+      start: { lat: P.points[0][0], lon: P.points[0][1] }, mode: "open", strategy: "global", profile: { ...DEFAULT_PROFILE }, timeLimitMs: 2000, maxSnap: 150,
+      stops: P.points.slice(1, 41).map((p: number[], i: number) => ({ key: `K${i + 1}`, lat: p[0], lon: p[1], service: 45 })),
+    });
+    expect(plan.features.every((f) => f.properties.mode !== "ride")).toBe(true);
+    const kmh = (plan.totalDistance / 1000) / (plan.travelTime / 3600);
+    expect(kmh).toBeLessThan(4.6);
+    expect(kmh).toBeGreaterThan(3.0);
   });
 });

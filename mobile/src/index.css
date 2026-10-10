@@ -35,3 +35,7 @@ body { font-size: 17px; -webkit-tap-highlight-color: transparent; padding-top: e
 .dark .text-amber-700 { color: #fbbf24; }
 .maplibregl-ctrl-attrib { font-size: 11px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* controles/atribuição do mapa ficam acima do painel inferior */
+.maplibregl-ctrl-bottom-right, .maplibregl-ctrl-bottom-left { bottom: var(--sheet-h, 0px); }
+.maplibregl-ctrl-attrib.maplibregl-compact { margin-bottom: 4px; }

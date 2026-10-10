@@ -4,7 +4,8 @@ import { type Address, DEFAULT_NAV, db, type DeliveryEvent, type Letter, type Le
 import { routePoint, trustOf, type Trust } from "./address";
 import { QuotaError, resolve, setDailyQuota, setProvider } from "./geocode";
 import { runQueue } from "./geoqueue";
-import { parseText } from "./importer";
+import { fromInferred, mapRows, parseText } from "./importer";
+import { inferRows } from "./schema";
 import { normalizeAddress } from "./normalize";
 import type { PlanRequest, PlanResult } from "./plan";
 import { DEFAULT_PROFILE } from "./router";
@@ -115,6 +116,7 @@ export async function stopsOf(batchId: string) {
     if (l.excluded) continue;
     const a = l.addressKey ? addrs.get(l.addressKey) : undefined;
     if (!a || !routePoint(a) || !ROUTABLE.includes(a.precision) && !a.entrance) { unlocated.push(l); continue; }
+    if (streetProblem(a.street, a.number)) { unlocated.push(l); continue; } // cadastro antigo corrompido (“106, 106”): nunca vira parada
     if (block && trustOf(a).code !== "test" && ["street", "interpolated"].includes(a.precision) && !a.entrance) { unlocated.push(l); continue; }
     byKey.set(a.key, [...(byKey.get(a.key) || []), l]);
   }
@@ -504,9 +506,74 @@ export async function rerouteFrom(route: Route, pos: { lat: number; lon: number 
 /** Planejamento de um toque com os padrões (rota aberta, global). Origem: ponto confirmado, senão a posição atual. */
 export async function quickPlan(batchId: string, here: { lat: number; lon: number } | null, onProgress?: (stage: string, p: number) => void): Promise<Route> {
   const s = await getSettings();
-  const start = s.start?.confirmed ? s.start : here ? { label: "Localização atual", lat: here.lat, lon: here.lon } : null;
+  // GPS atual (fix recente) tem prioridade; o ponto manual de Ajustes é só plano B e nunca é tratado como posição atual
+  const start = here ? { label: "Localização atual", lat: here.lat, lon: here.lon } : s.start?.confirmed ? s.start : null;
   if (!start) throw new Error("Defina o ponto de partida em Ajustes ou ative a localização para calcular a rota.");
-  const r = await planBatch(batchId, { mode: s.routeMode === "circular" ? "circular" : "open", strategy: "global", start, timeLimitMs: 8000, reason: "plan" } as any, onProgress);
+  const o = (st: { label: string; lat: number; lon: number }) => ({ mode: (s.routeMode === "circular" ? "circular" : "open") as any, strategy: "global" as const, start: st, timeLimitMs: 8000, reason: "plan" });
+  let r: Route;
+  try {
+    r = await planBatch(batchId, o(start), onProgress);
+  } catch (e) {
+    // GPS fora da malha de pedestres de Santos: cai para o ponto manual confirmado (e avisa pelo rótulo da origem)
+    if (!here || !s.start?.confirmed || !/fora da malha|Ponto de partida/i.test((e as Error).message)) throw e;
+    r = await planBatch(batchId, o(s.start), onProgress);
+  }
   await activateRoute(r);
   return r;
+}
+
+// ------------------------------------------------------------ diagnóstico/reprocessamento de lotes antigos (2.0.1)
+
+export interface LegacyIssue { letterId: string; row: number; street: string | null; number: string | null; reason: string; canReprocess: boolean }
+
+/** Logradouro inválido: vazio, só dígitos ou igual ao número (ex.: “106, 106”). */
+export function streetProblem(street: string | null | undefined, number: string | null | undefined): string | null {
+  const st = (street ?? "").trim();
+  if (!st) return "logradouro vazio";
+  if (/^\d+[a-z]?$/i.test(st)) return `logradouro é só um número (“${st}”): coluna deslocada ou mapeamento errado`;
+  if (number && st === number.trim()) return "logradouro igual ao número";
+  return null;
+}
+
+export async function diagnoseLegacy(batchId: string): Promise<{ total: number; issues: LegacyIssue[] }> {
+  const letters = await db.letters.where("batchId").equals(batchId).toArray();
+  const addrs = new Map((await db.addresses.bulkGet([...new Set(letters.map((l) => l.addressKey).filter(Boolean) as string[])])).filter(Boolean).map((a) => [a!.key, a!]));
+  const issues: LegacyIssue[] = [];
+  for (const l of letters) {
+    if (l.excluded) continue;
+    const a = l.addressKey ? addrs.get(l.addressKey) : undefined;
+    const reason = streetProblem(a?.street ?? l.street, a?.number ?? l.number);
+    if (reason) issues.push({ letterId: l.id, row: l.row, street: a?.street ?? l.street, number: a?.number ?? l.number, reason, canReprocess: !!(l.raw && l.raw.length >= 2) });
+  }
+  return { total: letters.length, issues };
+}
+
+/**
+ * Reprocessa as cartas inválidas a partir da LINHA ORIGINAL guardada (`raw`), inferindo o esquema do lote inteiro pelo conteúdo.
+ * Nunca inventa logradouro: se o resultado continuar inválido, a carta fica como está. Nunca apaga cartas.
+ */
+export async function reprocessLegacy(batchId: string): Promise<{ fixed: number; remaining: number; skippedNoRaw: number }> {
+  const { issues } = await diagnoseLegacy(batchId);
+  const letters = await db.letters.where("batchId").equals(batchId).toArray();
+  const withRaw = letters.filter((l) => l.raw && l.raw.length >= 2);
+  if (!withRaw.length) return { fixed: 0, remaining: issues.length, skippedNoRaw: issues.length };
+  const inf = inferRows(withRaw.map((l) => l.raw!), null, false);
+  const t = { headers: inf.headers, rows: inf.rows, original: "", hasHeader: false };
+  const prep = fromInferred(inf, "");
+  const mapped = mapRows({ ...t, hasHeader: false }, prep.mapping);
+  const byRaw = new Map(withRaw.map((l, i) => [l.id, mapped[i]]));
+  let fixed = 0;
+  const bad = new Set(issues.map((i) => i.letterId));
+  await db.transaction("rw", db.letters, async () => {
+    for (const l of withRaw) {
+      if (!bad.has(l.id)) continue;
+      const m = byRaw.get(l.id);
+      if (!m || m.errors.length || streetProblem(m.values.street, m.values.number)) continue;
+      await db.letters.update(l.id, { street: m.values.street, number: m.values.number, neighborhood: m.values.neighborhood ?? l.neighborhood, city: m.values.city ?? l.city,
+        cep: m.values.cep ?? l.cep, errors: [], addressKey: m.key, warnings: [...l.warnings, "Reprocessada a partir da linha original (2.0.1)."] });
+      fixed++;
+    }
+  });
+  const after = await diagnoseLegacy(batchId);
+  return { fixed, remaining: after.issues.length, skippedNoRaw: issues.filter((i) => !i.canReprocess).length };
 }

@@ -17,7 +17,7 @@ describe.skipIf(!existsSync(FILE))("paridade backend x app — 150 posições TE
   const Db: number[][] = P.D.map((r: number[]) => r.map(inf));
 
   it("matriz de tempo e distância do app = backend (tolerância 0,1% + 0,5 m/0,05 s)", () => {
-    const r = new Router(graph, { ...DEFAULT_PROFILE, ride_speed_kmh: 15 });
+    const r = new Router(graph, { ...DEFAULT_PROFILE, ride_speed_kmh: 15, pedestrian: false });
     const { snap, reach } = r.snapOrigin(P.points[0][0], P.points[0][1], 150);
     const snaps = [snap, ...P.points.slice(1).map((p: number[]) => r.snap(p[0], p[1], 150, reach))];
     snaps.forEach((s, i) => {
@@ -55,7 +55,7 @@ describe.skipIf(!existsSync(FILE))("paridade backend x app — 150 posições TE
   it("plano completo no app (snap + matriz + otimização + geometria) com 150 paradas", () => {
     const res = computePlan(graph, {
       start: { lat: P.points[0][0], lon: P.points[0][1] }, mode: "open", strategy: "global",
-      profile: { ...DEFAULT_PROFILE, ride_speed_kmh: 15 }, timeLimitMs: 6000, maxSnap: 150,
+      profile: { ...DEFAULT_PROFILE, ride_speed_kmh: 15, pedestrian: false }, timeLimitMs: 6000, maxSnap: 150,
       stops: P.points.slice(1).map((p: number[], i: number) => ({ key: `K${i + 1}`, lat: p[0], lon: p[1], service: P.service[String(i + 1)] })),
     });
     expect(res.status).toBe("complete");

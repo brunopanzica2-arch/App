@@ -159,8 +159,9 @@ export function ImportPage({ nav }: { nav: Nav }) {
           {"error" in pv ? <Alert kind="error">{pv.error}</Alert> : (
             <>
               <div className="grid grid-cols-2 gap-1 text-sm">
-                <div>Linhas: <b>{pv.total}</b></div><div>Com erro: <b className="text-problem">{pv.errorRows}</b></div>
-                <div>Com alerta: <b>{pv.warningRows}</b></div><div>Imóveis únicos: <b>{pv.uniqueAddresses}</b></div>
+                <div>Linhas lidas: <b>{pv.total}</b> <span className="sr-only">Linhas: {pv.total}</span></div><div>Válidas: <b>{pv.total - pv.errorRows}</b></div>
+                <div>Precisam de correção: <b className="text-problem">{pv.errorRows}</b></div><div>Ambíguas (alerta): <b>{pv.warningRows}</b></div>
+                <div>Imóveis únicos: <b>{pv.uniqueAddresses}</b></div><div>Cartas por imóvel: <b>até {Math.max(1, Math.round(pv.total / Math.max(pv.uniqueAddresses, 1)))}</b></div>
               </div>
               {pv.duplicateIds.length > 0 && <Alert kind="warn">Identificadores repetidos (registrados como duplicados): {pv.duplicateIds.join(", ")}</Alert>}
               <div className="max-h-72 overflow-auto text-xs" tabIndex={0} role="region" aria-label="Prévia das linhas">
@@ -173,7 +174,7 @@ export function ImportPage({ nav }: { nav: Nav }) {
                 ))}
               </div>
               <div className="text-xs muted">Prévia das 10 primeiras de {pv.total} linhas.</div>
-              <Button size="lg" onClick={() => commit()} disabled={busy}>Confirmar e localizar endereços</Button>
+              <Button size="lg" onClick={() => commit()} disabled={busy}>{pv.errorRows ? `Importar ${pv.total - pv.errorRows} válidas (${pv.errorRows} ficam de fora)` : "Confirmar e localizar endereços"}</Button>
             </>
           )}
         </Card>

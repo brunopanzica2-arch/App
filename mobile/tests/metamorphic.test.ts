@@ -13,7 +13,7 @@ const buf = readFileSync(new URL("../public/santos-graph.bin", import.meta.url))
 const graph = parseGraph(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
 const P = JSON.parse(readFileSync(new URL("../../test-data/resultados/paridade_150_open.json", import.meta.url), "utf8"));
 const CSV = readFileSync(new URL("../../test-data/cenario_300_cartas_centro_paqueta_vila_nova.csv", import.meta.url), "utf8");
-const profile = { ...DEFAULT_PROFILE, ride_speed_kmh: 15 };
+const profile = { ...DEFAULT_PROFILE, ride_speed_kmh: 15, pedestrian: false };
 const base = (n: number) => P.points.slice(1, n + 1).map((p: number[], i: number) => ({ key: `K${i + 1}`, lat: p[0], lon: p[1], service: 45 }));
 const req = (stops: any[], extra: object = {}) => ({
   start: { lat: P.points[0][0], lon: P.points[0][1] }, mode: "open" as const, strategy: "global" as const, profile, timeLimitMs: 2500, maxSnap: 150, stops, ...extra,

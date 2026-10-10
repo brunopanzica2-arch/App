@@ -3,7 +3,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useMemo, useRef, useState } from "react";
 import type { Nav } from "../App";
 import { db } from "../core/db";
-import { batchUndoSummary, stopsOf, TERMINAL, undoBatch } from "../core/service";
+import { batchUndoSummary, diagnoseLegacy, reprocessLegacy, stopsOf, TERMINAL, undoBatch } from "../core/service";
 import { Button } from "../ui/button";
 import { useAsync, useCurrentBatch } from "../ui/hooks";
 import { Alert, Badge, Card, Input, Select, Spinner } from "../ui/misc";
@@ -22,6 +22,7 @@ export function DeliveriesPage({ nav }: { nav: Nav }) {
     const route = rs.find((r) => r.status === "active") ?? null;
     return { ...d, route };
   }, [batchId]);
+  const [legacy, reloadLegacy] = useAsync(async () => (batchId ? diagnoseLegacy(batchId) : null), [batchId]);
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("todas");
   const [msg, setMsg] = useState<string | null>(null);
@@ -75,6 +76,16 @@ export function DeliveriesPage({ nav }: { nav: Nav }) {
         <Button onClick={() => nav("/importar")}><Upload className="h-5 w-5" /> Importar</Button>
       </div>
       {msg && <Alert kind="ok">{msg}</Alert>}
+      {legacy && legacy.issues.length > 0 && (
+        <Alert kind="warn">
+          <b>{legacy.issues.length} carta(s) com cadastro inválido</b> (ex.: logradouro “{legacy.issues[0].street}”): {legacy.issues[0].reason}. Elas não entram na rota e nada foi apagado.
+          <div className="mt-2"><Button size="sm" variant="secondary" onClick={async () => {
+            const r = await reprocessLegacy(batchId!);
+            setMsg(`Reprocessadas ${r.fixed} carta(s) a partir da linha original; ${r.remaining} ainda precisam de correção manual${r.skippedNoRaw ? ` (${r.skippedNoRaw} sem linha original guardada)` : ""}. Use “Validar / corrigir endereços” para localizar.`);
+            reload(); reloadLegacy();
+          }}>Reprocessar a partir da linha original</Button></div>
+        </Alert>
+      )}
       {!batches.length && <Card className="text-center">Nenhum lote importado. Toque em Importar.</Card>}
       {data && (
         <>
