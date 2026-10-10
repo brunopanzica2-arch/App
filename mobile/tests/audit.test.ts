@@ -157,6 +157,20 @@ describe("[D] CSV RFC 4180", () => {
   });
 });
 
+describe("[G] chave de endereço", () => {
+  it("ignora bairro e complemento, distingue tipo de via e município", () => {
+    const raw = readFileSync(new URL("../../test-data/casos_adversariais_30.csv", import.meta.url), "utf8");
+    const t = parseText(raw);
+    const k = Object.fromEntries(mapRows(t, suggestMapping(t.headers)).map((r) => [r.values.external_id, r.key]));
+    expect(k.ADV11).toBe(k.ADV12);
+    expect(k.ADV25).toBe(k.ADV26);
+    expect(k.ADV25).not.toBe(k.ADV27);
+    expect(k.ADV07!.split("|")[2]).toBe("108");
+    expect(k.ADV08!.split("|")[2]).toBe("110");
+    expect(k.ADV10!.split("|")[3]).not.toBe(k.ADV09!.split("|")[3]);
+  });
+});
+
 describe("[H] injeção de fórmula na exportação", () => {
   it("neutraliza = + - @ TAB sem perder o texto", () => {
     expect(safeCell('=HYPERLINK("x")')).toBe(`'=HYPERLINK("x")`);

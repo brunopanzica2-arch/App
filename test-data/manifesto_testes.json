@@ -43,7 +43,7 @@
  },
  "adversariais": {
   "arquivo": "casos_adversariais_30.csv",
-  "sha256": "11dc1fcf8c49cfda68f799914c9b8b71beb771fe1f336c1b77a43be77a0943db",
+  "sha256": "9ec2a1594120163b419555798c30b69ce173000c8fd776564396c7c271c4c298",
   "linhas_de_dados": 30,
   "expectativa": [
    {

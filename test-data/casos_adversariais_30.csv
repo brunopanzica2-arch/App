@@ -10,8 +10,8 @@ ADV07;Gabriela Teste;Praça Francisco Martins dos Santos;108.0;;Centro;Santos;;n
 ADV08;Heitor Teste;Praça Francisco Martins dos Santos;0110;;Centro;Santos;;número com zero à esquerda
 ADV09;Íris Teste;Praça Francisco Martins dos Santos;112;;Centro;Santos;1101;CEP inválido
 ADV10;João Teste;Praça Francisco Martins dos Santos;114;;Centro;São Vicente/SP;;outro município
-ADV11;Kátia Teste;R. Francisco Martins dos Santos;116;;Centro;Santos;;abreviação R.
-ADV12;Lucas Teste;PRAÇA FRANCISCO MARTINS DOS SANTOS;116;apto 2;Centro;Santos;;MAIÚSCULAS: mesma chave do ADV11
+ADV11;Kátia Teste;R. General Câmara;116;;Centro;Santos;;abreviação R.
+ADV12;Lucas Teste;RUA GENERAL CÂMARA;116;apto 2;Centro;Santos;;MAIÚSCULAS: mesma chave do ADV11
 ADV13;Marina Teste;Praça Francisco Martins dos Santos;118;;Vila Nova;Santos;;bairro informado possivelmente errado
 ADV14;Nélson Teste;Praça Francisco Martins dos Santos;120;;Centro;Santos;;"=HYPERLINK(""http://x"",""clique"")"
 ADV15;<script>alert(1)</script>;Praça Francisco Martins dos Santos;122;;Centro;Santos;;<img src=x onerror=alert(1)>

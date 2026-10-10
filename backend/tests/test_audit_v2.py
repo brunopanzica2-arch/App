@@ -250,3 +250,19 @@ def test_L_invalid_fixed_ids_are_rejected(db, org):
         run_plan(db, o.id, b, net, (0, 0.0001), fixed_next_stop_ids=[stop_ids[0], stop_ids[0]])
     route = run_plan(db, o.id, b, net, (0, 0.0001), fixed_next_stop_ids=[stop_ids[1]])
     assert route.stops[0].stop_id == stop_ids[1] and route.stops[0].locked
+
+
+# ----------------------------------------------------------------- [G] chave de endereço
+
+
+def test_G_address_key_ignores_neighborhood_and_complement_but_not_street_type():
+    from pathlib import Path
+
+    raw = (Path(__file__).resolve().parents[2] / "test-data" / "casos_adversariais_30.csv").read_bytes()
+    t = importer.parse_upload(raw, "casos_adversariais_30.csv", {})
+    k = {r.values["external_id"]: r.address_key for r in importer.map_rows(t, importer.suggest_mapping(t.headers))}
+    assert k["ADV11"] == k["ADV12"]  # "R." x "RUA" maiúsculo, complemento diferente: mesma entrada
+    assert k["ADV25"] == k["ADV26"]  # Av. Cons. Nébias (Vila Nova) x Avenida Conselheiro Nébias (Paquetá)
+    assert k["ADV25"] != k["ADV27"]  # Avenida x Rua: logradouros diferentes
+    assert k["ADV07"].split("|")[2] == "108" and k["ADV08"].split("|")[2] == "110"
+    assert k["ADV10"] != k["ADV09"].replace("|112|", "|114|")  # outro município nunca colapsa com Santos

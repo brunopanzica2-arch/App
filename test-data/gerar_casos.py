@@ -199,6 +199,9 @@ def main():
 
     # ---------------- casos adversariais (30 linhas) com expectativa por linha
     some = positions[0]
+    # ADV11/ADV12 precisam de um logradouro do tipo "Rua" (R. = Rua) cujo nº 116 não está no cenário principal
+    used = {(p["logradouro"], p["numero"]) for p in positions}
+    rua = next(p["logradouro"] for p in positions if p["logradouro"].startswith("Rua ") and (p["logradouro"], "116") not in used)
     adv = [
         ("ADV01", "Ana Teste", some["logradouro"], "100", "bloco A\napto 12", "Centro", "Santos", "", "complemento com QUEBRA DE LINHA", "ok"),
         ("ADV02", "Bruno; Teste", some["logradouro"], "102", "sala 3; fundos", "Centro", "Santos", "", "ponto-e-vírgula entre aspas", "ok"),
@@ -210,8 +213,8 @@ def main():
         ("ADV08", "Heitor Teste", some["logradouro"], "0110", "", "Centro", "Santos", "", "número com zero à esquerda", "ok"),
         ("ADV09", "Íris Teste", some["logradouro"], "112", "", "Centro", "Santos", "1101", "CEP inválido", "alerta"),
         ("ADV10", "João Teste", some["logradouro"], "114", "", "Centro", "São Vicente/SP", "", "outro município", "alerta"),
-        ("ADV11", "Kátia Teste", "R. " + some["logradouro"].split(" ", 1)[-1], "116", "", "Centro", "Santos", "", "abreviação R.", "ok"),
-        ("ADV12", "Lucas Teste", some["logradouro"].upper(), "116", "apto 2", "Centro", "Santos", "", "MAIÚSCULAS: mesma chave do ADV11", "ok"),
+        ("ADV11", "Kátia Teste", "R. " + rua.split(" ", 1)[-1], "116", "", "Centro", "Santos", "", "abreviação R.", "ok"),
+        ("ADV12", "Lucas Teste", rua.upper(), "116", "apto 2", "Centro", "Santos", "", "MAIÚSCULAS: mesma chave do ADV11", "ok"),
         ("ADV13", "Marina Teste", some["logradouro"], "118", "", "Vila Nova", "Santos", "", "bairro informado possivelmente errado", "ok"),
         ("ADV14", "Nélson Teste", some["logradouro"], "120", "", "Centro", "Santos", "", '=HYPERLINK("http://x","clique")', "ok"),
         ("ADV15", "<script>alert(1)</script>", some["logradouro"], "122", "", "Centro", "Santos", "", "<img src=x onerror=alert(1)>", "ok"),

@@ -9,7 +9,9 @@ Sistema full-stack para importar, geocodificar, agrupar, otimizar, mapear e acom
 - Escadas, acessos privados e barreiras são **sinalizados**. Para cada tipo existe uma política: permitir, penalizar ou evitar.
 - Objetivo da otimização: **menor tempo total**, somando deslocamento e atendimento. Em caso de empate, vale a menor distância. Rota **aberta** por padrão; circular ou com destino fixo são opcionais.
 
-> **App Android offline (sem servidor):** veja [`mobile/README.md`](mobile/README.md). O APK pronto está em [`releases/rota-santos-1.0.apk`](releases/rota-santos-1.0.apk).
+> **App Android offline (sem servidor):** veja [`mobile/README.md`](mobile/README.md). O APK está em [`releases/`](releases/LEIA-ME.md): `rota-santos-1.1.0-DEBUG.apk` (instalável) e o release sem assinatura (ver [`mobile/SIGNING.md`](mobile/SIGNING.md)).
+>
+> **Auditoria V2:** [`docs/AUDITORIA_V2.md`](docs/AUDITORIA_V2.md) · [`docs/TESTE_300_CENTRO_PAQUETA_VILA_NOVA.md`](docs/TESTE_300_CENTRO_PAQUETA_VILA_NOVA.md) · [`docs/RESULTADOS_COMPARATIVOS_V2.md`](docs/RESULTADOS_COMPARATIVOS_V2.md) · [`docs/TUTORIAL_USO_DIARIO.md`](docs/TUTORIAL_USO_DIARIO.md) · evidências em [`docs/EVIDENCIAS_E2E_V2/`](docs/EVIDENCIAS_E2E_V2/).
 
 A arquitetura, as decisões técnicas e os riscos estão em [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md). Os benchmarks medidos estão em [`docs/benchmarks.md`](docs/benchmarks.md) e as capturas do E2E em [`docs/screenshots/`](docs/screenshots).
 

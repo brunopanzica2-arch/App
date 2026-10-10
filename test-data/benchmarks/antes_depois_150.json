@@ -1,0 +1,13 @@
+{
+ "cenario": "paridade_150_open.json (150 posições TESTE, rota aberta, mesma matriz T/D e mesmo serviço)",
+ "antes": "commit 42d7976 (antes da auditoria V2)",
+ "depois": "branch atual",
+ "hardware": "Intel Xeon 2,1 GHz, 4 vCPU (contêiner Linux) — NÃO é celular",
+ "backend_ortools_30s": {"antes": {"tempo_min": 201.9, "km": 15.53, "arcos_invalidos": 0}, "depois": {"tempo_min": 201.9, "km": 15.53, "arcos_invalidos": 0}},
+ "app_ts_6s": [
+  {"seed": 1, "antes": {"tempo_min": 201.6, "km": 15.47, "arcos_invalidos": 0}, "depois": {"tempo_min": 200.8, "km": 15.35}},
+  {"seed": 2, "antes": {"tempo_min": 201.1, "km": 15.42, "arcos_invalidos": 0}, "depois": {"tempo_min": 201.3, "km": 15.5}},
+  {"seed": 3, "antes": {"tempo_min": 201.9, "km": 15.54, "arcos_invalidos": 0}, "depois": {"tempo_min": 201.1, "km": 15.44}}
+ ],
+ "matriz_com_par_impossivel": {"T": "[[0,5,5],[inf,0,inf],[inf,inf,0]]", "app_antes": "ordem [2,1] com arco Infinity aceita como melhor", "app_depois": "1 parada roteada, 1 excluída com motivo, status PARCIAL", "backend_antes": "sequência com arco de custo 10^11 (impossível)", "backend_depois": "rota parcial válida + exclusão com motivo"}
+}
