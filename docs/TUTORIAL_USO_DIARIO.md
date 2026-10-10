@@ -5,9 +5,9 @@ As capturas são do app real, rodando no navegador durante o E2E V2 com as **300
 
 ## 0. Instalar ou atualizar (uma vez)
 
-1. Baixe `releases/rota-santos-1.1.0-DEBUG.apk` no celular. Confira o SHA-256 em `releases/SHA256SUMS.txt`.
-2. Abra o arquivo e permita "instalar apps desta fonte". A 1.1.0 atualiza por cima da 1.0 **sem apagar os
-   dados**.
+1. Baixe `releases/rota-santos-1.2.0-DEBUG.apk` no celular. Confira o SHA-256 em `releases/SHA256SUMS.txt`.
+2. Abra o arquivo e permita "instalar apps desta fonte". A 1.2.0 atualiza por cima da 1.0/1.1 **sem apagar os
+   dados** (faça um backup cifrado antes, por precaução).
 3. Para a versão release assinada com a sua chave, veja `mobile/SIGNING.md`. Trocar debug → release exige
    backup, desinstalar e restaurar.
 
@@ -42,9 +42,13 @@ O Painel mostra **"N cartas / N imóveis / N bairros"** e o cartão **Endereços
 ![painel](EVIDENCIAS_E2E_V2/05-painel-300-150-3.png)
 
 **Validar endereços → Precisam de revisão:**
-- Toque num endereço, **arraste o pino roxo até a entrada do imóvel** e toque em **Confirmar**. Um endereço
-  confirmado fica salvo e é reaproveitado nos próximos dias.
-- **Localizar** consulta o mapa na internet. Há um limite diário (Ajustes, 250 por padrão), e endereços
+- Toque num endereço e **arraste o pino roxo até a portaria do imóvel**.
+  - **Confirmar portaria**: só quando o ponto é a entrada real (dá para anotar "portão azul", "interfone 12"). A rota passa a usar esse ponto.
+  - **Confirmar posição**: o pino está no lugar certo do número, mas não é a portaria.
+  - **Reverter última alteração** e **Invalidar confirmação** desfazem erros; confirmações com mais de 1 ano aparecem como "confirmação antiga".
+  - Depois de confirmar, o app abre o próximo endereço da lista (nunca confirma sozinho). Confirmações ficam salvas para os próximos dias.
+  - O selo de cada endereço mostra o nível de confiança: portaria confirmada > pino confirmado > número na fonte > interpolado (aproximado) > só a rua (não confirmado).
+- **Localizar** consulta o provedor de endereços **só dos endereços únicos ainda sem posição**, em fila que dá para cancelar e retomar. O Nominatim público atende no máximo 30 por vez e tem cota diária (Ajustes, 250 por padrão); para volume use uma instância própria (Ajustes → Geocodificação em lote). Endereços
   "só a rua" entram na rota **marcados como aproximados**. Em Ajustes dá para exigir confirmação antes de rotear.
 
 ![revisão](EVIDENCIAS_E2E_V2/04-revisao-posicoes-teste.png)
@@ -77,6 +81,8 @@ nela.
 
 **Errou?** Use **Desfazer última ação**.
 
+**Observação:** cada carta tem um campo "Observação (opcional)" para anotar algo em campo; ele vai no relatório e não muda o status.
+
 **Outros controles:**
 - **Fixar como próxima:** atende uma parada fora de ordem.
 - **Pular endereço:** adia uma parada.
@@ -93,7 +99,7 @@ nela.
 
 **Sem internet:**
 - A rota, as marcações e o recálculo funcionam.
-- O fundo do mapa vira um fundo liso com a rota e as paradas numeradas ("Mapa-base indisponível").
+- O mapa mostra as **ruas de Santos com nomes** (pacote offline embutido; selo "Mapa offline (pacote de Santos)"). Fora do recorte do pacote, ou se o pacote faltar, o fundo vira liso com a rota e as paradas numeradas ("Mapa-base indisponível").
 - Tudo fica gravado no celular, mesmo se o app for fechado.
 
 ![offline](EVIDENCIAS_E2E_V2/12-mapa-offline-fallback.png)
@@ -104,6 +110,8 @@ nela.
 exportar. Textos que pareçam fórmulas são neutralizados na planilha.
 
 ![relatório](EVIDENCIAS_E2E_V2/13-relatorio.png)
+
+**Ajustes → Exportar diagnóstico de desempenho:** gera um arquivo só com tempos de cálculo, memória e versões (sem nomes nem endereços), útil para comparar aparelhos.
 
 **Ajustes → Exportar backup:**
 - Use **com senha**. O arquivo tem nomes e endereços e sai cifrado (AES-GCM).
