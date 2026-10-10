@@ -74,6 +74,8 @@ Marcado **só** o que tem log/arquivo real.
 - [x] Relatório e exportações seguras (fórmulas neutralizadas; observação de campo coberta).
 - [x] Documento de operação (`TUTORIAL_USO_DIARIO.md`) e limitações (`LIMITACOES_OPERACIONAIS_V3.md`).
 
+**CI independente (GitHub Actions, outra máquina):** run 13 (commit `fc8a60f`), os dois jobs passaram: backend (ruff + 100 testes com PostGIS limpo) e app (82 testes, parser ADB, E2E de mapa offline e a11y, build debug e release sem assinatura). Isso confirma que os resultados não dependem do meu contêiner, mas **continua não sendo teste em celular**.
+
 ## 5. Pedidos do prompt V3 que NÃO foram feitos
 | Pedido | Situação |
 |---|---|
