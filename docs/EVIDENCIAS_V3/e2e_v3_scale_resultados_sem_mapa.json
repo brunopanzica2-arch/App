@@ -1,0 +1,48 @@
+{
+ "results": {
+  "ESCALA-1-importacao": {
+   "ok": true,
+   "detail": "prévia 1000 linhas / 500 imóveis; importação em 0.6 s"
+  },
+  "ESCALA-2-calculo": {
+   "ok": true,
+   "detail": "500 paradas, 25,5 km, cálculo 19.9 s no navegador, completa; Coordenadas: 0 atualizadas, 500 novas, 0 inválidas."
+  },
+  "ESCALA-3-lista-virtualizada": {
+   "ok": true,
+   "detail": "14 linhas no DOM para 500 paradas"
+  },
+  "ESCALA-4-rolagem": {
+   "ok": true,
+   "detail": "rolou 500 paradas em 3264 ms; pior quadro 85 ms; 3/169 quadros > 50 ms; última linha visível: 500"
+  },
+  "ESCALA-5-busca": {
+   "ok": true,
+   "detail": "busca \"Campos Salles\": 11 linhas renderizadas"
+  },
+  "ESCALA-6-estabilidade": {
+   "ok": true,
+   "detail": "erros de página: 0; tarefas longas (>50 ms): 75, maior 414 ms; heap JS: 48→48→48 MB"
+  }
+ },
+ "medidas": {
+  "tImport": "0.6",
+  "tPlan": "19.9",
+  "scroll": {
+   "ms": 3264,
+   "worst": 85,
+   "over50": 3,
+   "frames": 169,
+   "lastVisible": "500"
+  },
+  "rowsInDom": 14,
+  "longtasks": 75,
+  "heapMB": {
+   "aposImport": 48,
+   "aposPlano": 48,
+   "fim": 48
+  }
+ },
+ "ambiente": "Chromium headless em contêiner Linux 4 vCPU — NÃO é celular",
+ "errors": []
+}

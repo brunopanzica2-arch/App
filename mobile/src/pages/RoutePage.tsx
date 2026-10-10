@@ -1,6 +1,7 @@
 import { routePoint } from "../core/address";
 import { ChevronDown, ChevronUp, Crosshair, ExternalLink, ListOrdered, Pin, RotateCcw, Search, SkipForward, Undo2, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Nav } from "../App";
 import { db, type Letter, type LetterStatus } from "../core/db";
 import {
@@ -62,6 +63,9 @@ export function RoutePage({ routeId, nav }: { routeId?: string; nav: Nav }) {
     return items.filter((x) => [x.stop!.address.display, x.stop!.address.neighborhood, ...x.stop!.letters.flatMap((l) => [l.externalId, l.recipient, l.complement])]
       .some((v) => (v || "").toLowerCase().includes(q)));
   }, [items, query]);
+  // lista virtualizada: centenas de paradas sem pesar no aparelho (só as linhas visíveis ficam no DOM)
+  const listRef = useRef<HTMLDivElement>(null);
+  const virt = useVirtualizer({ count: filtered.length, getScrollElement: () => listRef.current, estimateSize: () => 64, overscan: 8 });
 
   if (!routeId) return <Card>Nenhuma rota calculada para o lote atual. <Button className="mt-2" onClick={() => nav("/")}>Ir ao painel</Button></Card>;
   if (!route || !stopsData) return <Spinner />;
@@ -198,23 +202,29 @@ export function RoutePage({ routeId, nav }: { routeId?: string; nav: Nav }) {
             <Input aria-label="Buscar parada" placeholder="Rua, número, código, bairro…" value={query} onChange={(e) => setQuery(e.target.value)} />
             <button aria-label="Fechar lista" onClick={() => setList(false)}><X className="h-5 w-5" /></button>
           </div>
-          <ol className="max-h-[50vh] divide-y divide-[var(--border)] overflow-y-auto text-sm">
-            {filtered.map((x) => (
-              <li key={x.key} className="flex items-center gap-2 py-2">
-                <button onClick={() => { setSelKey(x.key); setList(false); setOpen(true); }} className="flex flex-1 items-center gap-2 text-left">
-                  <b className="w-8 text-right">{x.seq}</b>
-                  <span className="flex-1">
-                    <span className="block font-semibold">{addr(x)}</span>
-                    <span className="text-xs muted">{x.stop!.address.neighborhood ?? ""} · {x.stop!.letters.length} carta(s) · {STOP_STATUS_LABEL[x.stop!.status]}
-                      {x.stop!.letters.length > 1 ? " · agrupadas: mesmo logradouro e número" : ""}</span>
-                  </span>
-                </button>
-                {["pending", "partial"].includes(x.stop!.status) && x.key !== next?.key && (
-                  <Button size="sm" variant="ghost" aria-label="Fixar como próxima" onClick={() => reoptimize("last", [x.key])}><Pin className="h-4 w-4" /></Button>
-                )}
-              </li>
-            ))}
-          </ol>
+          <div ref={listRef} className="max-h-[50vh] overflow-y-auto text-sm" data-testid="stop-list" tabIndex={0} role="region" aria-label="Lista de paradas na ordem da rota">
+            <ol className="relative" style={{ height: virt.getTotalSize() }} aria-label={`${filtered.length} paradas`}>
+              {virt.getVirtualItems().map((v) => {
+                const x = filtered[v.index];
+                return (
+                  <li key={x.key} data-index={v.index} ref={virt.measureElement} className="absolute left-0 top-0 flex w-full items-center gap-2 border-b border-[var(--border)] py-2"
+                    style={{ transform: `translateY(${v.start}px)` }}>
+                    <button onClick={() => { setSelKey(x.key); setList(false); setOpen(true); }} className="flex flex-1 items-center gap-2 text-left">
+                      <b className="w-8 text-right">{x.seq}</b>
+                      <span className="flex-1">
+                        <span className="block font-semibold">{addr(x)}</span>
+                        <span className="text-xs muted">{x.stop!.address.neighborhood ?? ""} · {x.stop!.letters.length} carta(s) · {STOP_STATUS_LABEL[x.stop!.status]}
+                          {x.stop!.letters.length > 1 ? " · agrupadas: mesmo logradouro e número" : ""}</span>
+                      </span>
+                    </button>
+                    {["pending", "partial"].includes(x.stop!.status) && x.key !== next?.key && (
+                      <Button size="sm" variant="ghost" aria-label="Fixar como próxima" onClick={() => reoptimize("last", [x.key])}><Pin className="h-4 w-4" /></Button>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
         </Card>
       )}
 

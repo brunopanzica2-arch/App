@@ -153,12 +153,12 @@ export function ImportPage({ nav }: { nav: Nav }) {
                 <div>Com alerta: <b>{pv.warningRows}</b></div><div>Imóveis únicos: <b>{pv.uniqueAddresses}</b></div>
               </div>
               {pv.duplicateIds.length > 0 && <Alert kind="warn">Identificadores repetidos (registrados como duplicados): {pv.duplicateIds.join(", ")}</Alert>}
-              <div className="max-h-72 overflow-auto text-xs">
+              <div className="max-h-72 overflow-auto text-xs" tabIndex={0} role="region" aria-label="Prévia das linhas">
                 {pv.rows.map((r) => (
                   <div key={r.row} className="border-t border-app py-1">
                     <b>{r.row}</b> · {r.values.street}, {r.values.number ?? "S/N"} {r.values.complement ?? ""} · {r.values.neighborhood ?? ""}
                     {r.errors.map((e) => <div key={e} className="text-problem">{e}</div>)}
-                    {r.warnings.map((w) => <div key={w} className="text-amber-600">{w}</div>)}
+                    {r.warnings.map((w) => <div key={w} className="text-amber-700">{w}</div>)}
                   </div>
                 ))}
               </div>

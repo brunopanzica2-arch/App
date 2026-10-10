@@ -154,3 +154,50 @@ def test_time_breakdown_separates_physical_time_from_penalties(db, org):
     assert tb["priority_penalty_s"] > 0 and tb["sector_penalty_s"] == 0
     assert tb["generalized_objective_s"] == pytest.approx(tb["estimated_duration_s"] + tb["priority_penalty_s"], abs=0.5)
     assert route.total_time_s < tb["generalized_objective_s"]  # penalidade nunca vaza para o ETA
+
+
+# ---------------------------------------------------------------- busca local do backend (partida a quente)
+
+def test_best_move_delta_matches_real_cost_change_on_asymmetric_costs():
+    from app.services.optimization import _best_move, _ils, _tour_cost
+
+    rng = np.random.default_rng(3)
+    checked = improved = 0
+    for _ in range(300):
+        n = int(rng.integers(5, 13))
+        A = rng.integers(1, 1000, size=(n + 2, n + 2)).astype(np.int64)
+        if rng.random() < 0.5:
+            A[rng.integers(0, n + 2), rng.integers(0, n + 2)] = 10**15  # arco impossível
+        x = np.array([0, *rng.permutation(np.arange(1, n + 1)), n + 1], dtype=np.int64)
+        mv = _best_move(x, A)
+        if mv is None:
+            continue
+        d, y = mv
+        assert sorted(y[1:-1]) == list(range(1, n + 1)) and y[0] == 0 and y[-1] == n + 1  # permutação preservada
+        assert _tour_cost(y, A) - _tour_cost(x, A) == d, "delta incremental difere do custo real"
+        checked += 1
+        improved += d < 0
+    assert checked > 100 and improved > 30
+    # ILS nunca piora e preserva a permutação
+    n = 30
+    A = rng.integers(1, 500, size=(n + 2, n + 2)).astype(np.int64)
+    x = np.array([0, *rng.permutation(np.arange(1, n + 1)), n + 1], dtype=np.int64)
+    y = _ils(x, A, 0.4)
+    assert sorted(y[1:-1]) == list(range(1, n + 1)) and _tour_cost(y, A) <= _tour_cost(x, A)
+
+
+@pytest.mark.parametrize("mode", ["open", "circular"])
+def test_solve_with_warm_start_returns_valid_better_or_equal_route(mode):
+    rng = random.Random(21)
+    n = 14
+    T = floyd(random_digraph(rng, n, 0.5))
+    stops = [i for i in range(1, n) if math.isfinite(T[0, i]) and math.isfinite(T[i, 0])]
+    f = feasibility(T, 0, stops, 0 if mode == "circular" else None)
+    assert len(f.kept) >= 8
+    end = 0 if mode == "circular" else None
+    res = solve(T, T.copy(), 0, f.kept, end, {i: 20.0 for i in f.kept}, time_limit_s=2, comp_rank=f.comp_rank)
+    assert validate(res.order, T, 0, f.kept, end) == []
+    names = {c.strategy for c in res.candidates}
+    assert "ils_python" in names
+    best_other = min(c.cost_s for c in res.candidates if c.feasible and not c.strategy.startswith("ils_python"))
+    assert res.best.cost_s <= best_other + 1e-6

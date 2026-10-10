@@ -8,8 +8,8 @@ export function Card({ className, ...p }: React.HTMLAttributes<HTMLDivElement>) 
 export function Badge({ className, color, ...p }: React.HTMLAttributes<HTMLSpanElement> & { color?: string }) {
   return (
     <span
-      className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold", className)}
-      style={color ? { background: color + "22", color } : undefined}
+      className={cn("tint inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold", className)}
+      style={color ? ({ "--tint": color } as React.CSSProperties) : undefined}
       {...p}
     />
   );
@@ -61,15 +61,15 @@ export function Spinner({ label = "Carregando…" }: { label?: string }) {
 export function Alert({ kind = "info", children }: { kind?: "info" | "warn" | "error" | "ok"; children: React.ReactNode }) {
   const c = { info: "#2563eb", warn: "#b45309", error: "#dc2626", ok: "#16a34a" }[kind];
   return (
-    <div role={kind === "error" ? "alert" : "status"} className="rounded-xl border px-3 py-2 text-sm" style={{ borderColor: c + "66", background: c + "14", color: c }}>
+    <div role={kind === "error" ? "alert" : "status"} className="tint tint-box rounded-xl border px-3 py-2 text-sm" style={{ "--tint": c } as React.CSSProperties}>
       {children}
     </div>
   );
 }
 
-export function Progress({ value }: { value: number }) {
+export function Progress({ value, label = "Progresso" }: { value: number; label?: string }) {
   return (
-    <div className="h-2 w-full overflow-hidden rounded-full bg-black/10 dark:bg-white/10" role="progressbar" aria-valuenow={Math.round(value * 100)} aria-valuemin={0} aria-valuemax={100}>
+    <div className="h-2 w-full overflow-hidden rounded-full bg-black/10 dark:bg-white/10" role="progressbar" aria-label={label} aria-valuenow={Math.round(value * 100)} aria-valuemin={0} aria-valuemax={100}>
       <div className="h-full bg-brand" style={{ width: `${Math.min(100, Math.max(0, value * 100))}%` }} />
     </div>
   );

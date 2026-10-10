@@ -1,0 +1,115 @@
+{
+ "ferramenta": "axe-core via @axe-core/playwright, tags wcag2a/wcag2aa/wcag21a/wcag21aa; mapa excluído",
+ "telas": [
+  {
+   "tela": "Importar (prévia)",
+   "tema": "light",
+   "violacoes": []
+  },
+  {
+   "tela": "Importar (prévia)",
+   "tema": "dark",
+   "violacoes": []
+  },
+  {
+   "tela": "Importar (resultado)",
+   "tema": "light",
+   "violacoes": []
+  },
+  {
+   "tela": "Importar (resultado)",
+   "tema": "dark",
+   "violacoes": []
+  },
+  {
+   "tela": "Painel",
+   "tema": "light",
+   "violacoes": []
+  },
+  {
+   "tela": "Painel",
+   "tema": "dark",
+   "violacoes": []
+  },
+  {
+   "tela": "Revisão de endereços",
+   "tema": "light",
+   "violacoes": []
+  },
+  {
+   "tela": "Revisão de endereços",
+   "tema": "dark",
+   "violacoes": []
+  },
+  {
+   "tela": "Planejar",
+   "tema": "light",
+   "violacoes": []
+  },
+  {
+   "tela": "Planejar",
+   "tema": "dark",
+   "violacoes": []
+  },
+  {
+   "tela": "Planejar (resultado)",
+   "tema": "light",
+   "violacoes": []
+  },
+  {
+   "tela": "Planejar (resultado)",
+   "tema": "dark",
+   "violacoes": []
+  },
+  {
+   "tela": "Jornada (rota)",
+   "tema": "light",
+   "violacoes": []
+  },
+  {
+   "tela": "Jornada (rota)",
+   "tema": "dark",
+   "violacoes": []
+  },
+  {
+   "tela": "Jornada (lista)",
+   "tema": "light",
+   "violacoes": []
+  },
+  {
+   "tela": "Jornada (lista)",
+   "tema": "dark",
+   "violacoes": []
+  },
+  {
+   "tela": "Jornada (parada aberta)",
+   "tema": "light",
+   "violacoes": []
+  },
+  {
+   "tela": "Jornada (parada aberta)",
+   "tema": "dark",
+   "violacoes": []
+  },
+  {
+   "tela": "Relatórios",
+   "tema": "light",
+   "violacoes": []
+  },
+  {
+   "tela": "Relatórios",
+   "tema": "dark",
+   "violacoes": []
+  },
+  {
+   "tela": "Ajustes",
+   "tema": "light",
+   "violacoes": []
+  },
+  {
+   "tela": "Ajustes",
+   "tema": "dark",
+   "violacoes": []
+  }
+ ]
+}

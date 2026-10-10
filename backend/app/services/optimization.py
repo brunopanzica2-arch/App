@@ -280,6 +280,85 @@ def nearest_neighbor(T, start, stops) -> list[int]:
     return out
 
 
+def _tour_cost(x: np.ndarray, A: np.ndarray) -> int:
+    return int(A[x[:-1], x[1:]].sum())
+
+
+def _best_move(x: np.ndarray, A: np.ndarray):
+    """Melhor movimento (2-opt ou Or-opt 1..3) em custos ASSIMÉTRICOS, avaliado em O(n²) vetorizado.
+    `x` = [início, paradas..., fim]. Devolve (delta, nova_sequência) ou None."""
+    n = len(x) - 2
+    if n < 3:
+        return None
+    best = (0, None)
+    F = np.concatenate(([0], np.cumsum(A[x[:-1], x[1:]])))
+    R = np.concatenate(([0], np.cumsum(A[x[1:], x[:-1]])))
+    i = np.arange(1, n)[:, None]
+    j = np.arange(2, n + 1)[None, :]
+    old = A[x[i - 1], x[i]] + (F[j] - F[i]) + A[x[j], x[j + 1]]
+    new = A[x[i - 1], x[j]] + (R[j] - R[i]) + A[x[i], x[j + 1]]
+    delta = np.where(j > i, new - old, 0)
+    k = int(np.argmin(delta))
+    if delta.flat[k] < best[0]:
+        ii, jj = divmod(k, delta.shape[1])
+        ii, jj = ii + 1, jj + 2
+        best = (int(delta.flat[k]), np.concatenate((x[:ii], x[ii:jj + 1][::-1], x[jj + 1:])))
+    for L in (1, 2, 3):
+        if n < L + 1:
+            break
+        i = np.arange(1, n - L + 2)[:, None]               # início do bloco
+        p = np.arange(1, n + 2)[None, :]                   # inserir entre x[p-1] e x[p]
+        a, f, l, b = x[i - 1], x[i], x[i + L - 1], x[i + L]
+        rem = A[a, f] + A[l, b] - A[a, b]
+        ins = A[x[p - 1], f] + A[l, x[p]] - A[x[p - 1], x[p]]
+        valid = (p < i) | (p > i + L)
+        d = np.where(valid, ins - rem, 0)
+        k = int(np.argmin(d))
+        if d.flat[k] < best[0]:
+            ii, pp = divmod(k, d.shape[1])
+            ii, pp = ii + 1, pp + 1
+            block = x[ii:ii + L]
+            rest = np.concatenate((x[:ii], x[ii + L:]))
+            pos = pp - L if pp > ii else pp
+            best = (int(d.flat[k]), np.concatenate((rest[:pos], block, rest[pos:])))
+    return best if best[1] is not None else None
+
+
+def _local_search(x: np.ndarray, A: np.ndarray, deadline: float) -> np.ndarray:
+    while time.perf_counter() < deadline:
+        mv = _best_move(x, A)
+        if mv is None or mv[0] >= 0:
+            break
+        x = mv[1]
+    return x
+
+
+def _ils(x: np.ndarray, A: np.ndarray, budget_s: float, seed: int = 12345) -> np.ndarray:
+    """Busca local iterada (double-bridge) sobre a matriz de arcos do OR-Tools, para partida a quente do solver."""
+    deadline = time.perf_counter() + budget_s
+    rnd = np.random.default_rng(seed)
+    best = _local_search(x, A, deadline)
+    best_c = _tour_cost(best, A)
+    cur, cur_c = best, best_c
+    n = len(x) - 2
+    while n >= 8 and time.perf_counter() < deadline:
+        q = max(1, n // 4)
+        a = 1 + int(rnd.integers(0, q)); b = a + 1 + int(rnd.integers(0, q)); c = b + 1 + int(rnd.integers(0, q))
+        if c >= n:
+            continue
+        mid = cur[1:n + 1]
+        pert = np.concatenate(([cur[0]], mid[:a - 1 + 0], mid[c - 1:], mid[b - 1:c - 1], mid[a - 1:b - 1], [cur[-1]]))
+        if len(pert) != len(cur):
+            continue
+        cand = _local_search(pert, A, deadline)
+        cc = _tour_cost(cand, A)
+        if cc < cur_c:
+            cur, cur_c = cand, cc
+            if cc < best_c:
+                best, best_c = cand, cc
+    return best
+
+
 def solve(T: np.ndarray, D: np.ndarray, start: int, stops: list[int], end: int | None = None,
           service_s: dict[int, float] | None = None, priority: dict[int, int] | None = None,
           sector: dict[int, str] | None = None, time_limit_s: float = 10,
@@ -355,7 +434,8 @@ def solve(T: np.ndarray, D: np.ndarray, start: int, stops: list[int], end: int |
     travel_l, arc_l = travel.tolist(), arc.tolist()
     names = strategies or (["path_cheapest_arc", "local_cheapest_insertion", "christofides"]
                            if len(stops) > 3 else ["path_cheapest_arc"])
-    per = max(1.0, time_limit_s / len(names))
+    warm = strategies is None and len(stops) >= 8
+    per = max(1.0, (time_limit_s * (0.4 if warm else 1.0)) / len(names))
     for name in names:
         t0 = time.perf_counter()
         manager = pywrapcp.RoutingIndexManager(n, 1, [0], [end_idx])
@@ -385,6 +465,45 @@ def solve(T: np.ndarray, D: np.ndarray, start: int, stops: list[int], end: int |
                 order.append(nodes[node])
             idx = sol.Value(routing.NextVar(idx))
         add(name, order, t0, int(sol.ObjectiveValue()))
+
+    # ---- partida a quente: busca local iterada (2-opt/Or-opt assimétricos) sobre os MESMOS arcos do OR-Tools,
+    #      e depois Guided Local Search do OR-Tools a partir dessa solução (ReadAssignmentFromRoutes).
+    feas0 = [c for c in cands if c.feasible]
+    if warm and feas0:
+        seed_order = min(feas0, key=lambda c: (round(c.cost_s, 3), round(c.distance_m, 3))).order
+        pos = {node: k for k, node in enumerate(nodes)}
+        A = arc
+        x0 = np.array([0, *[pos[v] for v in seed_order], end_idx], dtype=np.int64)
+        t0 = time.perf_counter()
+        xi = _ils(x0, A, time_limit_s * 0.25)
+        order_i = [nodes[k] for k in xi[1:-1]]
+        add("ils_python", order_i, t0)
+        t0 = time.perf_counter()
+        manager = pywrapcp.RoutingIndexManager(n, 1, [0], [end_idx])
+        routing = pywrapcp.RoutingModel(manager)
+        cb = routing.RegisterTransitCallback(lambda i, j: arc_l[manager.IndexToNode(i)][manager.IndexToNode(j)])
+        routing.SetArcCostEvaluatorOfAllVehicles(cb)
+        if prio:
+            tcb = routing.RegisterTransitCallback(lambda i, j: travel_l[manager.IndexToNode(i)][manager.IndexToNode(j)])
+            routing.AddDimension(tcb, 0, 10**13, True, "Time")
+            dim = routing.GetDimensionOrDie("Time")
+            for p_, node in enumerate(nodes):
+                if 1 <= p_ <= len(stops) and prio.get(node):
+                    dim.SetCumulVarSoftUpperBound(manager.NodeToIndex(p_), 0, prio[node] * W)
+        params = pywrapcp.DefaultRoutingSearchParameters()
+        params.local_search_metaheuristic = routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
+        params.time_limit.FromMilliseconds(int(time_limit_s * 0.35 * 1000))
+        routing.CloseModelWithParameters(params)
+        init = routing.ReadAssignmentFromRoutes([[int(k) for k in xi[1:-1]]], True)
+        sol = routing.SolveFromAssignmentWithParameters(init, params) if init is not None else None
+        if sol is not None:
+            order, idx = [], routing.Start(0)
+            while not routing.IsEnd(idx):
+                node = manager.IndexToNode(idx)
+                if 1 <= node <= len(stops):
+                    order.append(nodes[node])
+                idx = sol.Value(routing.NextVar(idx))
+            add("ils_python+guided_local_search", order, t0, int(sol.ObjectiveValue()))
 
     feasible = [c for c in cands if c.feasible]
     if not feasible:

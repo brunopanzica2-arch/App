@@ -1,0 +1,137 @@
+{
+ "entrada": "paridade_150_open.json",
+ "entrada_sha256": "1653e52afc81a82706745d1c5164d27625457120dfda8859e80f63630b24df1d",
+ "paradas": 150,
+ "ambiente": "Node v22.22.0 (desktop, NÃO é celular)",
+ "app": [
+  {
+   "limite_ms": 3000,
+   "melhor_s": 12070.72,
+   "pior_s": 12094.5,
+   "media_s": 12081.89,
+   "runs": [
+    {
+     "seed": 1,
+     "tempo_s": 12070.72,
+     "km": 15.447,
+     "execucao_s": 3,
+     "estrategia": "iterated_local_search(121)"
+    },
+    {
+     "seed": 2,
+     "tempo_s": 12078.04,
+     "km": 15.497,
+     "execucao_s": 3,
+     "estrategia": "iterated_local_search(91)"
+    },
+    {
+     "seed": 3,
+     "tempo_s": 12081.3,
+     "km": 15.408,
+     "execucao_s": 3,
+     "estrategia": "iterated_local_search(67)"
+    },
+    {
+     "seed": 4,
+     "tempo_s": 12084.91,
+     "km": 15.423,
+     "execucao_s": 3,
+     "estrategia": "iterated_local_search(81)"
+    },
+    {
+     "seed": 5,
+     "tempo_s": 12094.5,
+     "km": 15.462,
+     "execucao_s": 3,
+     "estrategia": "iterated_local_search(88)"
+    }
+   ]
+  },
+  {
+   "limite_ms": 6000,
+   "melhor_s": 12047.99,
+   "pior_s": 12094.5,
+   "media_s": 12074.74,
+   "runs": [
+    {
+     "seed": 1,
+     "tempo_s": 12047.99,
+     "km": 15.352,
+     "execucao_s": 6,
+     "estrategia": "iterated_local_search(218)"
+    },
+    {
+     "seed": 2,
+     "tempo_s": 12078.04,
+     "km": 15.497,
+     "execucao_s": 6,
+     "estrategia": "iterated_local_search(191)"
+    },
+    {
+     "seed": 3,
+     "tempo_s": 12068.27,
+     "km": 15.437,
+     "execucao_s": 6,
+     "estrategia": "iterated_local_search(157)"
+    },
+    {
+     "seed": 4,
+     "tempo_s": 12084.91,
+     "km": 15.423,
+     "execucao_s": 6,
+     "estrategia": "iterated_local_search(171)"
+    },
+    {
+     "seed": 5,
+     "tempo_s": 12094.5,
+     "km": 15.462,
+     "execucao_s": 6,
+     "estrategia": "iterated_local_search(152)"
+    }
+   ]
+  },
+  {
+   "limite_ms": 15000,
+   "melhor_s": 12047.99,
+   "pior_s": 12078.04,
+   "media_s": 12060.69,
+   "runs": [
+    {
+     "seed": 1,
+     "tempo_s": 12047.99,
+     "km": 15.352,
+     "execucao_s": 15,
+     "estrategia": "iterated_local_search(428)"
+    },
+    {
+     "seed": 2,
+     "tempo_s": 12078.04,
+     "km": 15.497,
+     "execucao_s": 15,
+     "estrategia": "iterated_local_search(450)"
+    },
+    {
+     "seed": 3,
+     "tempo_s": 12068.27,
+     "km": 15.437,
+     "execucao_s": 15,
+     "estrategia": "iterated_local_search(460)"
+    },
+    {
+     "seed": 4,
+     "tempo_s": 12047.99,
+     "km": 15.352,
+     "execucao_s": 15,
+     "estrategia": "iterated_local_search(435)"
+    },
+    {
+     "seed": 5,
+     "tempo_s": 12061.18,
+     "km": 15.407,
+     "execucao_s": 15,
+     "estrategia": "iterated_local_search(400)"
+    }
+   ]
+  }
+ ]
+}
