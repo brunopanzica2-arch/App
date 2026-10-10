@@ -101,7 +101,7 @@ pass("DEL-02 desfazer volta à parada", addr3 === addr, addr3);
 await page.getByRole("button", { name: "Não consegui" }).click();
 const motivos = await page.getByRole("dialog").innerText();
 pass("DEL-03 motivos de não entrega", /ausente/i.test(motivos), motivos.slice(0, 80).replace(/\n/g, " "));
-await page.getByRole("button", { name: "Fechar" }).click();
+await page.getByRole("button", { name: "Fechar", exact: true }).click();
 
 // 9. iniciar navegação (substituto web) e retomar
 await page.getByRole("button", { name: /Iniciar navegação/ }).click();
@@ -117,7 +117,7 @@ await page.waitForTimeout(500);
 const hits = await page.getByRole("dialog").locator("li").count();
 pass("BUS-01 busca global", hits > 0, `${hits} resultado(s)`);
 await shot("07-busca");
-await page.getByRole("button", { name: "Fechar" }).click();
+await page.getByRole("button", { name: "Fechar", exact: true }).click();
 
 // 11. abas e Entregas
 await page.goto(BASE + "#/entregas");
