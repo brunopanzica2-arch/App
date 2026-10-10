@@ -189,7 +189,7 @@ export function useNavigation(onRerouted?: (r: Route) => void) {
 
   // idade do fix: marca "stale" quando para de chegar posição
   useEffect(() => {
-    const t = setInterval(() => setUi((u) => (u.fix && u.gps === "ok" && Date.now() - u.fix.time > STALE_MS ? { ...u, gps: "stale" } : u)), 2000);
+    const t = setInterval(() => setUi((u) => (nav.isNative() && u.fix && u.gps === "ok" && Date.now() - u.fix.time > STALE_MS ? { ...u, gps: "stale" } : u)), 2000);
     return () => clearInterval(t);
   }, []);
 

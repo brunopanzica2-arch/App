@@ -1,0 +1,21 @@
+# Auditoria Rota Santos 2.0.1
+
+Base: APK 2.0.0 (`rota-santos-2.0.0-DEBUG.apk`, SHA-256 `453947d4…aaa75`) e as quatro capturas enviadas. Esta auditoria só registra o que foi **comprovado**; o que não pôde ser executado está marcado.
+
+## Erro meu na 2.0.0 (registrado de propósito)
+Na 2.0.0 declarei “E2E passou” sem abrir as capturas. A captura `docs/EVIDENCIAS_2_0/04-mapa-rota.png` da 2.0.0 já mostrava **a tela sem mapa** — o mesmo defeito das suas capturas. Um teste que só verifica texto e botões não detecta mapa em branco. Na 2.0.1 o teste verifica o **estado real do mapa** (`operational` só depois de `idle`, canvas > 300 px e imagem com detalhe) e eu passei a abrir as imagens.
+
+## Defeitos, causa comprovada e correção
+| # | Sintoma | Causa raiz (comprovada) | Correção | Prova |
+|---|---|---|---|---|
+| 1 | Tela principal branca, sem ruas (também sem cartas) | O contêiner do mapa tinha **altura 0**. O MapLibre acrescenta a classe `.maplibregl-map { position: relative }`, que sobrescreve o `position: absolute` das classes utilitárias; com `inset-0` sem efeito e sem altura própria, o canvas ficou com 300×150 e altura CSS 0. Medido no navegador: `{"w":412,"h":0,"canvas":true,"ch":300}` | `position:absolute; inset:0` **inline** no contêiner, wrapper que recebe a classe de tamanho, `ResizeObserver`+`map.resize()` e ao voltar do segundo plano | Mesmo medidor depois: altura 859 px, estado `operational`, captura com ruas (`docs/EVIDENCIAS_2_0/`) |
+| 2 | Falha silenciosa: fundo liso apresentado como se fosse mapa | `toFallback()` trocava para um estilo só com `background` sem avisar | Estado do mapa explícito (`init/loading/style/rendered/operational/error`), pré-checagem de WebGL, cartão “Mapa indisponível” com **Tentar novamente**; log estruturado `[rota:map]` | `RouteMap.tsx`, `data-map-state` |
+| 3 | Marcador GPS não aparece / “GPS ±12 m” sem marcador | (a) GPS só era iniciado ao tocar “Iniciar navegação”; (b) `doPlan` lia a posição **logo depois** de pedir (`locate(); getFix()`) — condição de corrida | `locate()` automático ao abrir o mapa (pede permissão uma vez), `awaitFirstFix()` espera o **evento** com tempo limite, estados `idle/needs_permission/asking/denied/disabled/searching/ok/stale/error`, marcador só com fix válido, chip de GPS, botão recentrar, seguir 2D/3D | `useNavigation.ts`, `MapHome.tsx`, E2E `GPS-01` |
+| 4 | Ponto manual de Ajustes confundido com GPS | `quickPlan` preferia o ponto confirmado em vez da posição atual e o rótulo era genérico | Origem = GPS recente; ponto manual só como plano B (e quando o GPS está fora da malha) | `service.ts` |
+| 5 | Roteamento com perfil de **bicicleta** (ride 15 km/h em ruas, “Pedalando”, “Conduzir a bicicleta”) | `edgeMode()` devolvia `ride` para qualquer via que não fosse calçada/escada | Perfil `pedestrian: true` por padrão: tudo a pé (4,5 km/h), escadas com fator próprio; rótulos e link externo (`travelmode=walking`) corrigidos; paridade com o backend mantida com `pedestrian:false` nos testes | `tests/navroute_real.test.ts` (nenhum trecho `ride`; 3,0–4,6 km/h) |
+| 6 | “106, 106” / “141, 141” | Cadastros antigos com logradouro = número (colunas deslocadas). A 2.0 já bloqueava na normalização, mas **gravava** a carta com erro e os antigos permaneciam | Linha inválida não é mais gravada (vai ao relatório com a linha original); `streetProblem()` impede que cadastro antigo vire parada; `diagnoseLegacy()` + `reprocessLegacy()` reprocessam pela **linha original** (`raw`) sem inventar logradouro nem apagar cartas | `tests/legacy.test.ts` |
+| 7 | Controles ocupavam a tela | Painel inferior ~60% da altura, botões e zoom sobre a atribuição | Painel **compacto por padrão** (resumo, parada, 3 botões, iniciar), expansível; atribuição e botões sobem com a altura real do painel; zoom +/- removido (gesto de pinça) | capturas `04c-painel-compacto.png` |
+| 8 | Duplicatas (“211 → 28 + 183”) | Ver `AUDITORIA_ROTA_SANTOS_2_0.md` (coluna de ID tratada como chave) | Já corrigido na 2.0; mantido | `import_inference.test.ts` |
+
+## Itens NÃO comprovados em Android
+Veja `TESTES_VISUAIS_ANDROID.md`. As correções acima foram verificadas no **Chromium (navegador)** e por testes unitários; **não** há ainda captura da 2.0.1 renderizada na WebView do Android, exceto o que estiver listado como PASS nesse documento.

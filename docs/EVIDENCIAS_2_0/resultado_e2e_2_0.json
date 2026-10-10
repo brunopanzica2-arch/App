@@ -8,7 +8,7 @@
     "detail": "{\"map\":\"operational\",\"gps\":\"ok\",\"fix\":\"-23.94800,-46.34062\",\"h\":859} png=322466B"
   },
   "GPS-01 fix automático e marcador": {
-    "ok": false,
+    "ok": true,
     "detail": "gps=ok fix=-23.94800,-46.34062"
   },
   "IMP-01 linha sem cabeçalho reconhecida": {
@@ -25,7 +25,7 @@
   },
   "UX-02 rota em um toque + contadores": {
     "ok": true,
-    "detail": "300 cartas 150 paradas 0 não loc. 0 concluídas 300 pendentes"
+    "detail": "300 cartas · 150 paradas · 0 não loc. · 0 concluídas · 300 pendentes"
   },
   "UX-03 próxima parada exibida": {
     "ok": true,
@@ -33,7 +33,7 @@
   },
   "UX-04 botões sem texto cortado": {
     "ok": true,
-    "detail": "[\"Entregue:64\",\"Não consegui:64\",\"Pular:56\",\"Detalhes:56\",\"Iniciar navegação:56\",\"Desfazer:44\",\"Todas as entregas:44\"]"
+    "detail": "[\"Entregue:64\",\"Não consegui:64\",\"Pular:64\",\"Iniciar navegação:56\"]"
   },
   "DEL-01 entrega avança para a próxima parada": {
     "ok": true,
