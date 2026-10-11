@@ -36,6 +36,8 @@ export function normalizeNumber(raw?: string | number | null): [string | null, s
   if (!s) return [null, "Número ausente"];
   if (/^\d+\.0$/.test(s)) s = s.slice(0, -2);
   if (/^(S\s*\/?\s*N|SN|SEM\s+N[UÚ]MERO)$/i.test(s)) return [null, "Sem número (S/N)"];
+  // prefixos ("nº 480", "n. 480", "número 480", "#480", "no 480") e milhar ("1.234") nunca viram S/N
+  s = s.replace(/^\s*(?:n[úu]mero|num|n[º°o]?|#)\s*\.?\s*(?=\d)/i, "").replace(/^(\d{1,3})\.(\d{3})(?!\d)/, "$1$2");
   const m = s.match(/^\s*(\d{1,6})\s*([A-Za-z]?)\b/);
   if (!m) return [null, `Número não reconhecido: ${s}`];
   return [(m[1].replace(/^0+/, "") || "0") + m[2].toUpperCase(), null];
@@ -113,7 +115,11 @@ export function normalizeAddress(street?: string | null, number?: string | null,
   // exibição com acentos (a chave e a consulta usam streetPretty sem acento)
   const streetShown = prettyKeep(street) || streetPretty;
   const nb = clean(neighborhood) || null;
-  const display = [streetShown + (num ? `, ${num}` : ", S/N"), nb ? prettyKeep(nb) : null,
+  const asked = clean(number == null ? "" : String(number));
+  const explicitSN = /^(S\s*\/?\s*N|SN|SEM\s+N[UÚ]MERO)$/i.test(asked);
+  // número informado mas ilegível: nunca exibir "S/N" (mostrar o que foi pedido, marcado como não confirmado)
+  const numShown = num ? `, ${num}` : !asked ? "" : explicitSN ? ", S/N" : `, ${asked} (número não confirmado)`;
+  const display = [streetShown + numShown, nb ? prettyKeep(nb) : null,
     `${prettyKeep(cityRaw)}/${state}`, cepN].filter(Boolean).join(" - ");
   return {
     type, name, number: num, neighborhood: nb, city: cityRaw, state, cep: cepN, original, issues, errors,

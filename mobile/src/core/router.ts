@@ -8,7 +8,7 @@
  * - nenhuma ligação nova é criada: paradas são projetadas sobre trechos reais.
  */
 import {
-  F_DISMOUNT, F_PRIVATE, F_SIDEWALK, F_STEPS, FLAG_NAMES, type Graph, N_BARRIER, N_BLOCKED, N_PRIVATE,
+  ATTR, F_DISMOUNT, F_PRIVATE, F_SIDEWALK, F_STEPS, FLAG_NAMES, type Graph, HW, N_BARRIER, N_BLOCKED, N_PRIVATE, SURF,
 } from "./graph";
 
 export type Policy = "allow" | "penalize" | "forbid";
@@ -26,6 +26,15 @@ export interface Profile {
   contraflow_factor: number;
   /** padrão: pedestre. Todo trecho que não é escada é percorrido a pé (walk_speed_kmh). `false` = perfil de bicicleta (paridade com o backend). */
   pedestrian?: boolean;
+  /**
+   * Perfil "ENTREGA URBANA A PÉ" (padrão no modo pedestre): trilha/track/path de mato e trechos sem informação confiável NÃO são tratados como rua.
+   * Trilhas contínuas ≥ `trail_forbid_m` são vedadas; trilhas curtas e trechos não verificados custam muito mais (custo de adequação, que
+   * não entra no tempo/ETA). `false` desliga (paridade com o backend legado).
+   */
+  urban_safe?: boolean;
+  trail_forbid_m?: number;
+  /** trechos reportados como inadequados pelo usuário (chaves de aresta, ver edgeKey) */
+  avoid_edges?: string[];
 }
 
 export const DEFAULT_PROFILE: Profile = {
@@ -41,7 +50,43 @@ export const DEFAULT_PROFILE: Profile = {
   barrier_penalty_s: 20,
   contraflow_factor: 1,
   pedestrian: true,
+  urban_safe: true,
+  trail_forbid_m: 150,
 };
+
+/** Chave estável de uma aresta (não depende do índice, que muda se a malha for reconstruída). */
+export function edgeKey(g: Graph, e: number): string {
+  const a = `${Math.round(g.lat[g.ea[e]] * 1e5)},${Math.round(g.lon[g.ea[e]] * 1e5)}`;
+  const b = `${Math.round(g.lat[g.eb[e]] * 1e5)},${Math.round(g.lon[g.eb[e]] * 1e5)}`;
+  return a < b ? `${a}>${b}` : `${b}>${a}`;
+}
+
+/** 0 = urbana · 1 = cautela (não verificada) · 2 = trilha/caminho não urbano · 3 = vedada */
+export type Suit = 0 | 1 | 2 | 3;
+export interface EdgeSuit { suit: Suit; mult: number; why: string }
+
+/** Classifica a adequação de uma aresta à entrega urbana a pé. Pura: só usa os atributos REAIS da malha; sem dado, não afirma nada. */
+export function classifyEdge(g: Graph, e: number, p: Profile): EdgeSuit {
+  const off: EdgeSuit = { suit: 0, mult: 1, why: "" };
+  if (p.urban_safe === false || p.pedestrian === false || g.format !== 2 || !g.hw || !g.surf || !g.attr || !g.trail) return off;
+  const hw = g.hw[e], surf = g.surf[e], attr = g.attr[e], trailM = g.trail[e] * 10;
+  const forbid = p.trail_forbid_m ?? 150;
+  const trailLike = hw === HW.PATH || hw === HW.TRACK || hw === HW.BRIDLEWAY
+    || ((hw === HW.FOOTWAY || hw === HW.CYCLEWAY) && (surf === SURF.UNPAVED || !!(attr & ATTR.TRAILHINT)));
+  if (trailLike) {
+    const urbanish = !!(attr & ATTR.LIT) || (!!(attr & ATTR.DESIGNATED) && surf === SURF.PAVED); // caminho iluminado/pavimentado e designado a pedestres
+    if (urbanish && !(attr & ATTR.TRAILHINT)) return { suit: 1, mult: 1.5, why: "caminho iluminado/designado a pedestres, não confirmado como calçada" };
+    // via NOMEADA (ex.: "Rua X" mapeada como path em morro/comunidade) sem dica de trilha nem piso de terra: provavelmente é caminho público, mas não verificado
+    if ((attr & ATTR.NAMED) && !(attr & ATTR.TRAILHINT) && surf !== SURF.UNPAVED) return { suit: 1, mult: 2.5, why: "via nomeada mapeada como caminho (path/track), sem dados de piso e acesso confiáveis" };
+    if (trailM >= forbid) return { suit: 3, mult: 15, why: `trilha contínua de ~${Math.round(trailM)} m (path/track/piso sem pavimento)` };
+    return { suit: 2, mult: 6, why: "trecho de trilha/caminho não urbano" };
+  }
+  if (hw === HW.MOTORWAY) return { suit: 1, mult: 3, why: "via expressa liberada a pedestres (confirmar)" };
+  if (surf === SURF.UNPAVED) return { suit: 1, mult: 2, why: "piso sem pavimento" };
+  if (hw === HW.SERVICE) return { suit: 0, mult: 1.15, why: "" };
+  if (hw === HW.FOOTWAY && surf === SURF.UNKNOWN && !(attr & (ATTR.SIDEWALK | ATTR.LIT | ATTR.NAMED | ATTR.DESIGNATED))) return { suit: 0, mult: 1.05, why: "" };
+  return off;
+}
 
 export type Mode = "ride" | "walk" | "steps";
 const MODE_CODE: Record<Mode, number> = { ride: 0, walk: 1, steps: 2 };
@@ -146,6 +191,10 @@ export class Router {
   readonly mode: Uint8Array;
   readonly wFwd: Float64Array; // tempo (s) da aresta inteira em cada sentido, com penalidades
   readonly wBwd: Float64Array;
+  /** custo de ADEQUAÇÃO (s) da aresta inteira: entra na escolha do caminho, NÃO no tempo/ETA */
+  readonly sx: Float64Array;
+  readonly suit: Uint8Array;
+  readonly suitWhy: Map<number, string> = new Map();
   // CSR dos arcos permitidos
   readonly off: Uint32Array;
   readonly arcTo: Uint32Array;
@@ -160,6 +209,9 @@ export class Router {
     this.g = g;
     this.p = p;
     const { n, m } = g;
+    // perfil urbano: acesso PRIVADO é vedado (a menos que o usuário permita explicitamente); fora dele, vale a política escolhida
+    const urban = p.urban_safe !== false && p.pedestrian !== false;
+    const privForbid = p.private_policy === "forbid" || (urban && p.private_policy !== "allow");
     this.nodeOk = new Uint8Array(n);
     this.nodePen = new Float64Array(n);
     for (let i = 0; i < n; i++) {
@@ -170,7 +222,7 @@ export class Router {
         else if (p.barrier_policy === "penalize") this.nodePen[i] += p.barrier_penalty_s;
       }
       if (ok && f & N_PRIVATE) {
-        if (p.private_policy === "forbid") ok = false;
+        if (privForbid) ok = false;
         else if (p.private_policy === "penalize") this.nodePen[i] += p.private_penalty_s;
       }
       this.nodeOk[i] = ok ? 1 : 0;
@@ -180,6 +232,9 @@ export class Router {
     this.mode = new Uint8Array(m);
     this.wFwd = new Float64Array(m);
     this.wBwd = new Float64Array(m);
+    this.sx = new Float64Array(m);
+    this.suit = new Uint8Array(m);
+    const avoid = new Set(p.avoid_edges ?? []);
     for (let e = 0; e < m; e++) {
       const f = g.eflags[e];
       let ok = this.nodeOk[g.ea[e]] && this.nodeOk[g.eb[e]];
@@ -189,11 +244,17 @@ export class Router {
         else if (p.steps_policy === "penalize") pen += p.steps_penalty_s * g.share[e];
       }
       if (f & F_PRIVATE) {
-        if (p.private_policy === "forbid") ok = 0;
+        if (privForbid) ok = 0;
         else if (p.private_policy === "penalize") pen += p.private_penalty_s * g.share[e];
       }
       const md = MODE_CODE[edgeMode(f, p)];
       const t = g.len[e] / speed[md];
+      const cl = classifyEdge(g, e, p);
+      if (cl.suit === 3) ok = 0;
+      if (avoid.size && avoid.has(edgeKey(g, e))) { ok = 0; cl.suit = 3; cl.why = "trecho reportado como inadequado"; }
+      this.suit[e] = cl.suit;
+      if (cl.why) this.suitWhy.set(e, cl.why);
+      this.sx[e] = cl.suit === 3 ? 0 : t * (cl.mult - 1);
       this.edgeOk[e] = ok ? 1 : 0;
       this.mode[e] = md;
       this.wFwd[e] = t * (g.dir[e] & 4 ? p.contraflow_factor : 1) + pen;
@@ -400,11 +461,14 @@ export class Router {
   }
 
   /** Projeta no trecho real mais próximo; com `reach`, só em trechos alcançáveis da origem. */
-  snap(lat: number, lon: number, maxDist: number, reach?: Uint8Array): Snap {
+  snap(lat: number, lon: number, maxDist: number, reach?: Uint8Array, allowTrail = false): Snap {
     const px = lon * this.kx * M_PER_DEG, py = lat * M_PER_DEG;
     const c = this.candidates(px, py, maxDist);
     if (!c.length) throw new SnapError(`Ponto a mais de ${Math.round(maxDist)} m da malha de circulação acessível.`);
-    for (const [d, e, t] of c) if (!reach || this.edgeReachable(e, reach)) return this.makeSnap(lat, lon, d, e, t, px, py, c[0][0]);
+    // destino de entrega só encaixa em via URBANA (nunca em trilha atrás do imóvel, mesmo que esteja mais perto)
+    const urban = allowTrail ? c : c.filter(([, e]) => this.suit[e] < 2);
+    if (!urban.length) throw new SnapError(`Destino a ${Math.round(c[0][0])} m só de trilha/caminho não urbano: não foi possível confirmar um acesso urbano seguro.`);
+    for (const [d, e, t] of urban) if (!reach || this.edgeReachable(e, reach)) return this.makeSnap(lat, lon, d, e, t, px, py, c[0][0]);
     throw new SnapError(`Há vias a ${Math.round(c[0][0])} m, mas nenhuma conectada à origem num raio de ${Math.round(maxDist)} m.`);
   }
 
@@ -438,7 +502,7 @@ export class Router {
 export interface LegFeature {
   type: "Feature";
   geometry: { type: "LineString"; coordinates: [number, number][] };
-  properties: { kind: "path"; mode: Mode; flags: string[]; distance_m: number; time_s: number; streets: string[]; leg?: number; /** nome da via de cada segmento (coordinates.length-1), para manobras */ segStreets?: string[] };
+  properties: { kind: "path"; mode: Mode; flags: string[]; distance_m: number; time_s: number; streets: string[]; leg?: number; /** nome da via de cada segmento (coordinates.length-1), para manobras */ segStreets?: string[]; /** índice da aresta da malha de cada segmento (auditoria) */ segEdges?: number[]; /** chave estável da aresta de cada segmento (para reportar/evitar trecho) */ segKeys?: string[] };
 }
 
 export interface Leg {
@@ -554,7 +618,7 @@ export class Solver {
           const v = r.arcTo[a];
           const fwd = r.arcFwd[a] === 1;
           const [t, l] = this.arcCost(r.arcEdge[a], fwd, 1, v);
-          const nk = k + t + TIEBREAK * l + 1e-9;
+          const nk = k + t + r.sx[r.arcEdge[a]] + TIEBREAK * l + 1e-9; // + custo de adequação (não entra no tempo)
           if (nk < key[v]) {
             key[v] = nk;
             time[v] = time[u] + t;
@@ -569,7 +633,7 @@ export class Solver {
       for (const x of this.extra.get(u) || []) {
         const frac = Math.abs(x.f1 - x.f0);
         const [t, l] = this.arcCost(x.edge, x.f1 > x.f0, frac, x.to);
-        const nk = k + t + TIEBREAK * l + 1e-9;
+        const nk = k + t + r.sx[x.edge] * frac + TIEBREAK * l + 1e-9;
         if (nk < key[x.to]) {
           key[x.to] = nk;
           time[x.to] = time[u] + t;
@@ -677,6 +741,8 @@ export class Solver {
       const [tt, l] = this.arcCost(p.edge, p.fwd, p.frac, p.v);
       const mode = MODES[this.r.mode[p.edge]];
       const flags = FLAG_NAMES.filter(([f]) => g.eflags[p.edge] & f).map(([, nm]) => nm);
+      if (this.r.suit[p.edge] === 2) flags.push("trilha");
+      else if (this.r.suit[p.edge] === 1) flags.push("nao_verificado");
       if (g.dir[p.edge] & (p.fwd ? 4 : 8)) flags.push("contramao_veiculos");
       if (p.v < g.n && g.nodeFlags[p.v] & N_BARRIER) flags.push("barreira");
       if (p.v < g.n && g.nodeFlags[p.v] & N_PRIVATE) flags.push("portao_privado");
@@ -693,12 +759,14 @@ export class Solver {
         cur.properties.distance_m += l;
         cur.properties.time_s += tt;
         cur.properties.segStreets!.push(name);
+        cur.properties.segEdges!.push(p.edge);
+        cur.properties.segKeys!.push(edgeKey(g, p.edge));
         if (name && !cur.properties.streets.includes(name)) cur.properties.streets.push(name);
       } else {
         cur = {
           type: "Feature",
           geometry: { type: "LineString", coordinates: [[lo, la], [lob, lb]] },
-          properties: { kind: "path", mode, flags, distance_m: l, time_s: tt, streets: name ? [name] : [], segStreets: [name] },
+          properties: { kind: "path", mode, flags, distance_m: l, time_s: tt, streets: name ? [name] : [], segStreets: [name], segEdges: [p.edge], segKeys: [edgeKey(g, p.edge)] },
         };
         curKey = k;
         res.features.push(cur);

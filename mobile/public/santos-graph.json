@@ -2,11 +2,13 @@
  "nodes": 41598,
  "edges": 48747,
  "names": 2381,
- "bytes": 1510930,
- "version": "462dd3ef7b847815",
+ "bytes": 1705918,
+ "version": "54f6d77b5acae19e",
+ "format": "RSG2",
  "bbox": "-24.0050,-46.4150,-23.9150,-46.2950",
- "sha256": "203c8dcb52823d29dac9e41a37111fd83660066197629ef717f9e2326f21f172",
- "exported": "2026-10-10",
+ "sha256": "1d90602e808f37047371d54fb43b7ad692229bcb264806fc90c2b0f1228bfc00",
+ "exported": "2026-10-11",
  "source": "OpenStreetMap (ODbL) — malha de pedestres",
- "osm_extraction": "API 0.6 do OSM (cache local)"
+ "osm_extraction": "API 0.6 do OSM (cache local)",
+ "build": "pedestrian-v2"
 }

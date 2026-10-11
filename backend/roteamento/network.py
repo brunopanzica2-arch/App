@@ -68,6 +68,57 @@ BARRIER_BLOCKING = {
 }
 
 
+# --------------------------------------------------------------- adequação urbana (2.3)
+# Classe da via (HW_*), tipo de piso (SURF_*) e dicas (ATTR_*) ficam GUARDADAS por aresta para que o app calcule o custo de
+# "adequação à entrega urbana a pé" e nunca trate trilha/caminho de mato como rua.
+HW_OTHER, HW_STREET, HW_ARTERIAL, HW_SERVICE, HW_PEDESTRIAN, HW_FOOTWAY, HW_SIDEWALK, HW_STEPS, HW_PATH, HW_TRACK, HW_CYCLEWAY, HW_BRIDLEWAY, HW_MOTORWAY = range(13)
+HW_CODES = {
+    "residential": HW_STREET, "living_street": HW_STREET, "unclassified": HW_STREET, "road": HW_STREET,
+    "tertiary": HW_ARTERIAL, "tertiary_link": HW_ARTERIAL, "secondary": HW_ARTERIAL, "secondary_link": HW_ARTERIAL,
+    "primary": HW_ARTERIAL, "primary_link": HW_ARTERIAL, "trunk": HW_ARTERIAL, "trunk_link": HW_ARTERIAL,
+    "service": HW_SERVICE, "pedestrian": HW_PEDESTRIAN, "footway": HW_FOOTWAY, "crossing": HW_SIDEWALK,
+    "steps": HW_STEPS, "path": HW_PATH, "track": HW_TRACK, "cycleway": HW_CYCLEWAY, "bridleway": HW_BRIDLEWAY,
+    "motorway": HW_MOTORWAY, "motorway_link": HW_MOTORWAY, "busway": HW_MOTORWAY,
+}
+SURF_UNKNOWN, SURF_PAVED, SURF_UNPAVED = 0, 1, 2
+PAVED_SURFACES = {"asphalt", "concrete", "paved", "paving_stones", "sett", "concrete:plates", "concrete:lanes", "cobblestone",
+                  "cobblestone:flattened", "bricks", "brick", "metal", "tartan", "ceramic_tiles", "paving_stones:lanes", "unhewn_cobblestone_x"}
+UNPAVED_SURFACES = {"unpaved", "dirt", "ground", "grass", "gravel", "fine_gravel", "sand", "mud", "earth", "compacted", "pebblestone",
+                    "rock", "woodchips", "grass_paver", "salt", "snow", "ice", "clay", "wood"}
+ATTR_LIT, ATTR_SIDEWALK, ATTR_DESIGNATED, ATTR_TRAILHINT, ATTR_BRIDGE_TUNNEL, ATTR_INCLINE, ATTR_NAMED = 1, 2, 4, 8, 16, 32, 64
+
+
+def way_attrs(tags: dict[str, str]) -> tuple[int, int, int]:
+    """(classe da via, piso, dicas) a partir das tags OSM. Nunca inventa: ausência = desconhecido."""
+    hw = tags.get("highway", "")
+    code = HW_CODES.get(hw, HW_OTHER)
+    ft = tags.get("footway", "")
+    if hw == "footway" and ft in ("sidewalk", "crossing", "access_aisle"):
+        code = HW_SIDEWALK
+    if tags.get("crossing") and hw in ("footway", "path"):
+        code = HW_SIDEWALK
+    surface = tags.get("surface", "")
+    surf = SURF_PAVED if surface in PAVED_SURFACES else SURF_UNPAVED if surface in UNPAVED_SURFACES else SURF_UNKNOWN
+    attr = 0
+    if tags.get("lit") in ("yes", "24/7", "automatic"):
+        attr |= ATTR_LIT
+    if code == HW_SIDEWALK:
+        attr |= ATTR_SIDEWALK
+    if tags.get("foot") in ("designated", "yes", "official"):
+        attr |= ATTR_DESIGNATED
+    if (tags.get("sac_scale") or tags.get("trail_visibility") in ("bad", "poor", "horrible", "no", "intermediate")
+            or tags.get("mtb:scale") or tags.get("informal") == "yes" or tags.get("tracktype") in ("grade3", "grade4", "grade5")
+            or tags.get("smoothness") in ("bad", "very_bad", "horrible", "very_horrible", "impassable")):
+        attr |= ATTR_TRAILHINT
+    if tags.get("bridge") or tags.get("tunnel"):
+        attr |= ATTR_BRIDGE_TUNNEL
+    if tags.get("incline"):
+        attr |= ATTR_INCLINE
+    if tags.get("name"):
+        attr |= ATTR_NAMED
+    return code, surf, attr
+
+
 @dataclass
 class WayInfo:
     fwd: bool = True
@@ -75,6 +126,9 @@ class WayInfo:
     flags: int = 0
     car_oneway: int = 0          # 1 = mão única no sentido da via, -1 = contrário
     area: bool = False
+    hw: int = 0
+    surf: int = 0
+    attr: int = 0
 
 
 def classify_way(tags: dict[str, str]) -> WayInfo | None:
@@ -146,6 +200,7 @@ def classify_way(tags: dict[str, str]) -> WayInfo | None:
 
     if tags.get("area") == "yes":
         info.area = True
+    info.hw, info.surf, info.attr = way_attrs(tags)
     return info
 
 
@@ -237,6 +292,10 @@ class Network:
     eshare: list[float] = field(default_factory=list)
     ename: list[str] = field(default_factory=list)
     eway: list[int] = field(default_factory=list)
+    # adequação urbana (2.3): classe da via, piso e dicas por aresta
+    ehw: list[int] = field(default_factory=list)
+    esurf: list[int] = field(default_factory=list)
+    eattr: list[int] = field(default_factory=list)
 
     _index: dict[int, int] = field(default_factory=dict, repr=False)
 
@@ -264,7 +323,7 @@ class Network:
             )
         return idx
 
-    def add_edge(self, a, b, length, flags, fwd, bwd, cf_fwd, cf_bwd, share, name, way):
+    def add_edge(self, a, b, length, flags, fwd, bwd, cf_fwd, cf_bwd, share, name, way, hw=0, surf=0, attr=0):
         self.ea.append(a)
         self.eb.append(b)
         self.elen.append(length)
@@ -276,6 +335,9 @@ class Network:
         self.eshare.append(share)
         self.ename.append(name)
         self.eway.append(way)
+        self.ehw.append(hw)
+        self.esurf.append(surf)
+        self.eattr.append(attr)
 
 
 def build_network(osm: OsmData, cross_areas: bool = True) -> Network:
@@ -309,7 +371,7 @@ def build_network(osm: OsmData, cross_areas: bool = True) -> Network:
             b = net._node(osm, refs[i + 1])
             net.add_edge(
                 a, b, length, info.flags, info.fwd, info.bwd, cf_fwd, cf_bwd,
-                length / total, name, wid,
+                length / total, name, wid, info.hw, info.surf, info.attr,
             )
         if cross_areas and info.area and refs[0] == refs[-1]:
             _add_area_crossings(net, osm, wid, refs, tags, info, membership)
@@ -361,5 +423,5 @@ def _add_area_crossings(net, osm, wid, refs, tags, info, membership,
                 continue
             net.add_edge(
                 net._node(osm, ring[i]), net._node(osm, ring[j]), length,
-                info.flags | F_AREA, True, True, False, False, 1.0, name, wid,
+                info.flags | F_AREA, True, True, False, False, 1.0, name, wid, info.hw, info.surf, info.attr,
             )

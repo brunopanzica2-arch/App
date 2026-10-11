@@ -9,7 +9,8 @@ import { setUserBias } from "../core/geocode";
 import { hudText, precisionNote } from "../core/hud";
 import { getDayStats, recordOutcome, type Reward, revertOutcome, chime } from "../core/progress";
 import { deriveView, endSession, finishRoute, resumeSession } from "../core/session";
-import { getNavPrefs, getSettings, quickPlan, recordEvent, resumableSession, saveSettings, type StopView, stopsOf, TERMINAL, undoLastEvent } from "../core/service";
+import { assessRoute } from "../core/safety";
+import { getNavPrefs, getSettings, quickPlan, recordEvent, reportSegment, resumableSession, saveSettings, type StopView, stopsOf, TERMINAL, undoLastEvent } from "../core/service";
 import { nav as navApi, parseVoiceCommand } from "../native/rotaNav";
 import { Button } from "../ui/button";
 import { useCurrentBatch } from "../ui/hooks";
@@ -38,6 +39,7 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [q, setQ] = useState("");
   const [confirmDeliver, setConfirmDeliver] = useState<string | null>(null);
+  const [guardOpen, setGuardOpen] = useState(false);
   const [baseMap, setBaseMap] = useState<string | null>(null);
   const [mapState, setMapState] = useState<MapState>("init");
   const [sheetMode, setSheetMode] = useState<"normal" | "compact">("compact");
@@ -231,6 +233,26 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
     return [...m.values()].slice(0, 30);
   }, [q, data]);
 
+  // guarda de segurança: "Rota revisada" só quando trajeto e destinos satisfazem os critérios (core/safety.ts)
+  const guard = useMemo(() => route ? assessRoute(route.metrics?.quality, items.filter((x) => open(x.stop)).map((x) => ({ approximate: x.stop.trust.approximate, code: x.stop.trust.code }))) : null, [route, items]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function startGuarded() {
+    if (!route) return;
+    if (guard?.needsConfirm) { setGuardOpen(true); return; }
+    await N.start(route);
+  }
+  /** "Reportar problema neste trecho": grava o trecho mais próximo da posição atual, evita-o e recalcula (limite local de 40). */
+  async function reportHere() {
+    if (!route) return;
+    const pos = ui.fix ? { lat: ui.fix.lat, lon: ui.fix.lon } : lastFix;
+    if (!pos) { setToast({ text: "Sem posição para localizar o trecho. Aguarde o GPS." }); return; }
+    const r = await reportSegment(route, pos, null);
+    if (!r) { setToast({ text: "Não encontrei um trecho da rota perto de você." }); return; }
+    setToast({ text: `Trecho reportado: ${r.street || "sem nome"} (${Math.round(r.meters)} m). Recalculando sem ele…` });
+    if (navigating) await N.stop();
+    await replan();
+  }
+
   if (!loaded) return <Spinner />;
 
   const cur = current?.stop;
@@ -368,10 +390,19 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
             ) : null}
             <div className="grid grid-cols-2 gap-2">
               {!navigating ? (
-                <Button size="lg" className="col-span-2" onClick={() => route && N.start(route)} disabled={!view.canStart || !next}><Navigation className="h-5 w-5" /> Iniciar navegação</Button>
+                <>
+                  {guard && view.canStart && (
+                    <div className="col-span-2" data-testid="route-guard" data-level={guard.level}>
+                      <Badge color={guard.level === "reviewed" ? "#16a34a" : "#b45309"}>{guard.label}</Badge>
+                      {guard.level !== "reviewed" && <ul className="mt-1 list-disc pl-5 text-xs muted">{guard.reasons.slice(0, 3).map((r) => <li key={r}>{r}</li>)}</ul>}
+                    </div>
+                  )}
+                  <Button size="lg" className="col-span-2" onClick={() => void startGuarded()} disabled={!view.canStart || !next}><Navigation className="h-5 w-5" /> Iniciar navegação</Button>
+                </>
               ) : (<>
                 {ui.paused ? <Button variant="secondary" onClick={N.resume}><Play className="h-5 w-5" /> Retomar</Button> : <Button variant="secondary" onClick={N.pause}><Pause className="h-5 w-5" /> Pausar</Button>}
                 <Button variant="secondary" onClick={() => void endNav()}><Square className="h-5 w-5" /> Encerrar</Button>
+                <Button variant="ghost" className="col-span-2" onClick={() => void reportHere()} data-testid="report-segment">Reportar problema neste trecho</Button>
               </>)}
               {sheetMode !== "compact" && <>
               <Button variant="ghost" onClick={undo}><Undo2 className="h-5 w-5" /> Desfazer</Button>
@@ -389,6 +420,16 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
             {Object.entries(REASON_LABEL).map(([k, v]) => (
               <Button key={k} variant="secondary" size="lg" className="whitespace-normal" onClick={() => { setReasonOpen(false); void mark(curLetters, "not_delivered", k); }}>{v}</Button>
             ))}
+          </div>
+        </Modal>
+      )}
+      {guardOpen && guard && (
+        <Modal title={guard.label} onClose={() => setGuardOpen(false)}>
+          <ul className="mb-3 list-disc pl-5 text-sm">{guard.reasons.map((r) => <li key={r}>{r}</li>)}</ul>
+          <p className="mb-3 text-sm muted">Confira o trajeto no mapa antes de seguir. Se algum trecho parecer trilha, escadaria ou área privada, não siga por ele.</p>
+          <div className="grid gap-2">
+            <Button size="lg" onClick={() => { setGuardOpen(false); setDetail(false); }}>Revisar no mapa</Button>
+            <Button variant="secondary" size="lg" onClick={() => { setGuardOpen(false); if (route) void N.start(route); }}>Iniciar mesmo assim</Button>
           </div>
         </Modal>
       )}

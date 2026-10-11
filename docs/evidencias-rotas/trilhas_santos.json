@@ -1,0 +1,952 @@
+[
+ {
+  "osm_way": 934484019,
+  "meters": 2419.2,
+  "run_m": 2420,
+  "tags": {
+   "highway": "path"
+  },
+  "acao": "VEDADA no perfil urbano (trilha contínua ≥150 m)",
+  "center": [
+   -24.009188,
+   -46.3187242
+  ]
+ },
+ {
+  "osm_way": 1231923020,
+  "meters": 1547.4,
+  "run_m": 1550,
+  "tags": {
+   "highway": "path",
+   "foot": "designated",
+   "bicycle": "designated",
+   "name": "Ciclovia Compartilhada no Exterior do Jardim Botânico"
+  },
+  "acao": "CAUTELA (×2,5): via nomeada mapeada como caminho, não verificada",
+  "center": [
+   -23.9357307,
+   -46.3714356
+  ]
+ },
+ {
+  "osm_way": 839515169,
+  "meters": 1378.6,
+  "run_m": 1380,
+  "tags": {
+   "highway": "path"
+  },
+  "acao": "VEDADA no perfil urbano (trilha contínua ≥150 m)",
+  "center": [
+   -23.9887718,
+   -46.3885474
+  ]
+ },
+ {
+  "osm_way": 399152685,
+  "meters": 161.8,
+  "run_m": 1030,
+  "tags": {
+   "highway": "path",
+   "surface": "unpaved",
+   "tracktype": "grade2"
+  },
+  "acao": "VEDADA no perfil urbano (trilha contínua ≥150 m)",
+  "center": [
+   -23.9920963,
+   -46.393977
+  ]
+ },
+ {
+  "osm_way": 839515171,
+  "meters": 863.6,
+  "run_m": 1030,
+  "tags": {
+   "highway": "path"
+  },
+  "acao": "VEDADA no perfil urbano (trilha contínua ≥150 m)",
+  "center": [
+   -23.9965054,
+   -46.3937295
+  ]
+ },
+ {
+  "osm_way": 845197535,
+  "meters": 611.5,
+  "run_m": 610,
+  "tags": {
+   "highway": "path"
+  },
+  "acao": "VEDADA no perfil urbano (trilha contínua ≥150 m)",
+  "center": [
+   -23.9516531,
+   -46.3558647
+  ]
+ },
+ {
+  "osm_way": 1231969060,
+  "meters": 455.3,
+  "run_m": 510,
+  "tags": {
+   "highway": "track"
+  },
+  "acao": "VEDADA no perfil urbano (trilha contínua ≥150 m)",
+  "center": [
+   -23.9562338,
+   -46.4086503
+  ]
+ },
+ {
+  "osm_way": 1340040743,
+  "meters": 57.7,
+  "run_m": 510,
+  "tags": {
+   "highway": "track",
+   "foot": "yes",
+   "bicycle": "dismount"
+  },
+  "acao": "VEDADA no perfil urbano (trilha contínua ≥150 m)",
+  "center": [
+   -23.9582091,
+   -46.4070405
+  ]
+ },
+ {
+  "osm_way": 746630776,
+  "meters": 489.7,
+  "run_m": 490,
+  "tags": {
+   "highway": "track",
+   "name": "Rua José Bonifacio"
+  },
+  "acao": "CAUTELA (×2,5): via nomeada mapeada como caminho, não verificada",
+  "center": [
+   -23.9880519,
+   -46.4184436
+  ]
+ },
+ {
+  "osm_way": 1381717600,
+  "meters": 387.9,
+  "run_m": 390,
+  "tags": {
+   "highway": "path",
+   "surface": "dirt",
+   "access": "private"
+  },
+  "acao": "VEDADA: acesso privado (access/foot=private)",
+  "center": [
+   -23.9594867,
+   -46.3631404
+  ]
+ },
+ {
+  "osm_way": 845197534,
+  "meters": 358.9,
+  "run_m": 360,
+  "tags": {
+   "highway": "path"
+  },
+  "acao": "VEDADA no perfil urbano (trilha contínua ≥150 m)",
+  "center": [
+   -23.9640092,
+   -46.3616234
+  ]
+ },
+ {
+  "osm_way": 486208457,
+  "meters": 281.7,
+  "run_m": 320,
+  "tags": {
+   "highway": "path",
+   "name": "Caminho Particular"
+  },
+  "acao": "CAUTELA (×2,5): via nomeada mapeada como caminho, não verificada",
+  "center": [
+   -23.9562672,
+   -46.3242603
+  ]
+ },
+ {
+  "osm_way": 1362620282,
+  "meters": 15.0,
+  "run_m": 320,
+  "tags": {
+   "highway": "path"
+  },
+  "acao": "VEDADA no perfil urbano (trilha contínua ≥150 m)",
+  "center": [
+   -23.956136,
+   -46.3238516
+  ]
+ },
+ {
+  "osm_way": 1362620284,
+  "meters": 11.6,
+  "run_m": 320,
+  "tags": {
+   "highway": "path"
+  },
+  "acao": "VEDADA no perfil urbano (trilha contínua ≥150 m)",
+  "center": [
+   -23.9561696,
+   -46.3240095
+  ]
+ },
+ {
+  "osm_way": 1362620285,
+  "meters": 11.3,
+  "run_m": 320,
+  "tags": {
+   "highway": "path"
+  },
+  "acao": "VEDADA no perfil urbano (trilha contínua ≥150 m)",
+  "center": [
+   -23.9561653,
+   -46.324258
+  ]
+ },
+ {
+  "osm_way": 1362626659,
+  "meters": 98.4,
+  "run_m": 260,
+  "tags": {
+   "highway": "path",
+   "name": "Vila Carla",
+   "informal": "yes"
+  },
+  "acao": "CAUTELA (×2,5): via nomeada mapeada como caminho, não verificada",
+  "center": [
+   -23.9400767,
+   -46.3392091
+  ]
+ },
+ {
+  "osm_way": 1362626660,
+  "meters": 129.6,
+  "run_m": 260,
+  "tags": {
+   "highway": "path",
+   "name": "Vila Carla",
+   "informal": "yes"
+  },
+  "acao": "CAUTELA (×2,5): via nomeada mapeada como caminho, não verificada",
+  "center": [
+   -23.9409701,
+   -46.339066
+  ]
+ },
+ {
+  "osm_way": 1362626661,
+  "meters": 28.9,
+  "run_m": 260,
+  "tags": {
+   "highway": "path",
+   "name": "Vila Carla",
+   "informal": "yes"
+  },
+  "acao": "CAUTELA (×2,5): via nomeada mapeada como caminho, não verificada",
+  "center": [
+   -23.9409699,
+   -46.3391462
+  ]
+ },
+ {
+  "osm_way": 452172396,
+  "meters": 225.5,
+  "run_m": 230,
+  "tags": {
+   "highway": "path"
+  },
+  "acao": "VEDADA no perfil urbano (trilha contínua ≥150 m)",
+  "center": [
+   -23.9950317,
+   -46.3064158
+  ]
+ },
+ {
+  "osm_way": 481716825,
+  "meters": 220.7,
+  "run_m": 220,
+  "tags": {
+   "highway": "track",
+   "name": "Rua Ana Jorge"
+  },
+  "acao": "CAUTELA (×2,5): via nomeada mapeada como caminho, não verificada",
+  "center": [
+   -23.9582975,
+   -46.3879601
+  ]
+ },
+ {
+  "osm_way": 1362940675,
+  "meters": 151.9,
+  "run_m": 150,
+  "tags": {
+   "highway": "track"
+  },
+  "acao": "VEDADA no perfil urbano (trilha contínua ≥150 m)",
+  "center": [
+   -23.955494,
+   -46.3924663
+  ]
+ },
+ {
+  "osm_way": 496761615,
+  "meters": 145.0,
+  "run_m": 150,
+  "tags": {
+   "highway": "path"
+  },
+  "acao": "VEDADA no perfil urbano (trilha contínua ≥150 m)",
+  "center": [
+   -23.9524092,
+   -46.3252291
+  ]
+ },
+ {
+  "osm_way": 974209395,
+  "meters": 137.5,
+  "run_m": 140,
+  "tags": {
+   "highway": "track"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -23.9692491,
+   -46.4016444
+  ]
+ },
+ {
+  "osm_way": 367436176,
+  "meters": 143.6,
+  "run_m": 140,
+  "tags": {
+   "highway": "path"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -23.953187,
+   -46.3325709
+  ]
+ },
+ {
+  "osm_way": 673460053,
+  "meters": 64.0,
+  "run_m": 120,
+  "tags": {
+   "highway": "path"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -23.9477271,
+   -46.3629371
+  ]
+ },
+ {
+  "osm_way": 673460054,
+  "meters": 59.4,
+  "run_m": 120,
+  "tags": {
+   "highway": "path"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -23.9475788,
+   -46.3625831
+  ]
+ },
+ {
+  "osm_way": 1334920978,
+  "meters": 108.3,
+  "run_m": 110,
+  "tags": {
+   "highway": "path",
+   "surface": "dirt",
+   "informal": "yes"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -23.9287674,
+   -46.3958966
+  ]
+ },
+ {
+  "osm_way": 1152753559,
+  "meters": 88.1,
+  "run_m": 90,
+  "tags": {
+   "highway": "path"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -24.008505,
+   -46.3240854
+  ]
+ },
+ {
+  "osm_way": 1444560469,
+  "meters": 87.0,
+  "run_m": 90,
+  "tags": {
+   "highway": "path"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -23.9703094,
+   -46.4142349
+  ]
+ },
+ {
+  "osm_way": 839515179,
+  "meters": 89.0,
+  "run_m": 90,
+  "tags": {
+   "highway": "path"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -23.9500402,
+   -46.3592255
+  ]
+ },
+ {
+  "osm_way": 1488701253,
+  "meters": 87.0,
+  "run_m": 90,
+  "tags": {
+   "highway": "path",
+   "surface": "ground",
+   "access": "yes",
+   "foot": "designated",
+   "bicycle": "designated",
+   "informal": "yes"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -23.9257492,
+   -46.4003753
+  ]
+ },
+ {
+  "osm_way": 1340729076,
+  "meters": 73.8,
+  "run_m": 70,
+  "tags": {
+   "highway": "track",
+   "name": "Rua Ana Jorge II"
+  },
+  "acao": "CAUTELA (×2,5): via nomeada mapeada como caminho, não verificada",
+  "center": [
+   -23.9575943,
+   -46.3874809
+  ]
+ },
+ {
+  "osm_way": 359227135,
+  "meters": 71.3,
+  "run_m": 70,
+  "tags": {
+   "highway": "path",
+   "name": "Rua Antenor Loureiro"
+  },
+  "acao": "CAUTELA (×2,5): via nomeada mapeada como caminho, não verificada",
+  "center": [
+   -23.9352111,
+   -46.3374107
+  ]
+ },
+ {
+  "osm_way": 188966895,
+  "meters": 62.3,
+  "run_m": 60,
+  "tags": {
+   "highway": "track"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -23.9688963,
+   -46.4018486
+  ]
+ },
+ {
+  "osm_way": 222755961,
+  "meters": 55.2,
+  "run_m": 60,
+  "tags": {
+   "highway": "track",
+   "name": "Viela"
+  },
+  "acao": "CAUTELA (×2,5): via nomeada mapeada como caminho, não verificada",
+  "center": [
+   -23.9381066,
+   -46.393071
+  ]
+ },
+ {
+  "osm_way": 473913617,
+  "meters": 49.8,
+  "run_m": 50,
+  "tags": {
+   "highway": "path"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -23.9944702,
+   -46.3067854
+  ]
+ },
+ {
+  "osm_way": 1086787765,
+  "meters": 52.0,
+  "run_m": 50,
+  "tags": {
+   "highway": "path"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -23.984299,
+   -46.3802937
+  ]
+ },
+ {
+  "osm_way": 1408679466,
+  "meters": 53.1,
+  "run_m": 50,
+  "tags": {
+   "highway": "track",
+   "surface": "unpaved",
+   "tracktype": "grade4"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -23.9626786,
+   -46.360974
+  ]
+ },
+ {
+  "osm_way": 1362626653,
+  "meters": 46.3,
+  "run_m": 50,
+  "tags": {
+   "highway": "path",
+   "informal": "yes"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -23.9406607,
+   -46.3419172
+  ]
+ },
+ {
+  "osm_way": 367491208,
+  "meters": 39.7,
+  "run_m": 50,
+  "tags": {
+   "highway": "track",
+   "name": "Avenida Mecanizada"
+  },
+  "acao": "CAUTELA (×2,5): via nomeada mapeada como caminho, não verificada",
+  "center": [
+   -23.9383427,
+   -46.3961922
+  ]
+ },
+ {
+  "osm_way": 1363268768,
+  "meters": 7.1,
+  "run_m": 50,
+  "tags": {
+   "highway": "track",
+   "name": "Avenida Salgado Filho"
+  },
+  "acao": "CAUTELA (×2,5): via nomeada mapeada como caminho, não verificada",
+  "center": [
+   -23.9387544,
+   -46.3961619
+  ]
+ },
+ {
+  "osm_way": 1363268769,
+  "meters": 7.4,
+  "run_m": 50,
+  "tags": {
+   "highway": "track",
+   "name": "Avenida Salgado Filho"
+  },
+  "acao": "CAUTELA (×2,5): via nomeada mapeada como caminho, não verificada",
+  "center": [
+   -23.9386994,
+   -46.396198
+  ]
+ },
+ {
+  "osm_way": 839515177,
+  "meters": 46.0,
+  "run_m": 50,
+  "tags": {
+   "highway": "path"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -23.9358118,
+   -46.3399323
+  ]
+ },
+ {
+  "osm_way": 1334920141,
+  "meters": 35.1,
+  "run_m": 50,
+  "tags": {
+   "highway": "footway",
+   "surface": "dirt"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -23.9238204,
+   -46.4073625
+  ]
+ },
+ {
+  "osm_way": 1334920142,
+  "meters": 17.3,
+  "run_m": 50,
+  "tags": {
+   "highway": "path",
+   "informal": "yes"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -23.9236786,
+   -46.4073225
+  ]
+ },
+ {
+  "osm_way": 1547276801,
+  "meters": 1.9,
+  "run_m": 40,
+  "tags": {
+   "highway": "path"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -24.0077016,
+   -46.4022563
+  ]
+ },
+ {
+  "osm_way": 1547276802,
+  "meters": 40.3,
+  "run_m": 40,
+  "tags": {
+   "highway": "path"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -24.007721,
+   -46.4021385
+  ]
+ },
+ {
+  "osm_way": 1188092603,
+  "meters": 35.1,
+  "run_m": 40,
+  "tags": {
+   "highway": "path",
+   "informal": "yes"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -23.9665207,
+   -46.3756534
+  ]
+ },
+ {
+  "osm_way": 473913616,
+  "meters": 27.4,
+  "run_m": 30,
+  "tags": {
+   "highway": "path"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -23.9947834,
+   -46.3069653
+  ]
+ },
+ {
+  "osm_way": 1503167312,
+  "meters": 14.9,
+  "run_m": 30,
+  "tags": {
+   "highway": "cycleway",
+   "surface": "wood",
+   "bridge": "yes"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -23.9874363,
+   -46.29446
+  ]
+ },
+ {
+  "osm_way": 1503167313,
+  "meters": 10.6,
+  "run_m": 30,
+  "tags": {
+   "highway": "cycleway",
+   "surface": "wood",
+   "bridge": "yes"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -23.9875333,
+   -46.2943592
+  ]
+ },
+ {
+  "osm_way": 502500111,
+  "meters": 22.2,
+  "run_m": 30,
+  "tags": {
+   "highway": "path"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -23.9723028,
+   -46.3693274
+  ]
+ },
+ {
+  "osm_way": 654321867,
+  "meters": 9.9,
+  "run_m": 30,
+  "tags": {
+   "highway": "path"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -23.9722585,
+   -46.3694117
+  ]
+ },
+ {
+  "osm_way": 1188082928,
+  "meters": 34.0,
+  "run_m": 30,
+  "tags": {
+   "highway": "path",
+   "informal": "yes"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -23.9610964,
+   -46.4038046
+  ]
+ },
+ {
+  "osm_way": 481716912,
+  "meters": 31.0,
+  "run_m": 30,
+  "tags": {
+   "highway": "track"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -23.9441949,
+   -46.3898845
+  ]
+ },
+ {
+  "osm_way": 845251135,
+  "meters": 32.4,
+  "run_m": 30,
+  "tags": {
+   "highway": "path",
+   "name": "Rua Manuel Sierra Perez"
+  },
+  "acao": "CAUTELA (×2,5): via nomeada mapeada como caminho, não verificada",
+  "center": [
+   -23.9388351,
+   -46.4192327
+  ]
+ },
+ {
+  "osm_way": 1230969420,
+  "meters": 28.6,
+  "run_m": 30,
+  "tags": {
+   "highway": "track",
+   "name": "Beco"
+  },
+  "acao": "CAUTELA (×2,5): via nomeada mapeada como caminho, não verificada",
+  "center": [
+   -23.9387333,
+   -46.3921701
+  ]
+ },
+ {
+  "osm_way": 1231463062,
+  "meters": 30.2,
+  "run_m": 30,
+  "tags": {
+   "highway": "track",
+   "footway": "alley"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -23.9383344,
+   -46.3923889
+  ]
+ },
+ {
+  "osm_way": 1363268770,
+  "meters": 26.2,
+  "run_m": 30,
+  "tags": {
+   "highway": "track",
+   "surface": "asphalt",
+   "name": "Avenida Tércio Augusto Garcia"
+  },
+  "acao": "CAUTELA (×2,5): via nomeada mapeada como caminho, não verificada",
+  "center": [
+   -23.9381797,
+   -46.3899334
+  ]
+ },
+ {
+  "osm_way": 1565322694,
+  "meters": 27.9,
+  "run_m": 30,
+  "tags": {
+   "highway": "path"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -23.9222614,
+   -46.4082672
+  ]
+ },
+ {
+  "osm_way": 473906304,
+  "meters": 7.1,
+  "run_m": 20,
+  "tags": {
+   "highway": "path"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -23.9946654,
+   -46.3067725
+  ]
+ },
+ {
+  "osm_way": 473917559,
+  "meters": 10.0,
+  "run_m": 20,
+  "tags": {
+   "highway": "path"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -23.9946735,
+   -46.3067293
+  ]
+ },
+ {
+  "osm_way": 502500112,
+  "meters": 22.0,
+  "run_m": 20,
+  "tags": {
+   "highway": "path"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -23.9722938,
+   -46.3695752
+  ]
+ },
+ {
+  "osm_way": 481716913,
+  "meters": 23.1,
+  "run_m": 20,
+  "tags": {
+   "highway": "track"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -23.9434615,
+   -46.3904991
+  ]
+ },
+ {
+  "osm_way": 1334920144,
+  "meters": 15.9,
+  "run_m": 20,
+  "tags": {
+   "highway": "footway",
+   "surface": "dirt"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -23.924722,
+   -46.4062095
+  ]
+ },
+ {
+  "osm_way": 654321868,
+  "meters": 12.0,
+  "run_m": 10,
+  "tags": {
+   "highway": "path"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -23.9719018,
+   -46.3692883
+  ]
+ },
+ {
+  "osm_way": 1498892633,
+  "meters": 10.4,
+  "run_m": 10,
+  "tags": {
+   "highway": "path",
+   "surface": "dirt",
+   "bicycle": "no"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -23.9705982,
+   -46.3504748
+  ]
+ },
+ {
+  "osm_way": 1507274672,
+  "meters": 5.4,
+  "run_m": 10,
+  "tags": {
+   "highway": "footway",
+   "surface": "wood",
+   "bridge": "yes"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -23.9373041,
+   -46.3815857
+  ]
+ },
+ {
+  "osm_way": 1377330038,
+  "meters": 9.1,
+  "run_m": 10,
+  "tags": {
+   "highway": "footway",
+   "informal": "yes"
+  },
+  "acao": "PENALIZADA (×6) e marcada como trilha/não verificada",
+  "center": [
+   -23.9327801,
+   -46.3231884
+  ]
+ }
+]

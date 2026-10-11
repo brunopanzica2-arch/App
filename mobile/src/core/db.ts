@@ -166,6 +166,8 @@ export interface Settings {
   /** navegação por voz e localização (2.0) */
   nav?: NavPrefs;
   /** diário da sessão de navegação: permite "Retomar N entregas" após fechar o app / reiniciar o aparelho */
+  /** trechos reportados como inadequados (só neste aparelho; evitados nos próximos cálculos) */
+  reportedEdges?: { key: string; at: string; lat: number; lon: number; street: string; note: string | null }[];
   /** rota cuja navegação foi encerrada manualmente (some do mapa; pode ser retomada) */
   endedRouteId?: string | null;
   /** estatísticas operacionais do dia (progresso/recompensa) */

@@ -32,7 +32,7 @@ from roteamento.router import Router, SnapError
 
 from ...core.config import Settings
 
-NETWORK_BUILD_VERSION = "pedestrian-v1"
+NETWORK_BUILD_VERSION = "pedestrian-v2"  # v2: classe da via, piso e dicas por aresta (adequação à entrega urbana)
 
 
 @dataclass

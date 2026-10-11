@@ -50,8 +50,20 @@ export interface PlanResult {
   timings: Record<string, number>;
   warnings: string[];
   originFlags: string[];
+  /** guarda de segurança: "Rota revisada" só quando não há trecho de trilha/não verificado */
+  quality?: RouteQuality;
   /** reaproveitamento da matriz (V3 §12): quantos pontos/pares vieram do cache */
   matrixStats?: MatrixStats & { cacheHit: boolean; warmStart: boolean };
+}
+
+export interface RouteQuality {
+  reviewed: boolean;
+  /** metros em trecho de trilha/caminho não urbano e em trecho não verificado */
+  trailMeters: number;
+  unverifiedMeters: number;
+  reasons: string[];
+  /** trechos problemáticos, com a razão exata (nome da via, metros, classe) */
+  segments: { leg: number; kind: "trilha" | "nao_verificado"; street: string; meters: number; coords: [number, number][] }[];
 }
 
 export class PlanError extends Error {}
@@ -211,6 +223,8 @@ export function computePlan(g: Graph, req: PlanRequest, progress?: (stage: strin
   const pen = penalties(order, { T, D, start: 0, stops: order, end, service, priority, sector });
   out.timeBreakdown = { travel: out.travelTime, service: out.serviceTime, access: out.accessTime, estimatedDuration: clock,
     priorityPenalty: pen.priority, sectorPenalty: pen.sector, generalizedObjective: clock + pen.priority + pen.sector };
+  out.quality = assessQuality(out.features, solver);
+  if (!out.quality.reviewed) warnings.push("Trechos não verificados — revisar antes de seguir: " + out.quality.reasons.join("; ") + ".");
   for (const [f, m] of Object.entries(out.flags))
     if (["escada", "acesso_privado", "barreira", "portao_privado", "proibido_pedalar", "travessia_de_praca"].includes(f))
       warnings.push(`Trecho sinalizado no percurso: ${f.replace(/_/g, " ")} (${Math.round(m)} m). Verifique no local.`);
@@ -219,4 +233,21 @@ export function computePlan(g: Graph, req: PlanRequest, progress?: (stage: strin
   if (mc) out.matrixStats = { ...mc.stats, cacheHit: !!prevStore && prevStore.matrix.key === mkey, warmStart: !!warm?.length };
   out.timings = { matrix_ms: Math.round(matrixMs), solve_ms: Math.round(solveMs), total_ms: Math.round(performance.now() - t0) };
   return out;
+}
+
+
+/** Avalia a qualidade do trajeto a partir dos trechos REAIS usados (flags de adequação vindas da malha). Nunca afirma "revisada" sem checar. */
+export function assessQuality(features: LegFeature[], _solver?: unknown): RouteQuality {
+  const q: RouteQuality = { reviewed: true, trailMeters: 0, unverifiedMeters: 0, reasons: [], segments: [] };
+  for (const f of features) {
+    const kind = f.properties.flags.includes("trilha") ? "trilha" : f.properties.flags.includes("nao_verificado") ? "nao_verificado" : null;
+    if (!kind) continue;
+    const m = f.properties.distance_m;
+    if (kind === "trilha") q.trailMeters += m; else q.unverifiedMeters += m;
+    q.segments.push({ leg: f.properties.leg ?? 0, kind, street: f.properties.streets[0] ?? "(sem nome)", meters: Math.round(m), coords: f.geometry.coordinates });
+  }
+  if (q.trailMeters > 0) q.reasons.push(`${Math.round(q.trailMeters)} m em trilha/caminho não urbano`);
+  if (q.unverifiedMeters > 0) q.reasons.push(`${Math.round(q.unverifiedMeters)} m em trecho sem dados de acesso/piso confiáveis`);
+  q.reviewed = q.reasons.length === 0;
+  return q;
 }

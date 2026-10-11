@@ -182,7 +182,7 @@ export async function planBatch(batchId: string, o: PlanOptions, onProgress?: (s
   const remaining = stops.filter((st) => st.letters.some(isPending));
   if (!remaining.length) throw new Error("Não há paradas pendentes neste lote.");
   const res = await runPlan({
-    start: o.start, end: o.end ?? null, mode: o.mode, strategy: o.strategy, profile: s.profile,
+    start: o.start, end: o.end ?? null, mode: o.mode, strategy: o.strategy, profile: { ...s.profile, avoid_edges: (s.reportedEdges ?? []).map((x) => x.key) },
     timeLimitMs: o.timeLimitMs, maxSnap: 150, snapReviewM: 30, fixedFirst: o.fixedFirst, cacheKey: batchId,
     stops: remaining.map((st) => {
       const pend = st.letters.filter(isPending).length;
@@ -209,7 +209,7 @@ export async function planBatch(batchId: string, o: PlanOptions, onProgress?: (s
       letters: remaining.filter((st) => !excludedKeys.has(st.key)).reduce((a, st) => a + st.letters.filter(isPending).length, 0),
       status: res.status === "partial" || notRouted > 0 ? "partial" : "complete", notRoutedLetters: notRouted,
       pendingStops: remaining.length, byMode: res.byMode, flags: res.flags, strategy: res.strategy, excluded: res.excluded,
-      snapReview: res.snapReview, accessTime: res.accessTime, timeBreakdown: res.timeBreakdown, originFlags: res.originFlags, matrixStats: res.matrixStats,
+      quality: res.quality, snapReview: res.snapReview, accessTime: res.accessTime, timeBreakdown: res.timeBreakdown, originFlags: res.originFlags, matrixStats: res.matrixStats,
       objectiveRule: "factibilidade > cobertura > tempo+penalidades > distância",
       note: "Tempos e distâncias são ESTIMATIVAS pela malha OSM de pedestres; não verificados em campo.",
     },
@@ -580,4 +580,26 @@ export async function reprocessLegacy(batchId: string): Promise<{ fixed: number;
   });
   const after = await diagnoseLegacy(batchId);
   return { fixed, remaining: after.issues.length, skippedNoRaw: issues.filter((i) => !i.canReprocess).length };
+}
+
+
+// ------------------------------------------------------------ segurança do trajeto (2.3)
+
+/** Reporta um trecho inadequado (o mais próximo de `pos` na rota) e o evita nos próximos cálculos. Limite de 40 relatos locais. */
+export async function reportSegment(route: Route, pos: { lat: number; lon: number }, note: string | null = null): Promise<{ key: string; street: string; meters: number } | null> {
+  let best: { d: number; key: string; street: string; lat: number; lon: number; len: number } | null = null;
+  for (const f of route.geojson.features ?? []) {
+    const c: [number, number][] = f.geometry.coordinates, keys: string[] = f.properties.segKeys ?? [], names: string[] = f.properties.segStreets ?? [];
+    for (let i = 0; i < c.length - 1 && i < keys.length; i++) {
+      const mx = (c[i][0] + c[i + 1][0]) / 2, my = (c[i][1] + c[i + 1][1]) / 2;
+      const d = Math.hypot((mx - pos.lon) * 102000, (my - pos.lat) * 111000);
+      if (!best || d < best.d) best = { d, key: keys[i], street: names[i] || "(sem nome)", lat: my, lon: mx, len: Math.hypot((c[i][0] - c[i + 1][0]) * 102000, (c[i][1] - c[i + 1][1]) * 111000) };
+    }
+  }
+  if (!best) return null;
+  const s = await getSettings();
+  const list = (s.reportedEdges ?? []).filter((x) => x.key !== best!.key);
+  list.push({ key: best.key, at: new Date().toISOString(), lat: best.lat, lon: best.lon, street: best.street, note });
+  await saveSettings({ reportedEdges: list.slice(-40) });
+  return { key: best.key, street: best.street, meters: Math.round(best.len) };
 }
