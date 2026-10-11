@@ -166,10 +166,24 @@ export interface Settings {
   /** navegação por voz e localização (2.0) */
   nav?: NavPrefs;
   /** diário da sessão de navegação: permite "Retomar N entregas" após fechar o app / reiniciar o aparelho */
+  /** rota cuja navegação foi encerrada manualmente (some do mapa; pode ser retomada) */
+  endedRouteId?: string | null;
+  /** estatísticas operacionais do dia (progresso/recompensa) */
+  dayStats?: DayStats | null;
+  /** última posição conhecida do aparelho (nunca confundida com o ponto manual) */
+  lastFix?: { lat: number; lon: number; accuracy: number; at: number } | null;
+  /** origem do cálculo: posição atual (padrão), ponto manual ou última posição */
+  startMode?: "current" | "manual" | "last";
   navSession?: { routeId: string; batchId: string; startedAt: string; lastStopKey: string | null } | null;
 }
 
+export interface DayStats { date: string; delivered: number; notDelivered: number; skipped: number; streak: number; bestStreak: number; xp: number; startedAt: number; lastAt: number; activeMs: number }
+
 export interface NavPrefs {
+  /** som curto opcional ao concluir uma entrega */
+  sound?: boolean;
+  /** meta de entregas do dia (0 = automática: total do lote) */
+  dailyGoal?: number;
   speech: boolean; detailed: boolean; rate: number; volume: number;
   /** false = economia de bateria (3 s / 3 m) */
   preciseGps: boolean;

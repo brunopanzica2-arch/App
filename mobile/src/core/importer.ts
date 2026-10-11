@@ -1,5 +1,6 @@
 /** Importação: CSV, XLSX, texto colado e manual. Nenhuma linha é descartada em silêncio. */
 import { type Batch, db, type Letter, uid } from "./db";
+import { parseFreeAddress } from "./freetext";
 import { clean, normalizeAddress, normText, parseAddressLine } from "./normalize";
 import { type Inferred, inferRows, inferSchema } from "./schema";
 
@@ -138,16 +139,19 @@ export function mapRows(t: Table, mapping: Record<string, string | null>): Mappe
   const idx = Object.fromEntries(t.headers.map((h, i) => [h, i]));
   const out: MappedRow[] = [];
   t.rows.forEach((r, k) => {
+    let fnotes: string[] = [];
     const v: Record<string, string | null> = {};
     for (const [f] of FIELDS) v[f] = mapping[f] ? clean(r[idx[mapping[f]!]] ?? "") || null : null;
     if (v.full_address) {
-      const p = parseAddressLine(v.full_address);
-      for (const [kk, vv] of Object.entries(p)) if (!v[kk]) v[kk] = vv;
+      // texto livre: sem separador/cabeçalho/ordem fixa (FreeTextAddressResolver); o escopo padrão Santos/SP é aplicado na normalização
+      const p = parseFreeAddress(v.full_address);
+      for (const k of ["street", "number", "complement", "neighborhood", "city", "state", "cep"] as const) if (!v[k] && p[k]) v[k] = p[k];
+      if (p.notes.length) fnotes = p.notes;
     }
     if (v.state && !/\/\s*[A-Za-z]{2}$/.test(v.city ?? "")) v.city = `${v.city || "Santos"}/${v.state.toUpperCase()}`;
     if (!Object.values(v).some(Boolean)) return;
     const na = normalizeAddress(v.street, v.number, v.neighborhood, v.city, v.cep);
-    out.push({ row: k + (t.hasHeader ? 2 : 1), raw: r, values: v, errors: na.errors, warnings: na.issues, key: na.errors.length ? null : na.key });
+    out.push({ row: k + (t.hasHeader ? 2 : 1), raw: r, values: v, errors: na.errors, warnings: [...na.issues, ...fnotes], key: na.errors.length ? null : na.key });
   });
   return out;
 }
