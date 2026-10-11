@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { DEFAULT_NAV, type NavPrefs } from "../core/db";
 import { getNavPrefs, saveSettings } from "../core/service";
 import { nav } from "../native/rotaNav";
+import { loadOfflineStyle, packStatus } from "../ui/offlineMap";
 import { Button } from "../ui/button";
 import { Alert, Card } from "../ui/misc";
 
@@ -9,6 +10,8 @@ import { Alert, Card } from "../ui/misc";
 export function NavPrefsCard() {
   const [p, setP] = useState<NavPrefs>(DEFAULT_NAV);
   const [info, setInfo] = useState<string>("");
+  const [pack, setPack] = useState<string>("verificando…");
+  useEffect(() => { void loadOfflineStyle().then(() => setPack(packStatus.ok && packStatus.info ? `Santos · ${packStatus.info.compilacao} · ${packStatus.info.tiles} tiles · zoom até ${packStatus.info.zoom_max} · SHA-256 ${packStatus.info.sha256.slice(0, 12)}… ${packStatus.reason}` : `INDISPONÍVEL — ${packStatus.reason}. O mapa tenta a fonte online; sem internet só rota e paradas aparecem.`)); }, []);
   useEffect(() => { void getNavPrefs().then(setP); void nav.status().then((s) => setInfo(`${s.backend || "—"} · GPS ${s.gpsEnabled ? "ligado" : "desligado"}${s.sdk ? ` · Android API ${s.sdk}` : ""}`)); }, []);
   const set = async (patch: Partial<NavPrefs>) => { const n = { ...p, ...patch }; setP(n); await saveSettings({ nav: n }); await nav.configure(n); };
   const Chk = ({ k, label, hint }: { k: keyof NavPrefs; label: string; hint?: string }) => (
@@ -29,6 +32,7 @@ export function NavPrefsCard() {
         <label>Volume<input type="range" min={0.3} max={1} step={0.1} value={p.volume} onChange={(e) => set({ volume: +e.target.value })} className="w-full" aria-label="Volume da voz" /></label>
       </div>
       <Button variant="secondary" onClick={() => nav.speak("Em cinquenta metros, vire à direita na Rua Itororó.")}>Testar voz</Button>
+      <Alert kind={packStatus.ok === false ? "warn" : "info"}><b>Mapa offline:</b> {pack}</Alert>
       <Alert kind="info">Localização: {info || "…"}. O app usa a localização só enquanto navega (serviço em primeiro plano com notificação). Não pede “localização o tempo todo”.</Alert>
     </Card>
   );

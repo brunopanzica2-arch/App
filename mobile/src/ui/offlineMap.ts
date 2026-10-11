@@ -6,6 +6,7 @@
  */
 import { layers, namedFlavor } from "@protomaps/basemaps";
 import * as maplibregl from "maplibre-gl";
+import { log } from "../core/log";
 import { PMTiles, Protocol, type RangeResponse, type Source } from "pmtiles";
 
 export interface PackInfo {
@@ -23,6 +24,8 @@ class BufferSource implements Source {
 }
 
 let protocolReady = false;
+/** Estado do pacote offline para a interface (versão, cobertura, erro): nunca falhar em silêncio. */
+export const packStatus: { ok: boolean | null; reason: string; info: PackInfo | null } = { ok: null, reason: "não carregado", info: null };
 let cached: Promise<{ style: any; info: PackInfo } | null> | null = null;
 
 const base = () => document.baseURI;
@@ -63,10 +66,11 @@ export function loadOfflineStyle(): Promise<{ style: any; info: PackInfo } | nul
       try {
         const info: PackInfo = await (await fetch(new URL("map/santos.pmtiles.json", base()))).json();
         const r = await fetch(new URL("map/santos.pmtiles", base()));
-        if (!r.ok) return null;
+        if (!r.ok) { packStatus.ok = false; packStatus.reason = `pacote ausente (HTTP ${r.status})`; log("offline", "pacote_ausente", { status: r.status }); return null; }
         const buf = await r.arrayBuffer();
         if (buf.byteLength !== info.bytes || (await sha256Hex(buf)) !== info.sha256) {
           console.warn("[mapa offline] pacote com tamanho/hash diferente do declarado; ignorado");
+          packStatus.ok = false; packStatus.reason = "pacote corrompido (tamanho/SHA-256 diferente do declarado)"; log("offline", "pacote_corrompido");
           return null; // pacote corrompido: não usar
         }
         if (!protocolReady) {
@@ -76,9 +80,12 @@ export function loadOfflineStyle(): Promise<{ style: any; info: PackInfo } | nul
           protocolReady = true;
         }
         ((loadOfflineStyle as any).protocol as Protocol).add(new PMTiles(new BufferSource(buf, packKey(info))));
+        packStatus.ok = true; packStatus.reason = "íntegro"; packStatus.info = info;
+        log("offline", "pacote_ok", { tiles: info.tiles });
         return { style: buildStyle(info), info };
       } catch (e) {
         console.warn("[mapa offline] pacote indisponível:", e);
+        packStatus.ok = false; packStatus.reason = `pacote indisponível: ${(e as Error).message}`;
         return null;
       }
     })();
