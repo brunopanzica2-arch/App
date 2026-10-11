@@ -137,8 +137,8 @@ await waitHome(() => document.querySelector("[data-testid=map-home]")?.dataset.p
 await page.waitForTimeout(2500);
 await shot("07_navegacao");
 h = await home();
-const cam = async () => (await page.evaluate(() => document.querySelector("[data-map-state]")?.dataset.cam ?? "")).split(",").map(Number);
-await page.waitForFunction(() => Number((document.querySelector("[data-map-state]")?.dataset.cam ?? "0,0,0").split(",")[1]) > 40, null, { timeout: 20000 }).catch(() => {});
+const cam = async () => (await page.evaluate(() => document.querySelector("[role=application]")?.parentElement?.dataset.cam ?? "")).split(",").map(Number);
+await page.waitForFunction(() => Number((document.querySelector("[role=application]")?.parentElement?.dataset.cam ?? "0,0,0").split(",")[1]) > 40, null, { timeout: 20000 }).catch(() => {});
 const [z3, p3] = await cam();
 pass("estado D: navegando (câmera 3D por padrão, rota ligada)", h.phase === "navigating" && h.follow === "3d" && h.route === "on", `fase=${h.phase} câmera=${h.follow}`);
 pass("navegação imersiva: câmera REALMENTE inclinada e aproximada", p3 >= 45 && z3 >= 17.5, `zoom=${z3} pitch=${p3}°`);

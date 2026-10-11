@@ -1,6 +1,6 @@
 {
   "ambiente": "Chromium (NÃO Android)",
-  "data": "2026-10-11T02:24:09.872Z",
+  "data": "2026-10-11T02:25:42.845Z",
   "results": {
     "P0.1 mapa real na home sem cartas": {
       "ok": true,
@@ -34,9 +34,13 @@
       "ok": true,
       "detail": "fase=navigating câmera=3d"
     },
-    "alternar 2D/3D": {
-      "ok": true,
-      "detail": "câmera=2d"
+    "navegação imersiva: câmera REALMENTE inclinada e aproximada": {
+      "ok": false,
+      "detail": "zoom=0 pitch=undefined°"
+    },
+    "alternar 2D/3D (pitch volta a 0 no 2D)": {
+      "ok": false,
+      "detail": "câmera=2d pitch=undefined°"
     },
     "recompensa pós-entrega (curta, com restantes e XP)": {
       "ok": true,
@@ -52,7 +56,7 @@
     },
     "conclusão: resumo e saída clara": {
       "ok": true,
-      "detail": "Rota concluída! | Excelente trabalho. Todas as entregas desta rota foram tratadas. | 4 | entregues | 2 | melhor seq. | Nv 1 | 40 XP | 0 min | tempo ativo | 5 ca"
+      "detail": "Rota concluída! | Excelente trabalho. Todas as entregas desta rota foram tratadas. | 3 | entregues | 1 | melhor seq. | Nv 1 | 30 XP | 0 min | tempo ativo | 6 ca"
     },
     "mapa continua renderizado após concluir": {
       "ok": true,
@@ -84,7 +88,7 @@
     },
     "regressão visual (pixelmatch, <2% de pixels diferentes)": {
       "ok": true,
-      "detail": "{\"01_home_sem_entregas\":\"0.00%\",\"03_importacao_texto_livre\":\"0.00%\",\"10_rota_concluida\":\"baseline criada\"}"
+      "detail": "{\"01_home_sem_entregas\":\"0.00%\",\"03_importacao_texto_livre\":\"0.00%\",\"10_rota_concluida\":\"0.11%\"}"
     },
     "axe sem violações (A/AA)": {
       "ok": true,
