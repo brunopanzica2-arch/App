@@ -157,7 +157,8 @@ export function useNavigation(onRerouted?: (r: Route) => void) {
   const locate = useCallback(async (opts: { ask?: boolean } = {}) => {
     const perms = await nav.permissions();
     let loc = perms.location;
-    if (loc !== "granted") {
+    // navegador: o próprio prompt do browser aparece ao iniciar; só o Android tem estado de permissão confiável para o fluxo abaixo
+    if (loc !== "granted" && nav.isNative()) {
       const asked = (() => { try { return localStorage.getItem(ASKED_KEY) === "1"; } catch { return false; } })();
       if (loc === "denied" || (asked && !opts.ask)) { setUi((u) => ({ ...u, gps: loc === "denied" ? "denied" : "needs_permission", gpsMsg: "" })); log("gps", "sem_permissao", { loc }); return; }
       if (!opts.ask && !nav.isNative() && loc === "prompt") { /* navegador: o próprio prompt aparece ao iniciar */ }
