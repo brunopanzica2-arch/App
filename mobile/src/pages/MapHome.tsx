@@ -365,35 +365,6 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
                 </div>
                 {detail && <Details stop={cur} onMark={(l, s) => mark([l], s)} nav={nav} batchId={batchId!} reload={reload} />}
               </>
-            ) : (
-              <Alert kind="ok">Todas as paradas desta rota foram tratadas. {pendingLetters > 0 ? `${pendingLetters} carta(s) pendente(s) fora da rota.` : "Bom trabalho!"}</Alert>
-            )}
-            {cur ? (
-              <>
-                <div>
-                  <div className="text-xs font-semibold uppercase text-next">{current && current.rs.key === next?.rs.key ? "Próxima parada" : "Parada selecionada"} · {current!.rs.seq} de {items.length}</div>
-                  <div className="text-2xl font-extrabold leading-tight" data-testid="cur-addr">{curAddr}</div>
-                  <div className="flex flex-wrap items-center gap-1 text-sm muted">
-                    {cur.address.neighborhood ?? ""} · {curLetters.length} carta(s)
-                    {navigating && st && st.stopKey === current!.rs.key && st.stopDist >= 0 && <b> · a {fmtDist(st.stopDist)}</b>}
-                  </div>
-                  {sheetMode !== "compact" && <div className="mt-1 flex flex-wrap gap-1"><Badge color={cur.trust.approximate ? "#b45309" : "#16a34a"}>{cur.trust.label}</Badge></div>}
-                  {note && <p className="mt-1 text-sm text-amber-700" role="note">{note}</p>}
-                </div>
-                {navigating && ui.nearStopKey === current!.rs.key && ui.nearStopText && (
-                  <Alert kind="ok">{ui.nearStopText}</Alert>
-                )}
-                <div className={cn("grid gap-2", sheetMode === "compact" ? "grid-cols-3" : "grid-cols-2")}>
-                  <Button variant="success" size="lg" className="h-16 whitespace-normal px-2 text-base leading-tight" disabled={!curLetters.length}
-                    onClick={() => curLetters.length > 1 ? setConfirmDeliver(current!.rs.key) : mark(curLetters, "delivered")}>
-                    {curLetters.length > 1 ? `Entregar todas (${curLetters.length})` : "Entregue"}
-                  </Button>
-                  <Button variant="danger" size="lg" className="h-16 whitespace-normal px-2 text-base leading-tight" disabled={!curLetters.length} onClick={() => setReasonOpen(true)}>Não consegui</Button>
-                  <Button variant="secondary" size="lg" className={cn("whitespace-normal px-2 text-base", sheetMode === "compact" ? "h-16" : "h-14")} disabled={!curLetters.length} onClick={() => mark(curLetters, "postponed")}><SkipForward className="h-5 w-5" /> Pular</Button>
-                  {sheetMode !== "compact" && <Button variant="secondary" size="lg" className="h-14 whitespace-normal" onClick={() => setDetail(!detail)}><Info className="h-5 w-5" /> Detalhes</Button>}
-                </div>
-                {detail && <Details stop={cur} onMark={(l, s) => mark([l], s)} nav={nav} batchId={batchId!} reload={reload} />}
-              </>
             ) : null}
             <div className="grid grid-cols-2 gap-2">
               {!navigating ? (

@@ -1,0 +1,119 @@
+{
+  "ambiente": "Chromium (NÃO Android)",
+  "data": "2026-10-11T02:17:46.965Z",
+  "results": {
+    "P0.1 mapa real na home sem cartas": {
+      "ok": true,
+      "detail": "estado=operational variância=15.1"
+    },
+    "P0.3 GPS automático (sem ponto manual)": {
+      "ok": true,
+      "detail": "gps=ok fix=-23.93720,-46.33180"
+    },
+    "UX home vazia: CTA Importar": {
+      "ok": true,
+      "detail": "botão visível"
+    },
+    "IMP texto livre: rua e número reconhecidos sem separador": {
+      "ok": true,
+      "detail": "9 linhas; prévia contém todos os números"
+    },
+    "IMP 3 cartas no mesmo imóvel preservadas": {
+      "ok": true,
+      "detail": "Inseridas: 9 · com erro: 0 · duplicadas: 0"
+    },
+    "estado B: entregas sem rota (sem rota no mapa, CTA Calcular)": {
+      "ok": true,
+      "detail": "fase=unplanned rota=off"
+    },
+    "estado C: rota calculada visível + Iniciar navegação": {
+      "ok": true,
+      "detail": "fase=planned rota=on"
+    },
+    "estado D: navegando (câmera 3D por padrão, rota ligada)": {
+      "ok": true,
+      "detail": "fase=navigating câmera=3d"
+    },
+    "alternar 2D/3D": {
+      "ok": true,
+      "detail": "câmera=2d"
+    },
+    "recompensa pós-entrega (curta, com restantes e XP)": {
+      "ok": true,
+      "detail": "Boa! Mais uma parada resolvida. | Restam 6 cartas · Parada 1 de 7 | +30 XP | Desfazer | Fechar"
+    },
+    "P0 rota some do mapa ao concluir": {
+      "ok": true,
+      "detail": "fase=completed rota=off nav=off"
+    },
+    "P0 sem 'Iniciar navegação' após concluir": {
+      "ok": true,
+      "detail": "botões 'Iniciar navegação'=0"
+    },
+    "conclusão: resumo e saída clara": {
+      "ok": true,
+      "detail": "Rota concluída! | Excelente trabalho. Todas as entregas desta rota foram tratadas. | 9 | entregues | 7 | melhor seq. | Nv 2 | 115 XP | 0 min | tempo ativo | Enc"
+    },
+    "mapa continua renderizado após concluir": {
+      "ok": true,
+      "detail": "estado=operational"
+    },
+    "após limpar: nenhum overlay e nenhuma rota ativa": {
+      "ok": true,
+      "detail": "fase=completed"
+    },
+    "P0 rota some do mapa ao ENCERRAR": {
+      "ok": true,
+      "detail": "fase=ended rota=off nav=off câmera=off"
+    },
+    "P0 encerrado: sem 'Iniciar navegação', com 'Retomar rota'": {
+      "ok": true,
+      "detail": "ok"
+    },
+    "retomar após encerrar volta a desenhar a rota": {
+      "ok": true,
+      "detail": "fase=navigating"
+    },
+    "reabrir: estado coerente (rota planejada com 'Retomar')": {
+      "ok": true,
+      "detail": "fase=planned"
+    },
+    "ajustes: 3 origens distintas": {
+      "ok": true,
+      "detail": "De onde a rota começa | Usar minha localização atual | Padrão. O GPS do aparelho é a origem da rota. | Usar o ponto de partida manual | não definido | Usar a última posição conhecida | -23.93720, -46."
+    },
+    "regressão visual (pixelmatch, <2% de pixels diferentes)": {
+      "ok": true,
+      "detail": "{\"01_home_sem_entregas\":\"baseline criada\",\"03_importacao_texto_livre\":\"baseline criada\",\"10_rota_concluida\":\"baseline criada\"}"
+    },
+    "axe sem violações (A/AA)": {
+      "ok": false,
+      "detail": "[{\"n\":\"Mapa\",\"v\":[]},{\"n\":\"Entregas\",\"v\":[\"color-contrast(6)\"]},{\"n\":\"Ajustes\",\"v\":[\"color-contrast(1)\"]},{\"n\":\"Importar\",\"v\":[]}]"
+    },
+    "Nominatim não consultado no teste": {
+      "ok": false,
+      "detail": "7 requisições"
+    },
+    "sem erros de página": {
+      "ok": true,
+      "detail": "nenhum"
+    }
+  },
+  "screenshots": [
+    "01_home_sem_entregas",
+    "02_importacao_vazia",
+    "03_importacao_texto_livre",
+    "04_revisao_enderecos",
+    "05_home_com_entregas_sem_rota",
+    "06_home_rota_calculada",
+    "07_navegacao",
+    "08_navegacao_2d",
+    "09_apos_uma_entrega_recompensa",
+    "10_rota_concluida",
+    "11_apos_limpar",
+    "12_apos_encerrar",
+    "13_retomada",
+    "14_reabrir_app",
+    "15_ajustes_localizacao"
+  ]
+}

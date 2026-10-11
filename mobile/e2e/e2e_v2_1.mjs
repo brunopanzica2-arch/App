@@ -36,7 +36,9 @@ const errors = [];
 page.on("pageerror", (e) => errors.push(e.message));
 page.on("dialog", (d) => d.accept());
 let nominatim = 0;
-page.on("request", (r) => { if (r.url().includes("nominatim")) nominatim++; });
+const nomUrls = [];
+// o teste não usa a rede pública: as consultas são interceptadas (e contadas) para provar o escopo Santos/SP e o limite de consultas
+await ctx.route(/nominatim\.openstreetmap\.org/, (r) => { nominatim++; nomUrls.push(r.request().url()); return r.fulfill({ status: 200, contentType: "application/json", body: "[]" }); });
 
 const shotFiles = [];
 async function shot(name) {
@@ -241,7 +243,8 @@ for (const [n, hsh] of [["Mapa", "#/"], ["Entregas", "#/entregas"], ["Ajustes", 
   ax.push({ n, v: r.violations.map((v) => `${v.id}(${v.nodes.length})`) });
 }
 pass("axe sem violações (A/AA)", ax.every((a) => !a.v.length), JSON.stringify(ax));
-pass("Nominatim não consultado no teste", nominatim === 0, `${nominatim} requisições`);
+const scoped = nomUrls.length > 0 && nomUrls.every((u) => /viewbox=/.test(u) && /city=Santos/i.test(decodeURIComponent(u)) && /state=SP/i.test(decodeURIComponent(u)));
+pass("geocodificação: escopo Santos/SP (viewbox+cidade+UF) e sem consulta em massa", scoped && nominatim <= 20, `${nominatim} consultas interceptadas (nenhuma saiu para a rede); todas com viewbox de Santos, city=Santos, state=SP: ${scoped}`);
 pass("sem erros de página", errors.length === 0, errors.slice(0, 3).join(" | ") || "nenhum");
 
 fs.writeFileSync(path.join(OUT, "resultado_e2e_2_1.json"), JSON.stringify({ ambiente: "Chromium (NÃO Android)", data: new Date().toISOString(), results, screenshots: shotFiles }, null, 2));

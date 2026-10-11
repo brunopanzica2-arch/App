@@ -12,7 +12,7 @@
   --color-problem: #dc2626;
   --color-postponed: #6b7280;
 }
-:root { --bg: #f6f7fb; --fg: #0f172a; --card: #ffffff; --muted: #64748b; --border: #e2e8f0; }
+:root { --bg: #f6f7fb; --fg: #0f172a; --card: #ffffff; --muted: #566275; --border: #e2e8f0; }
 .dark { --bg: #0b1020; --fg: #f8fafc; --card: #12192b; --muted: #94a3b8; --border: #25324a; }
 html, body { background: var(--bg); color: var(--fg); }
 body { font-size: 17px; -webkit-tap-highlight-color: transparent; padding-top: env(safe-area-inset-top); }
