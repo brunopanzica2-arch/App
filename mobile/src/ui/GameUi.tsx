@@ -37,7 +37,7 @@ export function CompletionCard({ stats, outside, hasRoute, onClear, onHistory, o
       <div className="flex items-center gap-3">
         <span className="grid h-12 w-12 place-items-center rounded-full bg-violet-100 text-violet-700"><PartyPopper className="h-7 w-7" aria-hidden /></span>
         <div>
-          <div className="text-xl font-extrabold leading-tight">Rota concluída!</div>
+          <div className="text-xl font-extrabold leading-tight">{hasRoute ? "Rota concluída!" : "Lote concluído!"}</div>
           <div className="text-sm muted">Excelente trabalho. Todas as entregas desta rota foram tratadas.</div>
         </div>
       </div>
@@ -54,9 +54,11 @@ export function CompletionCard({ stats, outside, hasRoute, onClear, onHistory, o
         </div>
       )}
       <div className="grid grid-cols-2 gap-2">
-        <Button size="lg" className="col-span-2" onClick={onClear}>{hasRoute ? "Encerrar e limpar o mapa" : "Voltar ao mapa"}</Button>
-        <Button variant="secondary" onClick={onHistory}><History className="h-5 w-5" /> Histórico</Button>
-        <Button variant="secondary" onClick={onImport}><Upload className="h-5 w-5" /> Novo lote</Button>
+        {hasRoute
+          ? <Button size="lg" className="col-span-2" onClick={onClear}>Encerrar e limpar o mapa</Button>
+          : <Button size="lg" className="col-span-2" onClick={onImport}><Upload className="h-5 w-5" /> Importar novo lote</Button>}
+        <Button variant="secondary" className={hasRoute ? "" : "col-span-2"} onClick={onHistory}><History className="h-5 w-5" /> Histórico</Button>
+        {hasRoute && <Button variant="secondary" onClick={onImport}><Upload className="h-5 w-5" /> Novo lote</Button>}
       </div>
     </div>
   );

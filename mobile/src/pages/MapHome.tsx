@@ -245,7 +245,7 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
 
   return (
     <div className="fixed inset-x-0 top-0 z-0" style={{ bottom: "calc(3.5rem + env(safe-area-inset-bottom))", paddingTop: "env(safe-area-inset-top)", ["--sheet-h" as any]: `${sheetH}px` }} data-testid="map-home"
-      data-map-state={mapState} data-gps-state={ui.gps} data-nav={navigating ? "on" : "off"} data-phase={view.phase} data-route={view.showRoute ? "on" : "off"} data-fix={ui.fix ? `${ui.fix.lat.toFixed(5)},${ui.fix.lon.toFixed(5)}` : ""}>
+      data-map-state={mapState} data-gps-state={ui.gps} data-nav={navigating ? "on" : "off"} data-phase={view.phase} data-follow={follow} data-route={view.showRoute ? "on" : "off"} data-fix={ui.fix ? `${ui.fix.lat.toFixed(5)},${ui.fix.lon.toFixed(5)}` : ""}>
       <RouteMap className="absolute inset-0 h-full w-full" stops={mapStops} route={view.showRoute ? route?.geojson : null} start={view.showRoute ? route?.start : null} fix={ui.fix} lastKnown={ui.fix ? null : lastFix} follow={view.navUi || !navigating ? follow : "off"}
         ahead={view.navUi ? ui.ahead : null} immersive={view.navUi} speed={ui.fix?.speed ?? -1} turnDist={ui.state?.nextDist ?? -1} onUserMove={onUserMove} bottomPad={sheetH + 16} onBaseMap={setBaseMap} onMapState={(st) => setMapState(st)}
         onStopClick={(k) => { setSel(k); setFollow("off"); }} focus={sel && selectedPoint && follow === "off" ? selectedPoint : null} />

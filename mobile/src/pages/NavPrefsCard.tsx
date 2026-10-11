@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { DEFAULT_NAV, type NavPrefs } from "../core/db";
-import { getNavPrefs, saveSettings } from "../core/service";
+import { getNavPrefs, getSettings, saveSettings } from "../core/service";
 import { nav } from "../native/rotaNav";
 import { loadOfflineStyle, packStatus } from "../ui/offlineMap";
 import { Button } from "../ui/button";
@@ -25,6 +25,7 @@ export function NavPrefsCard() {
       <Chk k="detailed" label="Instruções detalhadas" hint="Desligado: só avisa a curva próxima e a chegada." />
       <Chk k="preciseGps" label="GPS de alta precisão (1 s)" hint="Desligado = economia de bateria (3 s / 3 m)." />
       <Chk k="camera3d" label="Câmera 3D ao navegar" />
+      <Chk k="sound" label="Som curto ao concluir entrega" hint="Opcional. Desligado por padrão." />
       <Chk k="lockscreenManeuver" label="Mostrar a instrução na tela de bloqueio" hint="Padrão: só “Navegação ativa”. Ligado, a notificação mostra rua e número na tela bloqueada." />
       <Chk k="showWhenLocked" label="Abrir o mapa sobre a tela de bloqueio" hint="Só quando você toca em “Abrir mapa” na notificação." />
       <div className="grid grid-cols-2 gap-2 text-sm">
@@ -34,6 +35,38 @@ export function NavPrefsCard() {
       <Button variant="secondary" onClick={() => nav.speak("Em cinquenta metros, vire à direita na Rua Itororó.")}>Testar voz</Button>
       <Alert kind={packStatus.ok === false ? "warn" : "info"}><b>Mapa offline:</b> {pack}</Alert>
       <Alert kind="info">Localização: {info || "…"}. O app usa a localização só enquanto navega (serviço em primeiro plano com notificação). Não pede “localização o tempo todo”.</Alert>
+    </Card>
+  );
+}
+
+/** Origem do cálculo da rota: três opções explícitas, nunca misturadas. */
+export function LocationModeCard() {
+  const [mode, setMode] = useState<"current" | "manual" | "last">("current");
+  const [info, setInfo] = useState<{ manual: string; last: string }>({ manual: "não definido", last: "ainda não houve GPS" });
+  useEffect(() => {
+    void getSettings().then((s) => {
+      setMode(s.startMode ?? "current");
+      setInfo({
+        manual: s.start?.confirmed ? `${s.start.label} (${s.start.lat.toFixed(5)}, ${s.start.lon.toFixed(5)})` : "não definido",
+        last: s.lastFix ? `${s.lastFix.lat.toFixed(5)}, ${s.lastFix.lon.toFixed(5)} · ${new Date(s.lastFix.at).toLocaleString("pt-BR")}` : "ainda não houve GPS",
+      });
+    });
+  }, []);
+  const opts: ["current" | "manual" | "last", string, string][] = [
+    ["current", "Usar minha localização atual", "Padrão. O GPS do aparelho é a origem da rota."],
+    ["manual", "Usar o ponto de partida manual", info.manual],
+    ["last", "Usar a última posição conhecida", info.last],
+  ];
+  return (
+    <Card className="space-y-2" data-testid="location-mode">
+      <div className="font-semibold">De onde a rota começa</div>
+      {opts.map(([k, l, h]) => (
+        <label key={k} className="flex items-start gap-3 py-1">
+          <input type="radio" name="startMode" className="mt-1 h-5 w-5" checked={mode === k} onChange={async () => { setMode(k); await saveSettings({ startMode: k }); }} />
+          <span><span className="block">{l}</span><span className="block text-xs muted">{h}</span></span>
+        </label>
+      ))}
+      <p className="text-xs muted">O ponto manual é só uma opção secundária: ele nunca aparece como “você está aqui”.</p>
     </Card>
   );
 }

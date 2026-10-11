@@ -506,17 +506,21 @@ export async function rerouteFrom(route: Route, pos: { lat: number; lon: number 
 /** Planejamento de um toque com os padrões (rota aberta, global). Origem: ponto confirmado, senão a posição atual. */
 export async function quickPlan(batchId: string, here: { lat: number; lon: number } | null, onProgress?: (stage: string, p: number) => void): Promise<Route> {
   const s = await getSettings();
-  // GPS atual (fix recente) tem prioridade; o ponto manual de Ajustes é só plano B e nunca é tratado como posição atual
-  const start = here ? { label: "Localização atual", lat: here.lat, lon: here.lon } : s.start?.confirmed ? s.start : null;
-  if (!start) throw new Error("Defina o ponto de partida em Ajustes ou ative a localização para calcular a rota.");
+  // Origem do cálculo (Ajustes › Localização): posição atual (padrão), ponto manual ou última posição. Cada uma tem rótulo próprio.
+  const mode = s.startMode ?? "current";
+  const manual = s.start?.confirmed ? s.start : null;
+  const last = s.lastFix ? { label: "Última posição conhecida", lat: s.lastFix.lat, lon: s.lastFix.lon } : null;
+  const cur = here ? { label: "Localização atual", lat: here.lat, lon: here.lon } : null;
+  const start = mode === "manual" ? (manual ?? cur ?? last) : mode === "last" ? (last ?? cur ?? manual) : (cur ?? manual ?? last);
+  if (!start) throw new Error("Não consegui uma origem: ative a localização ou defina o ponto de partida em Ajustes.");
   const o = (st: { label: string; lat: number; lon: number }) => ({ mode: (s.routeMode === "circular" ? "circular" : "open") as any, strategy: "global" as const, start: st, timeLimitMs: 8000, reason: "plan" });
   let r: Route;
   try {
     r = await planBatch(batchId, o(start), onProgress);
   } catch (e) {
     // GPS fora da malha de pedestres de Santos: cai para o ponto manual confirmado (e avisa pelo rótulo da origem)
-    if (!here || !s.start?.confirmed || !/fora da malha|Ponto de partida/i.test((e as Error).message)) throw e;
-    r = await planBatch(batchId, o(s.start), onProgress);
+    if (!manual || start === manual || !/fora da malha|Ponto de partida/i.test((e as Error).message)) throw e;
+    r = await planBatch(batchId, o(manual), onProgress);
   }
   await activateRoute(r);
   return r;
