@@ -5,6 +5,7 @@
  * - NUNCA envia nome do destinatário nem complemento;
  * - precisão explícita: exato / interpolado / aproximado na rua / bairro / não localizado.
  */
+import { pickBest, SANTOS_VIEWBOX } from "./rank";
 import { confirmPin } from "./address";
 import { CapacitorHttp, Capacitor } from "@capacitor/core";
 import { type Address, type Candidate, db } from "./db";
@@ -19,6 +20,10 @@ export function setDailyQuota(n: number) { dailyQuota = n; }
 export class QuotaError extends Error {}
 
 /** Configura o provedor. Vazio/indefinido = Nominatim público. */
+/** Posição atual do aparelho (se houver): desempata homônimos dentro de Santos. Nunca é enviada ao provedor. */
+let userBias: { lat: number; lon: number } | null = null;
+export function setUserBias(p: { lat: number; lon: number } | null) { userBias = p; }
+
 export function setProvider(c?: GeoProviderCfg | null) { cfg = c && c.baseUrl ? c : { baseUrl: PUBLIC_URL }; }
 export function providerId(): string { try { return new URL(cfg.baseUrl).host; } catch { return cfg.baseUrl; } }
 /** Nominatim público: política de uso proíbe lote/volume. Só consultas pontuais + cota diária. */
@@ -94,7 +99,7 @@ export async function search(q: Record<string, string>, email = ""): Promise<Can
   const key = providerId() + "|" + JSON.stringify(q);
   const cached = await db.geocache.get(key);
   if (cached) return cached.result;
-  const params: Record<string, string> = { ...q, format: "jsonv2", addressdetails: "1", limit: "5", countrycodes: "br", "accept-language": "pt-BR" };
+  const params: Record<string, string> = { ...q, format: "jsonv2", addressdetails: "1", limit: "8", countrycodes: "br", "accept-language": "pt-BR", viewbox: SANTOS_VIEWBOX, bounded: "0" };
   if (email) params.email = email;
   let err: unknown;
   for (let attempt = 0, delay = 1000; attempt < 3; attempt++, delay *= 2) {
@@ -151,22 +156,23 @@ export async function resolve(na: NormalizedAddress, email = "", force = false):
     await db.addresses.put(base);
     return base;
   }
-  const cityOk = cands.filter((c) => !c.city || normText(c.city) === normText(na.city));
-  const pool = cityOk.length ? cityOk : cands;
+  const pick = pickBest(cands, { city: na.city, neighborhood: na.neighborhood, cep: na.cep, user: userBias })!;
+  const best = pick.best.c;
   const good = (c: Candidate) => ["exact", "interpolated"].includes(c.precision);
-  const best = pool.reduce((a, b) => ((+good(b) > +good(a) || (good(b) === good(a) && b.confidence > a.confidence)) ? b : a));
   const reasons: string[] = [];
   let conf = best.confidence;
-  if (!cityOk.length) { reasons.push("Resultado fora do município informado."); conf *= 0.3; }
+  const cityOk = !best.city || normText(best.city) === normText(na.city);
+  if (!cityOk) { reasons.push("Resultado fora do município informado."); conf *= 0.3; }
   if (!sameRoad(best, na)) { reasons.push(`Logradouro retornado ('${best.road ?? "?"}') difere do informado.`); conf *= 0.5; }
-  const distinct = new Set(pool.filter(good).map((c) => `${c.lat.toFixed(3)},${c.lon.toFixed(3)}`));
-  if (distinct.size > 1) { reasons.push(`${distinct.size} candidatos distintos (endereço ambíguo).`); conf *= 0.6; }
+  if (pick.ambiguous) { reasons.push(pick.reason!); conf *= 0.6; }
   if (best.precision === "street") reasons.push("Número não localizado: ponto aproximado na rua.");
   if (best.precision === "neighborhood") reasons.push("Somente o bairro foi localizado.");
   if (na.cep && best.postcode && best.postcode.replace("-", "") !== na.cep.replace("-", "")) {
     reasons.push(`CEP retornado (${best.postcode}) difere do informado.`);
     conf *= 0.8;
   }
+  base.candidates = pick.ranked.slice(0, 5).map((r) => r.c); // ordenadas por pontuação (a alternativa vem logo depois da melhor)
+  base.source = `${providerId()}|escopo-santos${userBias ? "|proximidade" : ""}${pick.best.why.length ? " · " + pick.best.why.join(", ") : ""}`.slice(0, 200);
   const addr: Address = {
     ...base, lat: best.lat, lon: best.lon, precision: best.precision, confidence: Math.round(conf * 1000) / 1000,
     needsReview: reasons.length > 0 || !good(best), reason: reasons.join(" ") || null,

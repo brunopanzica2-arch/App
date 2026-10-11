@@ -78,6 +78,12 @@ type Props = {
   fix?: { lat: number; lon: number; accuracy?: number; bearing?: number } | null;
   /** câmera: off = livre; "2d" = segue a posição; "3d" = segue com inclinação e rumo */
   follow?: "off" | "2d" | "3d";
+  /** última posição conhecida (cinza), usada só quando não há fix atual */
+  lastKnown?: { lat: number; lon: number } | null;
+  /** navegação imersiva: câmera inclinada, usuário no terço inferior, zoom dinâmico por velocidade e proximidade da manobra */
+  immersive?: boolean;
+  speed?: number;
+  turnDist?: number;
   /** trecho restante da rota [lon,lat][] (linha roxa viva) */
   ahead?: [number, number][] | null;
   /** o usuário arrastou/zoomou o mapa: desliga o seguimento */
@@ -93,7 +99,7 @@ type Props = {
 
 export type MapState = "init" | "loading" | "style" | "rendered" | "operational" | "error";
 
-export default function RouteMap({ stops = [], route, start, candidates = [], pin, onPinMove, onStopClick, me, fix, follow = "off", ahead, onUserMove, bottomPad = 0, focus, className, onBaseMap, onMapState }: Props) {
+export default function RouteMap({ stops = [], route, start, candidates = [], pin, onPinMove, onStopClick, me, fix, lastKnown, follow = "off", immersive = false, speed = -1, turnDist = -1, ahead, onUserMove, bottomPad = 0, focus, className, onBaseMap, onMapState }: Props) {
   const [mapState, setMapState] = useState<MapState>("init");
   const [mapErr, setMapErr] = useState<string | null>(null);
   const [retry, setRetry] = useState(0);
@@ -116,6 +122,10 @@ export default function RouteMap({ stops = [], route, start, candidates = [], pi
   followRef.current = follow;
   const aheadRef = useRef(ahead);
   aheadRef.current = ahead;
+  const lastKnownRef = useRef(lastKnown);
+  lastKnownRef.current = lastKnown;
+  const camRef = useRef({ immersive, speed, turnDist });
+  camRef.current = { immersive, speed, turnDist };
   const fixRef = useRef(fix ?? (me ? { ...me } : null));
   fixRef.current = fix ?? (me ? { ...me } : null);
 
@@ -123,7 +133,8 @@ export default function RouteMap({ stops = [], route, start, candidates = [], pi
     const m = map.current;
     if (!m || !ready.current) return;
     const f = fixRef.current;
-    (m.getSource("me") as GeoJSONSource | undefined)?.setData({ type: "FeatureCollection", features: f ? meFeatures(f) : [] });
+    const lk = lastKnownRef.current;
+    (m.getSource("me") as GeoJSONSource | undefined)?.setData({ type: "FeatureCollection", features: f ? meFeatures(f) : lk ? [{ type: "Feature", properties: { k: "last" }, geometry: { type: "Point", coordinates: [lk.lon, lk.lat] } }] : [] });
     (m.getSource("ahead") as GeoJSONSource | undefined)?.setData(aheadRef.current && aheadRef.current.length > 1
       ? { type: "FeatureCollection", features: [{ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: aheadRef.current } }] }
       : { type: "FeatureCollection", features: [] });
@@ -222,7 +233,10 @@ export default function RouteMap({ stops = [], route, start, candidates = [], pi
         paint: { "text-color": ["case", ["==", ["get", "color"], COLORS.pending], COLORS.route, ["==", ["get", "color"], COLORS.uncertain], "#111827", "#ffffff"] },
       });
       m.addLayer({ id: "me-acc", type: "fill", source: "me", filter: ["==", ["get", "k"], "acc"], paint: { "fill-color": "#2563eb", "fill-opacity": 0.12 } });
-      m.addLayer({ id: "me-dot", type: "circle", source: "me", filter: ["==", ["get", "k"], "dot"], paint: { "circle-radius": 8, "circle-color": "#2563eb", "circle-stroke-color": "#ffffff", "circle-stroke-width": 3 } });
+      m.addLayer({ id: "me-halo", type: "circle", source: "me", filter: ["==", ["get", "k"], "dot"], paint: { "circle-radius": 20, "circle-color": "#7c3aed", "circle-opacity": 0.22, "circle-blur": 0.6 } });
+      m.addLayer({ id: "me-dot", type: "circle", source: "me", filter: ["==", ["get", "k"], "dot"], paint: { "circle-radius": 10, "circle-color": "#7c3aed", "circle-stroke-color": "#ffffff", "circle-stroke-width": 4 } });
+      m.addLayer({ id: "me-core", type: "circle", source: "me", filter: ["==", ["get", "k"], "dot"], paint: { "circle-radius": 3.5, "circle-color": "#ffffff" } });
+      m.addLayer({ id: "me-last", type: "circle", source: "me", filter: ["==", ["get", "k"], "last"], paint: { "circle-radius": 8, "circle-color": "#94a3b8", "circle-stroke-color": "#ffffff", "circle-stroke-width": 3, "circle-opacity": 0.9 } });
       if (!handlers) {
         handlers = true;
         // gesto do usuário (arrastar/zoom/rotação) desliga o seguimento; movimento programático não tem originalEvent
@@ -307,17 +321,26 @@ export default function RouteMap({ stops = [], route, start, candidates = [], pi
     pushLive();
     const m = map.current, f = fixRef.current;
     if (!m || !ready.current || !f || follow === "off") return;
-    const moving = (f.bearing ?? -1) >= 0;
+    const { immersive: imm, speed: sp, turnDist: td } = camRef.current;
+    const h = m.getContainer().clientHeight || 700;
+    const moving = (f.bearing ?? -1) >= 0 && (sp < 0 || sp > 0.6); // parado: não gira o mapa com ruído de bússola
+    // zoom dinâmico: mais perto quando devagar ou perto da conversão; mais longe quando rápido
+    let zoom = follow === "3d" ? 18.4 : Math.max(m.getZoom(), 17.2);
+    if (follow === "3d") {
+      if (sp > 2.5) zoom -= 0.7; else if (sp > 1.8) zoom -= 0.3;
+      if (td >= 0 && td < 60) zoom += 0.5; else if (td >= 0 && td < 120) zoom += 0.2;
+    }
     m.easeTo({
       center: [f.lon, f.lat],
-      zoom: follow === "3d" ? 18 : Math.max(m.getZoom(), 17),
-      pitch: follow === "3d" ? 60 : 0,
+      zoom,
+      pitch: follow === "3d" ? 62 : 0,
       bearing: follow === "3d" && moving ? f.bearing! : follow === "3d" ? m.getBearing() : 0,
-      padding: { top: follow === "3d" ? 140 : 0, bottom: bottomPad, left: 0, right: 0 },
-      duration: 900, essential: true,
+      // personagem no terço inferior: a câmera enxerga mais da rua à frente
+      padding: { top: follow === "3d" ? Math.round(h * (imm ? 0.42 : 0.3)) : 0, bottom: bottomPad, left: 0, right: 0 },
+      duration: 1000, easing: (t) => t, essential: true,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fix, me, ahead, follow, bottomPad]);
+  }, [fix, me, ahead, follow, bottomPad, lastKnown]);
 
   useEffect(() => {
     const m = map.current;

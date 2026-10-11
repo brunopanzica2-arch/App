@@ -12,8 +12,8 @@
   --color-problem: #dc2626;
   --color-postponed: #6b7280;
 }
-:root { --bg: #f8fafc; --fg: #0f172a; --card: #ffffff; --muted: #64748b; --border: #e2e8f0; }
-.dark { --bg: #0b0b12; --fg: #f1f5f9; --card: #151521; --muted: #94a3b8; --border: #2a2a3a; }
+:root { --bg: #f6f7fb; --fg: #0f172a; --card: #ffffff; --muted: #64748b; --border: #e2e8f0; }
+.dark { --bg: #0b1020; --fg: #f8fafc; --card: #12192b; --muted: #94a3b8; --border: #25324a; }
 html, body { background: var(--bg); color: var(--fg); }
 body { font-size: 17px; -webkit-tap-highlight-color: transparent; padding-top: env(safe-area-inset-top); }
 .card { background: var(--card); border: 1px solid var(--border); border-radius: 1rem; }
@@ -39,3 +39,9 @@ body { font-size: 17px; -webkit-tap-highlight-color: transparent; padding-top: e
 /* controles/atribuição do mapa ficam acima do painel inferior */
 .maplibregl-ctrl-bottom-right, .maplibregl-ctrl-bottom-left { bottom: var(--sheet-h, 0px); }
 .maplibregl-ctrl-attrib.maplibregl-compact { margin-bottom: 4px; }
+
+/* recompensa/feedback (UI Pack 2.1): animação curta, desativada com prefers-reduced-motion */
+@keyframes rewardIn { 0% { transform: translateY(-14px) scale(.96); opacity: 0; } 60% { transform: translateY(2px) scale(1.01); opacity: 1; } 100% { transform: none; opacity: 1; } }
+.reward-in { animation: rewardIn .32s cubic-bezier(.2,.9,.3,1.2); }
+@keyframes pulseOnce { 0% { box-shadow: 0 0 0 0 rgba(124,58,237,.55); } 100% { box-shadow: 0 0 0 16px rgba(124,58,237,0); } }
+.pulse-once { animation: pulseOnce .6s ease-out 1; }

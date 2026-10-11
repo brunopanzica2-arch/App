@@ -4,14 +4,18 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Nav } from "../App";
 import { routePoint } from "../core/address";
-import { db, type Letter, type Route } from "../core/db";
+import { type DayStats, db, type Letter, type Route } from "../core/db";
+import { setUserBias } from "../core/geocode";
 import { hudText, precisionNote } from "../core/hud";
-import { getNavPrefs, quickPlan, recordEvent, resumableSession, saveSettings, type StopView, stopsOf, TERMINAL, undoLastEvent } from "../core/service";
+import { getDayStats, recordOutcome, type Reward, revertOutcome, chime } from "../core/progress";
+import { deriveView, endSession, finishRoute, resumeSession } from "../core/session";
+import { getNavPrefs, getSettings, quickPlan, recordEvent, resumableSession, saveSettings, type StopView, stopsOf, TERMINAL, undoLastEvent } from "../core/service";
 import { nav as navApi, parseVoiceCommand } from "../native/rotaNav";
 import { Button } from "../ui/button";
 import { useCurrentBatch } from "../ui/hooks";
 import { Alert, Badge, Spinner } from "../ui/misc";
 import RouteMap, { type MapState } from "../ui/RouteMap";
+import { CompletionCard, EndedCard, RewardToast } from "../ui/GameUi";
 import { useNavigation } from "../ui/useNavigation";
 import { cn, fmtDist, fmtTime, REASON_LABEL } from "../ui/utils";
 
@@ -40,13 +44,26 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
   const [sheetH, setSheetH] = useState(180);
   const sheetRef = useRef<HTMLElement>(null);
   const centered = useRef(false);
+  const [endedId, setEndedId] = useState<string | null>(null);
+  const [stats, setStats] = useState<DayStats | null>(null);
+  const [lastFix, setLastFix] = useState<{ lat: number; lon: number } | null>(null);
+  const [reward, setReward] = useState<Reward | null>(null);
+  const lastOutcome = useRef<{ kind: "delivered" | "not_delivered" | "skipped"; letters: number } | null>(null);
+  const rewardTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const returnTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const prevFollow = useRef<Follow>("3d");
 
   const reload = useCallback(async () => {
-    if (!batchId) { setLoaded(true); return; }
+    if (!batchId) { setLoaded(true); setStats(await getDayStats()); return; }
     const d = await stopsOf(batchId);
     const rs = (await db.routes.where("batchId").equals(batchId).toArray()).sort((a, b) => b.version - a.version);
     setData(d);
     setRoute(rs.find((r) => r.status === "active") ?? null);
+    const st = await getSettings();
+    setEndedId(st.endedRouteId ?? null);
+    setLastFix(st.lastFix ? { lat: st.lastFix.lat, lon: st.lastFix.lon } : null);
+    if (st.lastFix) setUserBias({ lat: st.lastFix.lat, lon: st.lastFix.lon });
+    setStats(await getDayStats());
     setLoaded(true);
   }, [batchId]);
   useEffect(() => { void reload(); }, [reload]);
@@ -88,14 +105,40 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
   const doneLetters = (data?.letters ?? []).filter((l) => TERMINAL.includes(l.status)).length;
   const stopsDone = items.filter((x) => !open(x.stop)).length;
 
-  const mapStops = useMemo(() => items.map((x) => ({
-    id: x.rs.key, lat: routePoint(x.stop.address)!.lat, lon: routePoint(x.stop.address)!.lon, seq: x.rs.seq, status: x.stop.status,
-    uncertain: x.stop.uncertain, isNext: x.rs.key === next?.rs.key,
-  })), [items, next]);
+  const openStopsN = items.filter((x) => open(x.stop)).length;
+  const view = deriveView({ letters: data?.letters.filter((l) => !l.excluded).length ?? 0, pendingLetters, routeId: route?.id ?? null, openStops: openStopsN, navActive: navigating, paused: ui.paused, endedRouteId: endedId });
+  const outsideLetters = (data?.letters ?? []).filter((l) => !l.excluded && !TERMINAL.includes(l.status) && (l.status === "postponed" || !l.addressKey || (data?.unlocated ?? []).some((u) => u.id === l.id))).length;
+
+  // Estado visual = função do estado lógico: só desenha o que a fase permite (rota concluída/encerrada NÃO fica no mapa)
+  const mapStops = useMemo(() => {
+    if (view.showRoute) return items.map((x) => ({
+      id: x.rs.key, lat: routePoint(x.stop.address)!.lat, lon: routePoint(x.stop.address)!.lon, seq: x.rs.seq, status: x.stop.status,
+      uncertain: x.stop.uncertain, isNext: x.rs.key === next?.rs.key,
+    }));
+    if (view.showStopPins) return (data?.stops ?? []).map((s) => ({ id: s.key, lat: routePoint(s.address)!.lat, lon: routePoint(s.address)!.lon, seq: null, status: s.status, uncertain: s.uncertain, isNext: false }));
+    return [];
+  }, [items, next, view.showRoute, view.showStopPins, data]);
 
   // seguir a posição ao iniciar; gesto do usuário desliga
   useEffect(() => { if (navigating) setSheetMode("compact"); }, [navigating]);
   useEffect(() => { if (navigating) getNavPrefs().then((p) => setFollow(p.camera3d ? "3d" : "2d")); else setFollow("off"); }, [navigating]);
+
+  // rota concluída com navegação ainda ligada: encerra serviço, câmera e instruções (limpeza centralizada)
+  useEffect(() => { if (view.phase === "completed" && navigating) void N.stop(); }, [view.phase, navigating]); // eslint-disable-line react-hooks/exhaustive-deps
+  // posição atual alimenta o desempate de endereços e a "última posição conhecida" (persistida no máximo a cada 20 s)
+  const lastSaved = useRef(0);
+  useEffect(() => {
+    const f = ui.fix;
+    if (!f || ui.gps !== "ok") return;
+    setUserBias({ lat: f.lat, lon: f.lon });
+    if (Date.now() - lastSaved.current > 20_000) { lastSaved.current = Date.now(); void saveSettings({ lastFix: { lat: f.lat, lon: f.lon, accuracy: f.accuracy, at: f.time } }); }
+  }, [ui.fix, ui.gps]);
+  // gesto no mapa durante a navegação: câmera livre; volta ao modo de navegação sozinha depois de 8 s
+  const onUserMove = useCallback(() => {
+    setFollow((f) => { if (f !== "off") prevFollow.current = f; return "off"; });
+    clearTimeout(returnTimer.current);
+    if (navigatingRef.current) returnTimer.current = setTimeout(() => { if (navigatingRef.current) setFollow(prevFollow.current); }, 8000);
+  }, []);
 
   const [kw, setKw] = useState(0);
   useEffect(() => { const h = () => setKw(Math.round(window.innerHeight - (window.visualViewport?.height ?? window.innerHeight))); window.visualViewport?.addEventListener("resize", h); return () => window.visualViewport?.removeEventListener("resize", h); }, []);
@@ -115,8 +158,18 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
 
   async function mark(ls: Letter[], status: Letter["status"], reason: string | null = null) {
     if (!route || !ls.length) return;
+    const stopTotal = items.length;
+    const stopIndex = (current?.rs.seq ?? stopsDone + 1);
     for (const l of ls) await recordEvent(l.id, status, route.id, reason);
-    setToast({ text: `${ls.length} carta(s): ${status === "delivered" ? "entregue" : status === "postponed" ? "adiada" : "não entregue"}.`, undo: true });
+    const kind = status === "delivered" ? "delivered" : status === "postponed" ? "skipped" : "not_delivered";
+    lastOutcome.current = { kind, letters: ls.length };
+    const remainingLetters = Math.max(0, pendingLetters - (kind === "skipped" ? 0 : ls.length));
+    const r = await recordOutcome(kind, ls.length, { remainingLetters, remainingStops: Math.max(0, openStopsN - 1), stopIndex, stopTotal });
+    if (r) {
+      setToast(null); setReward(r);
+      clearTimeout(rewardTimer.current); rewardTimer.current = setTimeout(() => setReward(null), 4500);
+      if ((await getNavPrefs()).sound) chime();
+    } else setToast({ text: `${ls.length} carta(s): ${kind === "skipped" ? "adiada" : "não entregue"}.`, undo: true });
     await reload();
     if (navigating) await N.advance();
     setSel(null);
@@ -125,10 +178,25 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
 
   async function undo() {
     if (!batchId) return;
+    setReward(null);
     const ev = await undoLastEvent(batchId);
+    if (ev && lastOutcome.current) { await revertOutcome(lastOutcome.current.kind, lastOutcome.current.letters); lastOutcome.current = null; }
     setToast({ text: ev ? "Última ação desfeita." : "Nada para desfazer." });
     await reload();
   }
+
+  /** Encerrar: para GPS/voz/serviço, limpa câmera e instruções e tira a rota do mapa (sem apagar cartas). */
+  async function endNav() {
+    if (!route) return;
+    await N.stop();
+    await endSession(route.id);
+    setFollow("off"); setSel(null); setReward(null); setDetail(false);
+    await reload();
+    void N.locate();
+  }
+  async function resumeRoute() { if (!route) return; await resumeSession(); await reload(); await N.start(route); }
+  async function replan() { await resumeSession(); await saveSettings({ endedRouteId: null }); if (route) await db.routes.update(route.id, { status: "superseded" }); await reload(); await doPlan(); }
+  async function clearFinished() { if (route) await finishRoute(route.id); setFollow("off"); setSel(null); await reload(); void N.locate(); }
 
   async function voice() {
     try {
@@ -177,14 +245,14 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
 
   return (
     <div className="fixed inset-x-0 top-0 z-0" style={{ bottom: "calc(3.5rem + env(safe-area-inset-bottom))", paddingTop: "env(safe-area-inset-top)", ["--sheet-h" as any]: `${sheetH}px` }} data-testid="map-home"
-      data-map-state={mapState} data-gps-state={ui.gps} data-nav={navigating ? "on" : "off"} data-fix={ui.fix ? `${ui.fix.lat.toFixed(5)},${ui.fix.lon.toFixed(5)}` : ""}>
-      <RouteMap className="absolute inset-0 h-full w-full" stops={mapStops} route={route?.geojson} start={route?.start} fix={ui.fix} follow={follow}
-        ahead={ui.ahead} onUserMove={() => setFollow("off")} bottomPad={sheetH + 16} onBaseMap={setBaseMap} onMapState={(st) => setMapState(st)}
+      data-map-state={mapState} data-gps-state={ui.gps} data-nav={navigating ? "on" : "off"} data-phase={view.phase} data-route={view.showRoute ? "on" : "off"} data-fix={ui.fix ? `${ui.fix.lat.toFixed(5)},${ui.fix.lon.toFixed(5)}` : ""}>
+      <RouteMap className="absolute inset-0 h-full w-full" stops={mapStops} route={view.showRoute ? route?.geojson : null} start={view.showRoute ? route?.start : null} fix={ui.fix} lastKnown={ui.fix ? null : lastFix} follow={view.navUi || !navigating ? follow : "off"}
+        ahead={view.navUi ? ui.ahead : null} immersive={view.navUi} speed={ui.fix?.speed ?? -1} turnDist={ui.state?.nextDist ?? -1} onUserMove={onUserMove} bottomPad={sheetH + 16} onBaseMap={setBaseMap} onMapState={(st) => setMapState(st)}
         onStopClick={(k) => { setSel(k); setFollow("off"); }} focus={sel && selectedPoint && follow === "off" ? selectedPoint : null} />
 
       {/* topo: HUD de manobra ou busca */}
       <div className="pointer-events-none absolute inset-x-0 top-0 p-2" style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.5rem)" }}>
-        {navigating && hud ? (
+        {view.navUi && hud ? (
           <div className="pointer-events-auto flex items-center gap-3 rounded-2xl bg-[#2e1065] p-3 text-white shadow-xl" role="status" aria-live="polite" data-testid="hud">
             <HudIcon className="h-12 w-12 shrink-0" aria-hidden />
             <div className="min-w-0">
@@ -192,7 +260,7 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
               <div className="text-base leading-snug">{hud.body}</div>
             </div>
           </div>
-        ) : !navigating && (
+        ) : !view.navUi && (
           <div className="pointer-events-auto flex gap-2">
             <button onClick={() => setSearchOpen(true)} className="card flex flex-1 items-center gap-2 px-3 py-3 text-left shadow-lg" aria-label="Buscar entrega">
               <Search className="h-5 w-5" /> <span className="muted truncate">Buscar entrega</span>
@@ -223,6 +291,7 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
         </>)}
       </div>
 
+      {reward && <RewardToast reward={reward} onUndo={() => void undo()} onClose={() => setReward(null)} top={navigating ? "calc(env(safe-area-inset-top) + 9rem)" : "calc(env(safe-area-inset-top) + 7rem)"} />}
       {toast && (
         <div role="status" className="absolute inset-x-2 z-30 flex items-center gap-2 rounded-xl bg-neutral-900 p-3 text-sm text-white shadow-xl" style={{ top: navigating ? "calc(env(safe-area-inset-top) + 9.5rem)" : "calc(env(safe-area-inset-top) + 7rem)" }}>
           <span className="flex-1">{toast.text}</span>
@@ -237,32 +306,39 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
           className="mx-auto mb-1 grid h-6 w-24 place-items-center"><span className="h-1.5 w-10 rounded-full bg-neutral-400" aria-hidden /></button>
         {busy && <div className="mb-2"><Spinner label={busy} /></div>}
 
-        {!data || (data.letters.length === 0) ? (
-          <div className="space-y-3 text-center">
+        {view.phase === "empty" ? (
+          <div className="space-y-3 text-center" data-testid="state-empty">
             <div className="text-lg font-bold">Nenhuma entrega ainda</div>
-            <p className="text-sm muted">Importe a planilha ou cole as linhas do dia. O app reconhece as colunas sozinho.</p>
+            <p className="text-sm muted">Cole os endereços ou importe a planilha. Sem separador, sem cabeçalho.</p>
             <Button size="lg" className="w-full" onClick={() => nav("/importar")}><Upload className="h-5 w-5" /> Importar cartas</Button>
           </div>
-        ) : !route ? (
-          <div className="space-y-3">
-            <Counters letters={data.letters.length} stops={data.stops.length} unlocated={unlocated} done={doneLetters} pending={pendingLetters} />
+        ) : view.phase === "unplanned" ? (
+          <div className="space-y-3" data-testid="state-unplanned">
+            {sheetMode !== "compact" ? <Counters letters={data?.letters.length ?? 0} stops={data!.stops.length} unlocated={unlocated} done={doneLetters} pending={pendingLetters} />
+              : <div data-testid="counters" className="text-center text-sm muted">{data!.letters.length} cartas · {data!.stops.length} paradas · {unlocated} não loc. · {doneLetters} concluídas · {pendingLetters} pendentes</div>}
             {unlocated > 0 && <Alert kind="warn">{unlocated} carta(s) sem localização ficam fora da rota até você localizar ou corrigir o endereço.</Alert>}
-            <Button size="lg" className="w-full" onClick={doPlan} disabled={!!busy || data.stops.length === 0}>Calcular rota</Button>
+            <Button size="lg" className="w-full" onClick={doPlan} disabled={!!busy || (data?.stops.length ?? 0) === 0}>Calcular rota</Button>
             <div className="grid grid-cols-2 gap-2">
-              <Button variant="secondary" onClick={() => nav(`/enderecos/${batchId}`)}>Localizar / corrigir endereços</Button>
+              <Button variant="secondary" onClick={() => nav(`/enderecos/${batchId}`)}>Localizar / corrigir</Button>
               <Button variant="secondary" onClick={() => nav("/importar")}><Upload className="h-4 w-4" /> Importar mais</Button>
             </div>
           </div>
+        ) : view.phase === "completed" ? (
+          <CompletionCard stats={stats ?? { date: "", delivered: doneLetters, notDelivered: 0, skipped: 0, streak: 0, bestStreak: 0, xp: 0, startedAt: 0, lastAt: 0, activeMs: 0 }} outside={outsideLetters} hasRoute={!!route}
+            onClear={() => void clearFinished()} onHistory={() => nav("/relatorios")} onImport={() => nav("/importar")}
+            onPlanRest={outsideLetters > 0 && (data?.stops.length ?? 0) > 0 ? () => void clearFinished().then(() => doPlan()) : null} />
+        ) : view.phase === "ended" ? (
+          <EndedCard stopsLeft={openStopsN} lettersLeft={pendingLetters} onResume={() => void resumeRoute()} onReplan={() => void replan()} onFinish={() => void clearFinished()} />
         ) : (
-          <div className="space-y-3">
-            {resume && !navigating && (
+          <div className="space-y-3" data-testid="state-live">
+            {resume && view.phase === "planned" && (
               <button className="w-full rounded-xl border-2 border-brand p-3 text-left" onClick={() => route && N.start(route)} data-testid="resume">
                 <span className="block text-xs font-semibold uppercase text-brand">Sessão interrompida</span>
                 <span className="text-lg font-bold">Retomar {resume.letters} entrega(s) em {resume.stops} parada(s)</span>
               </button>
             )}
-            {sheetMode !== "compact" ? <Counters letters={data.letters.length} stops={data.stops.length} unlocated={unlocated} done={doneLetters} pending={pendingLetters} />
-              : <div data-testid="counters" className="text-center text-sm muted">{data.letters.length} cartas · {data.stops.length} paradas · {unlocated} não loc. · {doneLetters} concluídas · {pendingLetters} pendentes</div>}
+            {sheetMode !== "compact" ? <Counters letters={data?.letters.length ?? 0} stops={data?.stops.length ?? 0} unlocated={unlocated} done={doneLetters} pending={pendingLetters} />
+              : <div data-testid="counters" className="text-center text-sm muted">{data?.letters.length ?? 0} cartas · {data?.stops.length ?? 0} paradas · {unlocated} não loc. · {doneLetters} concluídas · {pendingLetters} pendentes</div>}
             {cur ? (
               <>
                 <div>
@@ -292,12 +368,39 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
             ) : (
               <Alert kind="ok">Todas as paradas desta rota foram tratadas. {pendingLetters > 0 ? `${pendingLetters} carta(s) pendente(s) fora da rota.` : "Bom trabalho!"}</Alert>
             )}
+            {cur ? (
+              <>
+                <div>
+                  <div className="text-xs font-semibold uppercase text-next">{current && current.rs.key === next?.rs.key ? "Próxima parada" : "Parada selecionada"} · {current!.rs.seq} de {items.length}</div>
+                  <div className="text-2xl font-extrabold leading-tight" data-testid="cur-addr">{curAddr}</div>
+                  <div className="flex flex-wrap items-center gap-1 text-sm muted">
+                    {cur.address.neighborhood ?? ""} · {curLetters.length} carta(s)
+                    {navigating && st && st.stopKey === current!.rs.key && st.stopDist >= 0 && <b> · a {fmtDist(st.stopDist)}</b>}
+                  </div>
+                  {sheetMode !== "compact" && <div className="mt-1 flex flex-wrap gap-1"><Badge color={cur.trust.approximate ? "#b45309" : "#16a34a"}>{cur.trust.label}</Badge></div>}
+                  {note && <p className="mt-1 text-sm text-amber-700" role="note">{note}</p>}
+                </div>
+                {navigating && ui.nearStopKey === current!.rs.key && ui.nearStopText && (
+                  <Alert kind="ok">{ui.nearStopText}</Alert>
+                )}
+                <div className={cn("grid gap-2", sheetMode === "compact" ? "grid-cols-3" : "grid-cols-2")}>
+                  <Button variant="success" size="lg" className="h-16 whitespace-normal px-2 text-base leading-tight" disabled={!curLetters.length}
+                    onClick={() => curLetters.length > 1 ? setConfirmDeliver(current!.rs.key) : mark(curLetters, "delivered")}>
+                    {curLetters.length > 1 ? `Entregar todas (${curLetters.length})` : "Entregue"}
+                  </Button>
+                  <Button variant="danger" size="lg" className="h-16 whitespace-normal px-2 text-base leading-tight" disabled={!curLetters.length} onClick={() => setReasonOpen(true)}>Não consegui</Button>
+                  <Button variant="secondary" size="lg" className={cn("whitespace-normal px-2 text-base", sheetMode === "compact" ? "h-16" : "h-14")} disabled={!curLetters.length} onClick={() => mark(curLetters, "postponed")}><SkipForward className="h-5 w-5" /> Pular</Button>
+                  {sheetMode !== "compact" && <Button variant="secondary" size="lg" className="h-14 whitespace-normal" onClick={() => setDetail(!detail)}><Info className="h-5 w-5" /> Detalhes</Button>}
+                </div>
+                {detail && <Details stop={cur} onMark={(l, s) => mark([l], s)} nav={nav} batchId={batchId!} reload={reload} />}
+              </>
+            ) : null}
             <div className="grid grid-cols-2 gap-2">
               {!navigating ? (
-                <Button size="lg" className="col-span-2" onClick={() => route && N.start(route)} disabled={!next}><Navigation className="h-5 w-5" /> Iniciar navegação</Button>
+                <Button size="lg" className="col-span-2" onClick={() => route && N.start(route)} disabled={!view.canStart || !next}><Navigation className="h-5 w-5" /> Iniciar navegação</Button>
               ) : (<>
                 {ui.paused ? <Button variant="secondary" onClick={N.resume}><Play className="h-5 w-5" /> Retomar</Button> : <Button variant="secondary" onClick={N.pause}><Pause className="h-5 w-5" /> Pausar</Button>}
-                <Button variant="secondary" onClick={() => void N.stop()}><Square className="h-5 w-5" /> Encerrar</Button>
+                <Button variant="secondary" onClick={() => void endNav()}><Square className="h-5 w-5" /> Encerrar</Button>
               </>)}
               {sheetMode !== "compact" && <>
               <Button variant="ghost" onClick={undo}><Undo2 className="h-5 w-5" /> Desfazer</Button>
