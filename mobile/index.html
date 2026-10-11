@@ -9,35 +9,72 @@
     <script>try{var t=localStorage.getItem('rota.theme');if(t==='dark'||(!t&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')}catch(e){}</script>
     <style>
       html,body{background:#000}
-      #splash{position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#000;color:#fff;transition:opacity .35s ease;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+      /* Abertura Panzica Productions: só transform/opacity (rodam no compositor e continuam suaves mesmo com o JS carregando). */
+      #splash{position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#000;color:#fff;overflow:hidden;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;transition:opacity .6s ease .45s}
       #splash.out{opacity:0;pointer-events:none}
-      #splash .logo{width:min(46vw,200px);height:auto;filter:drop-shadow(0 0 28px rgba(139,92,246,.45));animation:sp-pop .7s cubic-bezier(.2,.9,.3,1.1) both}
-      #splash .brand{margin-top:20px;font-weight:600;font-size:clamp(20px,6vw,26px);letter-spacing:.14em;text-transform:none;animation:sp-fade .8s .15s ease both}
-      #splash .brand span{color:#C4B5FD}
-      #splash .spin{margin-top:44px;width:38px;height:38px;animation:sp-rot 1s linear infinite}
-      #splash .spin circle{fill:none;stroke-width:4;stroke-linecap:round}
-      #splash .msg{margin-top:14px;font-size:13px;color:#94a3b8;min-height:18px;text-align:center;padding:0 24px}
-      #splash button{margin-top:10px;background:#7c3aed;color:#fff;border:0;border-radius:12px;padding:12px 18px;font-weight:600;font-size:15px}
+      #splash .glow{position:absolute;left:50%;top:50%;width:140vmin;height:140vmin;margin:-70vmin 0 0 -70vmin;border-radius:50%;background:radial-gradient(closest-side,rgba(124,58,237,.38),rgba(124,58,237,.12) 55%,transparent 75%);opacity:0;animation:sp-glow-in 1.6s ease-out .1s forwards,sp-glow-pulse 3.2s ease-in-out 1.7s infinite;will-change:transform,opacity}
+      #splash .stage{position:relative;display:flex;flex-direction:column;align-items:center;will-change:transform,opacity;transition:transform .7s cubic-bezier(.4,0,.2,1),opacity .6s ease}
+      #splash.out .stage{transform:scale(1.06) translateY(-8px);opacity:0}
+      #splash .logo-wrap{width:min(44vw,190px);aspect-ratio:1;opacity:0;transform:scale(.7);animation:sp-logo-in 1.1s cubic-bezier(.2,.8,.2,1) .15s forwards,sp-float 4.2s ease-in-out 1.4s infinite;will-change:transform,opacity}
+      #splash .logo{width:100%;height:100%;display:block;overflow:visible}
+      #splash .ring{fill:none;stroke:url(#spg);stroke-width:5;stroke-linecap:round;stroke-dasharray:100;stroke-dashoffset:100;stroke-opacity:0;transform:rotate(-90deg);transform-origin:60px 60px;animation:sp-draw 1.2s cubic-bezier(.65,0,.35,1) .3s both}
+      #splash .pee{fill:none;stroke:#fff;stroke-width:9;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:100;stroke-dashoffset:100;stroke-opacity:0;animation:sp-draw .9s cubic-bezier(.65,0,.35,1) 1s both}
+      #splash .dot{fill:#8B5CF6;transform-box:fill-box;transform-origin:center;transform:scale(0);animation:sp-pop .5s cubic-bezier(.3,1.6,.5,1) 1.8s forwards}
+      #splash .brand{margin-top:26px;display:flex;flex-direction:column;align-items:center;gap:4px;font-weight:600;line-height:1.1}
+      #splash .w{display:flex}
+      #splash .w1{font-size:clamp(26px,8vw,34px);letter-spacing:.12em}
+      #splash .w2{font-size:clamp(15px,4.6vw,19px);letter-spacing:.34em;color:#C4B5FD;text-transform:uppercase;font-weight:500;margin-right:-.34em}
+      #splash .c{display:inline-block;opacity:0;transform:translateY(16px) scale(.9);animation:sp-char .7s cubic-bezier(.2,.9,.25,1) calc(var(--d) * 1ms) forwards,sp-wave 3.4s ease-in-out calc(var(--d) * 1ms + 1600ms) infinite;will-change:transform,opacity}
+      #splash.out .c{animation:sp-char-out .5s cubic-bezier(.5,0,.8,.4) calc(var(--o) * 1ms) forwards}
+      #splash .wheel{margin-top:46px;width:40px;height:40px;opacity:0;transform:scale(.6);animation:sp-wheel-in .6s cubic-bezier(.2,.9,.3,1.2) 2.3s forwards;will-change:transform,opacity;transition:opacity .35s ease,transform .35s ease}
+      #splash.out .wheel{opacity:0!important;transform:scale(.6)!important;animation:none}
+      #splash .wheel i{display:block;width:100%;height:100%;box-sizing:border-box;border-radius:50%;border:4px solid rgba(167,139,250,.18);border-top-color:#A78BFA;border-right-color:#7C3AED;animation:sp-rot .9s cubic-bezier(.5,.15,.5,.85) infinite;will-change:transform}
+      #splash .msg{margin-top:16px;font-size:13px;color:#a1a1b5;min-height:18px;text-align:center;padding:0 24px;opacity:0;animation:sp-rise .7s ease 2.6s forwards}
+      #splash .msg.swap{animation:sp-rise .5s ease forwards}
+      #splash button{margin-top:12px;background:#7c3aed;color:#fff;border:0;border-radius:12px;padding:12px 18px;font-weight:600;font-size:15px;animation:sp-rise .5s ease both}
       @keyframes sp-rot{to{transform:rotate(360deg)}}
-      @keyframes sp-pop{from{opacity:0;transform:scale(.88)}to{opacity:1;transform:none}}
-      @keyframes sp-fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-      @media (prefers-reduced-motion:reduce){#splash .logo,#splash .brand{animation:none}#splash .spin{animation-duration:1.8s}#splash{transition:none}}
+      @keyframes sp-draw{0%{stroke-dashoffset:100;stroke-opacity:0}3%{stroke-dashoffset:99;stroke-opacity:1}to{stroke-dashoffset:0;stroke-opacity:1}}
+      @keyframes sp-pop{to{transform:scale(1)}}
+      @keyframes sp-logo-in{to{opacity:1;transform:scale(1)}}
+      @keyframes sp-float{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-6px) scale(1.025)}}
+      @keyframes sp-glow-in{to{opacity:1}}
+      @keyframes sp-glow-pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.12);opacity:.7}}
+      @keyframes sp-char{to{opacity:1;transform:none}}
+      @keyframes sp-wave{0%,100%{transform:translateY(0)}50%{transform:translateY(-2.5px)}}
+      @keyframes sp-char-out{from{opacity:1;transform:none}to{opacity:0;transform:translateY(-14px) scale(.92)}}
+      @keyframes sp-wheel-in{to{opacity:1;transform:scale(1)}}
+      @keyframes sp-rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+      @media (prefers-reduced-motion:reduce){#splash .c,#splash .logo-wrap,#splash .glow{animation-duration:.01s!important;animation-delay:0s!important}#splash .logo-wrap{animation-iteration-count:1}#splash .wheel i{animation-duration:2s}}
     </style>
   </head>
   <body>
     <div id="splash" role="status" aria-live="polite" aria-label="Carregando Panzica Productions">
-      <svg class="logo" viewBox="0 0 120 120" aria-hidden="true">
-        <defs><linearGradient id="spg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#C4B5FD"/><stop offset="1" stop-color="#7C3AED"/></linearGradient></defs>
-        <circle cx="60" cy="60" r="44" fill="none" stroke="url(#spg)" stroke-width="5"/>
-        <path d="M50.5 84V38H66a14 14 0 0 1 0 28H50.5" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
-        <circle cx="88" cy="92" r="4" fill="#8B5CF6"/>
-      </svg>
-      <div class="brand">Panzica <span>Productions</span></div>
-      <svg class="spin" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="16" stroke="#2a2a3a"/><circle cx="20" cy="20" r="16" stroke="#A78BFA" stroke-dasharray="26 76"/></svg>
-      <div class="msg" id="splash-msg"></div>
+      <div class="glow"></div>
+      <div class="stage">
+        <div class="logo-wrap">
+          <svg class="logo" viewBox="0 0 120 120" aria-hidden="true">
+            <defs><linearGradient id="spg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#C4B5FD"/><stop offset="1" stop-color="#7C3AED"/></linearGradient></defs>
+            <circle class="ring" cx="60" cy="60" r="44" pathLength="100"/>
+            <path class="pee" pathLength="100" d="M50.5 84V38H66a14 14 0 0 1 0 28H50.5"/>
+            <circle class="dot" cx="88" cy="92" r="4"/>
+          </svg>
+        </div>
+        <div class="brand" aria-hidden="true"><div class="w w1" data-t="Panzica" data-d="1000"></div><div class="w w2" data-t="Productions" data-d="1550"></div></div>
+        <div class="wheel"><i></i></div>
+        <div class="msg" id="splash-msg">Abrindo seu mapa…</div>
+      </div>
     </div>
     <script>
-      // Saída de segurança INLINE (funciona mesmo se o pacote JS falhar): depois de 20 s avisa e oferece tentar de novo.
+      // Letras animadas uma a uma (entrada escalonada; a saída também é escalonada, nunca some de uma vez).
+      (function () {
+        var n = 0, all = [];
+        document.querySelectorAll('#splash .w').forEach(function (w) {
+          var t = w.getAttribute('data-t'), d = +w.getAttribute('data-d'), step = w.classList.contains('w1') ? 70 : 48;
+          for (var i = 0; i < t.length; i++) { var c = document.createElement('span'); c.className = 'c'; c.textContent = t[i]; c.style.setProperty('--d', d + i * step); w.appendChild(c); all.push(c); }
+        });
+        all.forEach(function (c, i) { c.style.setProperty('--o', i * 28); });
+      })();
+      // Saída de segurança INLINE (funciona mesmo se o pacote JS falhar).
       window.__splashT = setTimeout(function () {
         var s = document.getElementById('splash'); if (!s) return;
         var m = document.getElementById('splash-msg');

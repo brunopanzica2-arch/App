@@ -31,6 +31,7 @@ const home = () => page.evaluate(() => { const e = document.querySelector("[data
 const waitHome = (cond, t = 120000) => page.waitForFunction(cond, null, { timeout: t });
 
 await page.goto(BASE);
+await page.waitForSelector("#root > *"); // 2.3: o app só inicia depois da entrada da abertura animada
 await page.evaluate(() => new Promise((res, rej) => {
   const o = indexedDB.open("rota-santos");
   o.onsuccess = () => { const db = o.result, tx = db.transaction("settings", "readwrite");
@@ -38,6 +39,7 @@ await page.evaluate(() => new Promise((res, rej) => {
     tx.oncomplete = () => { db.close(); res(); }; tx.onerror = () => rej(tx.error); };
 }));
 await page.reload();
+await page.waitForFunction(() => !document.getElementById("splash"), null, { timeout: 60000 }); // abertura animada terminou
 await waitHome(() => ["operational", "error"].includes(document.querySelector("[data-testid=map-home]")?.dataset.mapState));
 await waitHome(() => document.querySelector("[data-testid=map-home]")?.dataset.gpsState === "ok").catch(() => {});
 

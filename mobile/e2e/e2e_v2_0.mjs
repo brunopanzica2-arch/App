@@ -24,6 +24,7 @@ page.on("request", (r) => { if (r.url().includes("nominatim")) nominatim++; });
 const shot = (n) => page.screenshot({ path: `${OUT}/${n}.png` });
 
 await page.goto(BASE);
+await page.waitForSelector("#root > *"); // 2.3: o app só inicia depois da entrada da abertura animada
 await page.evaluate(() => new Promise((res, rej) => {
   const o = indexedDB.open("rota-santos");
   o.onsuccess = () => { const db = o.result, tx = db.transaction("settings", "readwrite");
@@ -31,6 +32,7 @@ await page.evaluate(() => new Promise((res, rej) => {
     tx.oncomplete = () => { db.close(); res(); }; tx.onerror = () => rej(tx.error); };
 }));
 await page.reload();
+await page.waitForFunction(() => !document.getElementById("splash"), null, { timeout: 60000 }); // abertura animada terminou
 
 // 1. estado vazio
 await page.getByRole("button", { name: /Importar cartas/ }).first().waitFor();

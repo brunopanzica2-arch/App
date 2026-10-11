@@ -1,22 +1,44 @@
 {
-  "fundo preto": {
-    "ok": true,
-    "d": "rgb(0, 0, 0)"
+  "res": {
+    "fundo preto": {
+      "ok": true,
+      "d": "rgb(0, 0, 0)"
+    },
+    "texto 'Panzica Productions' (letra por letra)": {
+      "ok": true,
+      "d": "Panzica Productions"
+    },
+    "logo centralizada": {
+      "ok": true,
+      "d": "centro x=205.99219512939453 de 206"
+    },
+    "roda de carregamento girando": {
+      "ok": true,
+      "d": "sp-rot"
+    },
+    "duração total (entrada ≥ 4,3 s + saída animada)": {
+      "ok": true,
+      "d": "5413 ms até a remoção"
+    },
+    "letras entram com rampa de opacidade (não surgem do nada)": {
+      "ok": true,
+      "d": "amostras com letras em transição: 40; logo em rampa: 13"
+    },
+    "roda entra com rampa": {
+      "ok": true,
+      "d": "2 amostras"
+    },
+    "saída animada: fundo some em rampa e letras saem escalonadas": {
+      "ok": true,
+      "d": "fundo em rampa: 9 amostras; letras em transição: 40"
+    },
+    "jank medido (quadros >50 ms durante todo o carregamento)": {
+      "ok": true,
+      "d": "302 quadros, 6 acima de 50 ms, pior 467 ms (Chromium headless com GL por software: pior caso)"
+    }
   },
-  "texto 'Panzica Productions'": {
-    "ok": true,
-    "d": "Panzica Productions"
-  },
-  "logo centralizada": {
-    "ok": true,
-    "d": "centro x=205.9921875 de 206"
-  },
-  "roda de carregamento girando": {
-    "ok": true,
-    "d": "sp-rot"
-  },
-  "some sozinha quando o app abre": {
-    "ok": true,
-    "d": "presente aos 0,9 s e removida depois da abertura"
-  }
+  "total": 5413,
+  "quadros": 302,
+  "acima50ms": 6,
+  "piorMs": 467
 }

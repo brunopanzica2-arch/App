@@ -75,6 +75,7 @@ const waitHome = (cond, t = 120000) => page.waitForFunction(cond, null, { timeou
 
 // ---------------------------------------------------------------- semente: sem ponto manual (a origem é o GPS)
 await page.goto(BASE);
+await page.waitForSelector("#root > *"); // 2.3: o app só inicia depois da entrada da abertura animada
 await page.evaluate(() => new Promise((res, rej) => {
   const o = indexedDB.open("rota-santos");
   o.onsuccess = () => { const db = o.result, tx = db.transaction("settings", "readwrite");
@@ -82,6 +83,7 @@ await page.evaluate(() => new Promise((res, rej) => {
     tx.oncomplete = () => { db.close(); res(); }; tx.onerror = () => rej(tx.error); };
 }));
 await page.reload();
+await page.waitForFunction(() => !document.getElementById("splash"), null, { timeout: 60000 }); // abertura animada terminou
 
 // 1. home sem entregas
 await waitHome(() => ["operational", "error"].includes(document.querySelector("[data-testid=map-home]")?.dataset.mapState));
