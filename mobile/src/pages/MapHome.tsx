@@ -10,6 +10,10 @@ import { hudText, precisionNote } from "../core/hud";
 import { getDayStats, recordOutcome, type Reward, revertOutcome, chime } from "../core/progress";
 import { deriveView, endSession, finishRoute, resumeSession } from "../core/session";
 import { assessRoute } from "../core/safety";
+import { type AddressHit, searchDeliveries, type SearchResult } from "../core/search";
+import { addLetterFromHit, previewRouteTo } from "../core/searchActions";
+import { searchService, setSearchUser } from "../core/searchRuntime";
+import type { PlanResult } from "../core/plan";
 import { getNavPrefs, getSettings, quickPlan, recordEvent, reportSegment, resumableSession, saveSettings, type StopView, stopsOf, TERMINAL, undoLastEvent } from "../core/service";
 import { nav as navApi, parseVoiceCommand } from "../native/rotaNav";
 import { Button } from "../ui/button";
@@ -24,7 +28,7 @@ type Follow = "off" | "2d" | "3d";
 const ICON: Record<string, any> = { left: CornerUpLeft, sharp_left: CornerUpLeft, slight_left: CornerUpLeft, right: CornerUpRight, sharp_right: CornerUpRight, slight_right: CornerUpRight };
 
 export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
-  const [batchId] = useCurrentBatch();
+  const [batchId, setBatchId] = useCurrentBatch();
   const [data, setData] = useState<Awaited<ReturnType<typeof stopsOf>> | null>(null);
   const [route, setRoute] = useState<Route | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -40,6 +44,12 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
   const [q, setQ] = useState("");
   const [confirmDeliver, setConfirmDeliver] = useState<string | null>(null);
   const [guardOpen, setGuardOpen] = useState(false);
+  const [tab, setTab] = useState<"addr" | "mine">("addr");
+  const [addrRes, setAddrRes] = useState<SearchResult | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [found, setFound] = useState<AddressHit | null>(null);
+  const [preview, setPreview] = useState<PlanResult | null>(null);
+  const [fixing, setFixing] = useState(false);
   const [baseMap, setBaseMap] = useState<string | null>(null);
   const [mapState, setMapState] = useState<MapState>("init");
   const [sheetMode, setSheetMode] = useState<"normal" | "compact">("compact");
@@ -220,18 +230,39 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
     } catch (e) { setToast({ text: (e as Error).message }); }
   }
 
-  const hits = useMemo(() => {
-    const t = q.trim().toLowerCase();
-    if (!t || !data) return [];
-    const m = new Map<string, { key: string; line: string; sub: string }>();
-    for (const l of data.letters) {
-      const hay = [l.street, l.number, l.neighborhood, l.externalId, l.recipient, l.complement].map((v) => (v ?? "").toLowerCase());
-      if (!hay.some((v) => v.includes(t)) || !l.addressKey) continue;
-      const a = data.addresses.find((x) => x.key === l.addressKey);
-      if (a && !m.has(a.key)) m.set(a.key, { key: a.key, line: a.display.split(" - ")[0], sub: `${a.neighborhood ?? ""} · ${l.externalId ?? "carta " + l.row}` });
-    }
-    return [...m.values()].slice(0, 30);
-  }, [q, data]);
+  const hits = useMemo(() => (data ? searchDeliveries(data.letters, q) : []), [q, data]);
+
+  // busca de endereços: debounce 300 ms, cancela a anterior; Nominatim público só consulta no botão/Enter (política de uso)
+  useEffect(() => {
+    if (!searchOpen || tab !== "addr") return;
+    setSearchUser(ui.fix ? { lat: ui.fix.lat, lon: ui.fix.lon } : lastFix);
+    if (q.trim().length < 2) { setAddrRes(null); setSearching(false); return; }
+    setSearching(true);
+    const t = setTimeout(() => { void searchService.query(q).then((r) => { setAddrRes(r); setSearching(false); }); }, 300);
+    return () => { clearTimeout(t); searchService.cancel(); };
+  }, [q, tab, searchOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+  async function submitSearch() {
+    setSearching(true);
+    const r = await searchService.query(q, { submit: true });
+    setAddrRes(r); setSearching(false);
+  }
+  function pickHit(h: AddressHit) { setFound(h); setPreview(null); setFixing(false); setSearchOpen(false); setFollow("off"); }
+  async function routeToFound() {
+    if (!found) return;
+    const here = ui.fix ? { lat: ui.fix.lat, lon: ui.fix.lon } : lastFix ?? (await getSettings()).start;
+    if (!here) { setToast({ text: "Sem posição de partida: aguarde o GPS ou defina a partida em Ajustes." }); return; }
+    setBusy("Calculando rota a pé…");
+    try { setPreview(await previewRouteTo({ lat: found.lat, lon: found.lon, label: found.title }, here)); }
+    catch (e) { setToast({ text: (e as Error).message || "Não foi possível confirmar um trajeto urbano seguro até este destino." }); }
+    setBusy(null);
+  }
+  async function addFound() {
+    if (!found) return;
+    const r = await addLetterFromHit(found, batchId);
+    setFound(null); setPreview(null); setFixing(false);
+    setToast({ text: `Carta adicionada: ${found.title}. ${found.numberConfirmed ? "" : "Posição aproximada — confirme na tela de endereços."}` });
+    if (r.batchId !== batchId) setBatchId(r.batchId); else await reload();
+  }
 
   // guarda de segurança: "Rota revisada" só quando trajeto e destinos satisfazem os critérios (core/safety.ts)
   const guard = useMemo(() => route ? assessRoute(route.metrics?.quality, items.filter((x) => open(x.stop)).map((x) => ({ approximate: x.stop.trust.approximate, code: x.stop.trust.code }))) : null, [route, items]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -268,9 +299,32 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
   return (
     <div className="fixed inset-x-0 top-0 z-0" style={{ bottom: "calc(3.5rem + env(safe-area-inset-bottom))", paddingTop: "env(safe-area-inset-top)", ["--sheet-h" as any]: `${sheetH}px` }} data-testid="map-home"
       data-map-state={mapState} data-gps-state={ui.gps} data-nav={navigating ? "on" : "off"} data-phase={view.phase} data-follow={follow} data-route={view.showRoute ? "on" : "off"} data-fix={ui.fix ? `${ui.fix.lat.toFixed(5)},${ui.fix.lon.toFixed(5)}` : ""}>
-      <RouteMap className="absolute inset-0 h-full w-full" stops={mapStops} route={view.showRoute ? route?.geojson : null} start={view.showRoute ? route?.start : null} fix={ui.fix} lastKnown={ui.fix ? null : lastFix} follow={view.navUi || !navigating ? follow : "off"}
+      <RouteMap className="absolute inset-0 h-full w-full" stops={mapStops} route={preview ? { type: "FeatureCollection", features: preview.features } : view.showRoute ? route?.geojson : null} start={view.showRoute ? route?.start : null}
+        pin={found && fixing ? { lat: found.lat, lon: found.lon } : null} onPinMove={(lat, lon) => setFound((f) => f && { ...f, lat, lon, precision: "street", numberConfirmed: false, source: "malha", note: "Posição ajustada por você neste aparelho (não confirmada no local)." })} fix={ui.fix} lastKnown={ui.fix ? null : lastFix} follow={view.navUi || !navigating ? follow : "off"}
         ahead={view.navUi ? ui.ahead : null} immersive={view.navUi} speed={ui.fix?.speed ?? -1} turnDist={ui.state?.nextDist ?? -1} onUserMove={onUserMove} bottomPad={sheetH + 16} onBaseMap={setBaseMap} onMapState={(st) => setMapState(st)}
-        onStopClick={(k) => { setSel(k); setFollow("off"); }} focus={sel && selectedPoint && follow === "off" ? selectedPoint : null} />
+        onStopClick={(k) => { setSel(k); setFollow("off"); }} focus={found ? { lat: found.lat, lon: found.lon } : sel && selectedPoint && follow === "off" ? selectedPoint : null} />
+
+      {/* resultado da busca de endereço: marcador + cartão de ações */}
+      {found && (
+        <div className="pointer-events-auto absolute inset-x-2 z-20 rounded-2xl border border-app bg-[var(--card)] p-3 shadow-xl" style={{ bottom: sheetH + 12 }} data-testid="found-card">
+          <div className="flex items-start gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="text-lg font-extrabold leading-tight">{found.title}</div>
+              <div className="text-sm muted">{found.subtitle}</div>
+              <div className="mt-1"><Badge color={found.numberConfirmed ? "#16a34a" : "#b45309"}>{found.numberConfirmed ? "Número localizado" : found.numberAsked ? "Número não confirmado" : "Rua"}</Badge></div>
+              <p className="mt-1 text-xs muted">{found.note}</p>
+              {preview && <p className="mt-1 text-sm font-semibold" data-testid="preview-info">{fmtDist(preview.totalDistance)} · {fmtTime(preview.totalTime)} a pé (estimativa){preview.quality && !preview.quality.reviewed ? " — Trechos não verificados — revisar antes de seguir" : ""}</p>}
+            </div>
+            <button aria-label="Fechar resultado" onClick={() => { setFound(null); setPreview(null); setFixing(false); }}><X className="h-5 w-5" /></button>
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <Button size="md" onClick={() => void addFound()}>Adicionar carta</Button>
+            <Button size="md" variant="secondary" onClick={() => void routeToFound()}><Navigation className="h-4 w-4" /> Traçar rota até aqui</Button>
+            <Button size="md" variant="secondary" onClick={() => setFollow("off")}>Ver no mapa</Button>
+            <Button size="md" variant={fixing ? "primary" : "secondary"} onClick={() => setFixing((v) => !v)}>{fixing ? "Pronto" : "Corrigir posição"}</Button>
+          </div>
+        </div>
+      )}
 
       {/* topo: HUD de manobra ou busca */}
       <div className="pointer-events-none absolute inset-x-0 top-0 p-2" style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.5rem)" }}>
@@ -284,10 +338,10 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
           </div>
         ) : !view.navUi && (
           <div className="pointer-events-auto flex gap-2">
-            <button onClick={() => setSearchOpen(true)} className="card flex flex-1 items-center gap-2 px-3 py-3 text-left shadow-lg" aria-label="Buscar entrega">
-              <Search className="h-5 w-5" /> <span className="muted truncate">Buscar entrega</span>
+            <button onClick={() => setSearchOpen(true)} className="card flex min-w-0 flex-1 items-center gap-2 px-3 py-3 text-left shadow-lg" aria-label="Buscar endereço ou entrega">
+              <Search className="h-5 w-5 shrink-0" /> <span className="muted truncate">Buscar em Santos…</span>
             </button>
-            <Button variant="secondary" size="lg" onClick={() => nav("/importar")} aria-label="Importar cartas"><Upload className="h-5 w-5" /> Importar</Button>
+            <Button variant="secondary" size="lg" className="shrink-0" onClick={() => nav("/importar")} aria-label="Importar cartas"><Upload className="h-5 w-5" /> Importar</Button>
           </div>
         )}
         <GpsChip ui={ui} onRetry={() => void N.locate({ ask: true })} />
@@ -443,16 +497,40 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
         </Modal>
       )}
       {searchOpen && (
-        <Modal title="Buscar entrega" onClose={() => setSearchOpen(false)}>
-          <input autoFocus aria-label="Buscar" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rua, número, código, destinatário…"
-            className="mb-2 w-full rounded-xl border border-app bg-transparent p-3" />
-          <ul className="max-h-[50vh] overflow-y-auto">
-            {hits.map((h) => (
-              <li key={h.key}><button className="w-full border-b border-app py-3 text-left" onClick={() => { setSel(h.key); setSearchOpen(false); setQ(""); }}>
-                <b className="block">{h.line}</b><span className="text-sm muted">{h.sub}</span></button></li>
+        <Modal title="Busca de endereços e entregas" onClose={() => setSearchOpen(false)}>
+          <div role="tablist" className="mb-2 grid grid-cols-2 gap-1 rounded-xl bg-black/5 p-1">
+            {([["addr", "Endereços"], ["mine", `Minhas entregas${hits.length ? ` (${hits.length})` : ""}`]] as const).map(([k, label]) => (
+              <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={cn("rounded-lg py-2 text-sm font-semibold", tab === k && "bg-[var(--card)] shadow")}>{label}</button>
             ))}
-            {q.trim() && !hits.length && <li className="py-3 muted">Nada encontrado.</li>}
-          </ul>
+          </div>
+          <form onSubmit={(e) => { e.preventDefault(); if (tab === "addr") void submitSearch(); }} className="mb-2 flex gap-2">
+            <input autoFocus aria-label="Buscar" value={q} onChange={(e) => setQ(e.target.value)} enterKeyHint="search"
+              placeholder={tab === "addr" ? "Rua e número em Santos…" : "Rua, número, código, destinatário…"} className="w-full rounded-xl border border-app bg-transparent p-3" />
+            {tab === "addr" && <Button type="submit" variant="secondary" aria-label="Buscar endereço"><Search className="h-5 w-5" /></Button>}
+          </form>
+          {tab === "addr" ? (
+            <ul className="max-h-[50vh] overflow-y-auto" data-testid="addr-results">
+              {searching && <li className="py-2 text-sm muted">Buscando…</li>}
+              {addrRes?.hits.map((h) => (
+                <li key={h.id}><button className="w-full border-b border-app py-3 text-left" onClick={() => pickHit(h)}>
+                  <b className="block">{h.title}</b>
+                  <span className="text-sm muted">{h.subtitle}</span>
+                  <span className="block text-xs text-amber-700">{h.numberConfirmed ? "Número localizado" : h.numberAsked ? "Número não confirmado — ponto aproximado na rua" : "Rua"}</span>
+                </button></li>
+              ))}
+              {addrRes?.message && <li className="py-2 text-sm text-amber-700" role="status">{addrRes.message}</li>}
+              {addrRes?.state === "ok" && !addrRes.fromRemote && <li className="py-2 text-xs muted">Ruas do mapa offline. Toque na lupa para consultar números no provedor.</li>}
+              {q.trim().length >= 2 && !searching && addrRes && !addrRes.hits.length && !addrRes.message && <li className="py-3 muted">Nenhum endereço encontrado em Santos.</li>}
+            </ul>
+          ) : (
+            <ul className="max-h-[50vh] overflow-y-auto">
+              {hits.map((h) => (
+                <li key={h.key}><button className="w-full border-b border-app py-3 text-left" onClick={() => { setSel(h.key); setSearchOpen(false); setQ(""); }}>
+                  <b className="block">{h.line}</b><span className="text-sm muted">{h.sub}</span></button></li>
+              ))}
+              {q.trim() && !hits.length && <li className="py-3 muted">Nada encontrado nas suas entregas.</li>}
+            </ul>
+          )}
         </Modal>
       )}
     </div>

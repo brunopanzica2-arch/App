@@ -119,13 +119,15 @@ await page.getByRole("button", { name: "Fechar", exact: true }).click();
 
 // 9. iniciar navegação (substituto web) e retomar
 await page.getByRole("button", { name: /Iniciar navegação/ }).click();
+await page.getByRole("button", { name: "Iniciar mesmo assim" }).click({ timeout: 1500 }).catch(() => {}); // 2.3: guarda de segurança (rota com destinos aproximados)
 await page.getByRole("button", { name: /Pausar/ }).waitFor();
 pass("NAV-01 navegação inicia no navegador (substituto)", true, "botões Pausar/Encerrar visíveis; HUD de manobras e voz exigem o app Android");
 await shot("06-navegando-web");
 await page.getByRole("button", { name: /Encerrar/ }).click();
 
 // 10. busca global
-await page.getByRole("button", { name: "Buscar entrega" }).click();
+await page.getByRole("button", { name: "Buscar endereço ou entrega" }).click();
+await page.getByRole("tab", { name: /Minhas entregas/ }).click();
 await page.getByLabel("Buscar", { exact: true }).fill("Joaquim");
 await page.waitForTimeout(500);
 const hits = await page.getByRole("dialog").locator("li").count();

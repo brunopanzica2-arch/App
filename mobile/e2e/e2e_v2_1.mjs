@@ -134,6 +134,7 @@ pass("estado C: rota calculada visível + Iniciar navegação", h.route === "on"
 
 // 5. navegação: 2D → 3D imersivo
 await page.getByRole("button", { name: /Iniciar navegação/ }).click();
+await page.getByRole("button", { name: "Iniciar mesmo assim" }).click({ timeout: 1500 }).catch(() => {}); // 2.3: guarda de segurança (rota com destinos aproximados)
 await waitHome(() => document.querySelector("[data-testid=map-home]")?.dataset.phase === "navigating");
 await page.waitForTimeout(2500);
 await shot("07_navegacao");
@@ -202,6 +203,7 @@ await waitHome(() => document.querySelector("[data-testid=map-home]")?.dataset.p
 await page.getByRole("button", { name: "Calcular rota" }).click();
 await waitHome(() => document.querySelector("[data-testid=map-home]")?.dataset.phase === "planned", 240000);
 await page.getByRole("button", { name: /Iniciar navegação/ }).click();
+await page.getByRole("button", { name: "Iniciar mesmo assim" }).click({ timeout: 1500 }).catch(() => {}); // 2.3: guarda de segurança (rota com destinos aproximados)
 await waitHome(() => document.querySelector("[data-testid=map-home]")?.dataset.phase === "navigating");
 await page.waitForTimeout(1500);
 await page.getByRole("button", { name: /Encerrar/ }).click();

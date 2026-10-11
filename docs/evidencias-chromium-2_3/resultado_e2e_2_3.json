@@ -1,0 +1,46 @@
+{
+  "BUSCA-01 autocomplete de ruas sem nenhuma entrega importada": {
+    "ok": true,
+    "detail": "1º resultado: Rua Joaquim Távora, 480"
+  },
+  "BUSCA-02 número digitado preservado e marcado 'não confirmado' (nunca S/N)": {
+    "ok": true,
+    "detail": "Rua Joaquim Távora, 480 | Santos/SP · rua (posição aproximada) | Número não confirmado — ponto aproximado na rua | Ruas do mapa offline. Toque na lupa para cons"
+  },
+  "BUSCA-03 digitar NÃO consulta o Nominatim público": {
+    "ok": true,
+    "detail": "0 consulta(s) durante a digitação"
+  },
+  "BUSCA-04 enviar consulta ao provedor: 1 requisição, escopo Santos/SP": {
+    "ok": true,
+    "detail": "https://nominatim.openstreetmap.org/search?street=480+rua+joaquim+tavora&city=Santos&state=SP&country=Brasil&format=jsonv2&addressdetails=1&limit=8&countrycodes=br&accept-language=pt-BR&viewbox=-46.46,-23.8,-46.25,-24.03"
+  },
+  "BUSCA-05 cartão: 4 ações e 'Número não confirmado'": {
+    "ok": true,
+    "detail": "Rua Joaquim Távora, 480 | Santos/SP · rua (posição aproximada) | Número não confirmado |  | Número 480 não confirmado: ponto aproximado na rua, não a porta. |  | Adicionar carta | Traçar rota até aqui | Ver no mapa | Cor"
+  },
+  "BUSCA-06 'Traçar rota até aqui' calcula rota a pé": {
+    "ok": true,
+    "detail": "1,7 km · 22 min a pé (estimativa)"
+  },
+  "BUSCA-07 'Corrigir posição' alterna para 'Pronto'": {
+    "ok": true,
+    "detail": "ok"
+  },
+  "SEG-01 selo de segurança visível; 'Rota revisada' só se nada aproximado/não verificado": {
+    "ok": true,
+    "detail": "nível=approximate | Destinos aproximados — confirme no local | 7 destino(s) com posição aproximada (número não confirmado no local)"
+  },
+  "SEG-02 rota não 100% revisada pede confirmação antes de iniciar": {
+    "ok": true,
+    "detail": "nível=approximate diálogo=1"
+  },
+  "SEG-03 'Reportar problema neste trecho' grava o trecho e recalcula uma nova rota": {
+    "ok": true,
+    "detail": "trechos reportados 0 → 1; fase=planned"
+  },
+  "sem erros de página": {
+    "ok": true,
+    "detail": "nenhum"
+  }
+}
