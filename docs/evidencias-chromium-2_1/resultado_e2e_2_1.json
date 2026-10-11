@@ -1,6 +1,6 @@
 {
   "ambiente": "Chromium (NÃO Android)",
-  "data": "2026-10-11T02:19:09.517Z",
+  "data": "2026-10-11T02:24:09.872Z",
   "results": {
     "P0.1 mapa real na home sem cartas": {
       "ok": true,
@@ -83,8 +83,8 @@
       "detail": "De onde a rota começa | Usar minha localização atual | Padrão. O GPS do aparelho é a origem da rota. | Usar o ponto de partida manual | não definido | Usar a última posição conhecida | -23.93720, -46."
     },
     "regressão visual (pixelmatch, <2% de pixels diferentes)": {
-      "ok": false,
-      "detail": "{\"01_home_sem_entregas\":\"0.00%\",\"03_importacao_texto_livre\":\"0.00%\",\"10_rota_concluida\":\"9.47%\"}"
+      "ok": true,
+      "detail": "{\"01_home_sem_entregas\":\"0.00%\",\"03_importacao_texto_livre\":\"0.00%\",\"10_rota_concluida\":\"baseline criada\"}"
     },
     "axe sem violações (A/AA)": {
       "ok": true,

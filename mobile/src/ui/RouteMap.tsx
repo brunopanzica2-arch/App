@@ -256,6 +256,9 @@ export default function RouteMap({ stops = [], route, start, candidates = [], pi
       m.fire("data-ready" as any);
     });
     map.current = m;
+    // câmera real exposta para teste/diagnóstico: zoom, inclinação (pitch) e rumo (bearing)
+    const publishCam = () => { const root = el.current?.parentElement; if (root) root.dataset.cam = `${m.getZoom().toFixed(2)},${m.getPitch().toFixed(0)},${m.getBearing().toFixed(0)}`; };
+    m.on("moveend", publishCam); m.on("load", publishCam);
     const ro = new ResizeObserver(() => m.resize());
     ro.observe(el.current!);
     const onVis = () => { if (document.visibilityState === "visible") m.resize(); };

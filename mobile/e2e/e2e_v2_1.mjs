@@ -137,12 +137,17 @@ await waitHome(() => document.querySelector("[data-testid=map-home]")?.dataset.p
 await page.waitForTimeout(2500);
 await shot("07_navegacao");
 h = await home();
+const cam = async () => (await page.evaluate(() => document.querySelector("[data-map-state]")?.dataset.cam ?? "")).split(",").map(Number);
+await page.waitForFunction(() => Number((document.querySelector("[data-map-state]")?.dataset.cam ?? "0,0,0").split(",")[1]) > 40, null, { timeout: 20000 }).catch(() => {});
+const [z3, p3] = await cam();
 pass("estado D: navegando (câmera 3D por padrão, rota ligada)", h.phase === "navigating" && h.follow === "3d" && h.route === "on", `fase=${h.phase} câmera=${h.follow}`);
+pass("navegação imersiva: câmera REALMENTE inclinada e aproximada", p3 >= 45 && z3 >= 17.5, `zoom=${z3} pitch=${p3}°`);
 await page.getByRole("button", { name: /Câmera 3D/ }).click();
 await page.waitForTimeout(1800);
 await shot("08_navegacao_2d");
 h = await home();
-pass("alternar 2D/3D", h.follow === "2d", `câmera=${h.follow}`);
+const [, p2] = await cam();
+pass("alternar 2D/3D (pitch volta a 0 no 2D)", h.follow === "2d" && p2 < 5, `câmera=${h.follow} pitch=${p2}°`);
 await page.getByRole("button", { name: /Câmera 2D/ }).click();
 await page.waitForTimeout(1500);
 
