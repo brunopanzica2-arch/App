@@ -40,3 +40,9 @@ cd mobile && npm run android:apk
 node scripts/android/suite.mjs ../releases/rota-santos-2.0.1-DEBUG.apk run-$(date +%Y%m%d-%H%M)
 ```
 `scripts/android/suite.mjs` (cenários 01 e 02: mapa operacional, GPS com 3 deslocamentos, permissão negada e retomada) e `lib.mjs` (adb, `screencap`, CDP do WebView) **foram escritos, mas só puderam ser exercitados até o ponto em que a WebView cai**: não há resultado PASS deles. Os demais cenários (03–10) **ainda não têm automação**; estão listados acima como BLOCKED/NOT TESTED.
+
+## Testes automatizados que passam (não visuais)
+`npx vitest run`: 121 passam, 3 ignorados (fixtures opcionais). JUnit do motor nativo: 15 passam. `e2e/e2e_v2_0.mjs` (Chromium): todas as verificações passam.
+
+## APK entregue
+`releases/rota-santos-2.0.1-DEBUG.apk` — SHA-256 `4f8e4dbe687297b6527fd833f82716cfbcdc4c872f982c99144fab653fae3ff5`, `br.santos.rota`, versionCode 5, minSdk 24, `usesCleartextTraffic=false`, sem `server.url` (a configuração de sonda usada nos experimentos não está no APK). Release assinado: BLOQUEADO (sem sua chave).

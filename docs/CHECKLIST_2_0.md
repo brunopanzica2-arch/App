@@ -33,3 +33,12 @@ Legenda: **CONCLUÍDO** = implementado e coberto por teste automatizado; **PARCI
 | APK release assinado | BLOQUEADO | sem sua chave |
 | Testes: vitest 113 ok/3 skip; JUnit 15 ok; E2E 17 ok; backend pytest | vitest/JUnit/E2E CONCLUÍDO; pytest NÃO EXECUTADO | pytest precisa de PostGIS |
 | OCR, vibração, setores da bolsa, regra de lado da rua, gamificação | FORA DE ESCOPO | exclusões do pedido |
+
+## Atualização 2.0.1
+| Item | Estado |
+|---|---|
+| Mapa em branco (altura 0 do contêiner) | corrigido; comprovado **no Chromium**; **BLOCKED em Android** (WebView do emulador sem KVM cai) |
+| GPS automático, marcador só com fix válido, ponto manual ≠ GPS | implementado; E2E Chromium PASS; Android **NOT TESTED** |
+| Perfil de pedestre (sem “pedalar”) | CONCLUÍDO (teste na malha real) |
+| “106, 106” / lotes antigos | CONCLUÍDO (bloqueio na entrada + diagnóstico/reprocessamento pela linha original) |
+| Capturas reais do APK em Android | **BLOCKED** |
