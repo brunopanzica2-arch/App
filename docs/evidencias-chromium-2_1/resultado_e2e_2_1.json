@@ -1,6 +1,6 @@
 {
   "ambiente": "Chromium (NÃO Android)",
-  "data": "2026-10-11T02:17:46.965Z",
+  "data": "2026-10-11T02:19:09.517Z",
   "results": {
     "P0.1 mapa real na home sem cartas": {
       "ok": true,
@@ -40,7 +40,7 @@
     },
     "recompensa pós-entrega (curta, com restantes e XP)": {
       "ok": true,
-      "detail": "Boa! Mais uma parada resolvida. | Restam 6 cartas · Parada 1 de 7 | +30 XP | Desfazer | Fechar"
+      "detail": "Boa! Mais uma parada resolvida. | Restam 6 cartas · Parada 1 de 5 | +30 XP | Desfazer | Fechar"
     },
     "P0 rota some do mapa ao concluir": {
       "ok": true,
@@ -52,7 +52,7 @@
     },
     "conclusão: resumo e saída clara": {
       "ok": true,
-      "detail": "Rota concluída! | Excelente trabalho. Todas as entregas desta rota foram tratadas. | 9 | entregues | 7 | melhor seq. | Nv 2 | 115 XP | 0 min | tempo ativo | Enc"
+      "detail": "Rota concluída! | Excelente trabalho. Todas as entregas desta rota foram tratadas. | 4 | entregues | 2 | melhor seq. | Nv 1 | 40 XP | 0 min | tempo ativo | 5 ca"
     },
     "mapa continua renderizado após concluir": {
       "ok": true,
@@ -60,7 +60,7 @@
     },
     "após limpar: nenhum overlay e nenhuma rota ativa": {
       "ok": true,
-      "detail": "fase=completed"
+      "detail": "fase=unplanned"
     },
     "P0 rota some do mapa ao ENCERRAR": {
       "ok": true,
@@ -83,16 +83,16 @@
       "detail": "De onde a rota começa | Usar minha localização atual | Padrão. O GPS do aparelho é a origem da rota. | Usar o ponto de partida manual | não definido | Usar a última posição conhecida | -23.93720, -46."
     },
     "regressão visual (pixelmatch, <2% de pixels diferentes)": {
-      "ok": true,
-      "detail": "{\"01_home_sem_entregas\":\"baseline criada\",\"03_importacao_texto_livre\":\"baseline criada\",\"10_rota_concluida\":\"baseline criada\"}"
+      "ok": false,
+      "detail": "{\"01_home_sem_entregas\":\"0.00%\",\"03_importacao_texto_livre\":\"0.00%\",\"10_rota_concluida\":\"9.47%\"}"
     },
     "axe sem violações (A/AA)": {
-      "ok": false,
-      "detail": "[{\"n\":\"Mapa\",\"v\":[]},{\"n\":\"Entregas\",\"v\":[\"color-contrast(6)\"]},{\"n\":\"Ajustes\",\"v\":[\"color-contrast(1)\"]},{\"n\":\"Importar\",\"v\":[]}]"
+      "ok": true,
+      "detail": "[{\"n\":\"Mapa\",\"v\":[]},{\"n\":\"Entregas\",\"v\":[]},{\"n\":\"Ajustes\",\"v\":[]},{\"n\":\"Importar\",\"v\":[]}]"
     },
-    "Nominatim não consultado no teste": {
-      "ok": false,
-      "detail": "7 requisições"
+    "geocodificação: escopo Santos/SP (viewbox+cidade+UF) e sem consulta em massa": {
+      "ok": true,
+      "detail": "14 consultas interceptadas (nenhuma saiu para a rede); todas com viewbox de Santos, city=Santos, state=SP: true"
     },
     "sem erros de página": {
       "ok": true,
