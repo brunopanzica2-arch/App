@@ -137,7 +137,7 @@ export function queryFor(na: NormalizedAddress): Record<string, string> {
 
 export async function resolve(na: NormalizedAddress, email = "", force = false): Promise<Address> {
   const existing = await db.addresses.get(na.key);
-  if (existing && !force && (existing.confirmedAt || ["exact", "interpolated", "manual"].includes(existing.precision))) return existing;
+  if (existing && !force && (existing.confirmedAt || existing.entrance || ["exact", "interpolated", "manual", "test"].includes(existing.precision))) return existing;
   const q = queryFor(na);
   let cands = await search(q, email);
   if (!cands.length && q.postalcode) {
