@@ -1,0 +1,30 @@
+// Splash "Panzica Productions" no Chromium (NÃO Android): fundo preto, logo centralizada, texto e roda até o app abrir.
+import fs from "node:fs";
+import path from "node:path";
+import { chromium } from "playwright";
+const BASE = process.env.E2E_BASE || "http://localhost:4173/";
+const OUT = path.resolve("../docs/evidencias-chromium-2_3");
+fs.mkdirSync(OUT, { recursive: true });
+const b = await chromium.launch({ args: ["--use-gl=swiftshader", "--enable-unsafe-swiftshader"] });
+const ctx = await b.newContext({ viewport: { width: 412, height: 915 }, serviceWorkers: "block", geolocation: { latitude: -23.9372, longitude: -46.3318 }, permissions: ["geolocation"] });
+const p = await ctx.newPage();
+const res = {};
+const ok = (k, v, d) => { res[k] = { ok: v, d }; console.log(`${v ? "PASSOU" : "FALHOU"} ${k}: ${d}`); };
+await p.goto(BASE, { waitUntil: "commit" });
+await p.waitForSelector("#splash");
+await p.waitForTimeout(900);
+await p.screenshot({ path: path.join(OUT, "splash_1_logo_roda.png") });
+const info = await p.evaluate(() => { const s = document.getElementById("splash"); const cs = getComputedStyle(s); const logo = s.querySelector(".logo").getBoundingClientRect(); const spin = s.querySelector(".spin"); return { bg: cs.backgroundColor, text: s.querySelector(".brand").textContent, logoCx: logo.left + logo.width / 2, vw: innerWidth, anim: getComputedStyle(spin).animationName, role: s.getAttribute("role") }; });
+ok("fundo preto", info.bg === "rgb(0, 0, 0)", info.bg);
+ok("texto 'Panzica Productions'", info.text === "Panzica Productions", info.text);
+ok("logo centralizada", Math.abs(info.logoCx - info.vw / 2) < 1, `centro x=${info.logoCx} de ${info.vw / 2}`);
+ok("roda de carregamento girando", info.anim === "sp-rot", info.anim);
+// ainda visível antes do tempo mínimo e removida depois que o app abriu
+const still = await p.evaluate(() => !!document.getElementById("splash"));
+await p.waitForFunction(() => !document.getElementById("splash"), null, { timeout: 15000 });
+ok("some sozinha quando o app abre", still, "presente aos 0,9 s e removida depois da abertura");
+await p.waitForTimeout(1200);
+await p.screenshot({ path: path.join(OUT, "splash_2_app_aberto.png") });
+fs.writeFileSync(path.join(OUT, "resultado_splash.json"), JSON.stringify(res, null, 2));
+await b.close();
+process.exit(Object.values(res).every((r) => r.ok) ? 0 : 1);

@@ -7,8 +7,45 @@
     <title>Rota Santos</title>
     <link rel="icon" type="image/png" href="./icon-192.png" />
     <script>try{var t=localStorage.getItem('rota.theme');if(t==='dark'||(!t&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')}catch(e){}</script>
+    <style>
+      html,body{background:#000}
+      #splash{position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#000;color:#fff;transition:opacity .35s ease;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+      #splash.out{opacity:0;pointer-events:none}
+      #splash .logo{width:min(46vw,200px);height:auto;filter:drop-shadow(0 0 28px rgba(139,92,246,.45));animation:sp-pop .7s cubic-bezier(.2,.9,.3,1.1) both}
+      #splash .brand{margin-top:20px;font-weight:600;font-size:clamp(20px,6vw,26px);letter-spacing:.14em;text-transform:none;animation:sp-fade .8s .15s ease both}
+      #splash .brand span{color:#C4B5FD}
+      #splash .spin{margin-top:44px;width:38px;height:38px;animation:sp-rot 1s linear infinite}
+      #splash .spin circle{fill:none;stroke-width:4;stroke-linecap:round}
+      #splash .msg{margin-top:14px;font-size:13px;color:#94a3b8;min-height:18px;text-align:center;padding:0 24px}
+      #splash button{margin-top:10px;background:#7c3aed;color:#fff;border:0;border-radius:12px;padding:12px 18px;font-weight:600;font-size:15px}
+      @keyframes sp-rot{to{transform:rotate(360deg)}}
+      @keyframes sp-pop{from{opacity:0;transform:scale(.88)}to{opacity:1;transform:none}}
+      @keyframes sp-fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+      @media (prefers-reduced-motion:reduce){#splash .logo,#splash .brand{animation:none}#splash .spin{animation-duration:1.8s}#splash{transition:none}}
+    </style>
   </head>
   <body>
+    <div id="splash" role="status" aria-live="polite" aria-label="Carregando Panzica Productions">
+      <svg class="logo" viewBox="0 0 120 120" aria-hidden="true">
+        <defs><linearGradient id="spg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#C4B5FD"/><stop offset="1" stop-color="#7C3AED"/></linearGradient></defs>
+        <circle cx="60" cy="60" r="44" fill="none" stroke="url(#spg)" stroke-width="5"/>
+        <path d="M50.5 84V38H66a14 14 0 0 1 0 28H50.5" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="88" cy="92" r="4" fill="#8B5CF6"/>
+      </svg>
+      <div class="brand">Panzica <span>Productions</span></div>
+      <svg class="spin" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="16" stroke="#2a2a3a"/><circle cx="20" cy="20" r="16" stroke="#A78BFA" stroke-dasharray="26 76"/></svg>
+      <div class="msg" id="splash-msg"></div>
+    </div>
+    <script>
+      // Saída de segurança INLINE (funciona mesmo se o pacote JS falhar): depois de 20 s avisa e oferece tentar de novo.
+      window.__splashT = setTimeout(function () {
+        var s = document.getElementById('splash'); if (!s) return;
+        var m = document.getElementById('splash-msg');
+        m.textContent = 'Está demorando mais que o normal para abrir.';
+        var b = document.createElement('button'); b.textContent = 'Tentar de novo'; b.onclick = function () { location.reload(); };
+        m.after(b);
+      }, 20000);
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

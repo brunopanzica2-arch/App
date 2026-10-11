@@ -1,0 +1,22 @@
+{
+  "fundo preto": {
+    "ok": true,
+    "d": "rgb(0, 0, 0)"
+  },
+  "texto 'Panzica Productions'": {
+    "ok": true,
+    "d": "Panzica Productions"
+  },
+  "logo centralizada": {
+    "ok": true,
+    "d": "centro x=205.9921875 de 206"
+  },
+  "roda de carregamento girando": {
+    "ok": true,
+    "d": "sp-rot"
+  },
+  "some sozinha quando o app abre": {
+    "ok": true,
+    "d": "presente aos 0,9 s e removida depois da abertura"
+  }
+}

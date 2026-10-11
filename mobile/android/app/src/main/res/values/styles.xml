@@ -16,7 +16,13 @@
     </style>
 
 
+    <!-- Abertura: fundo PRETO + logo Panzica Productions (o texto e a roda de carregamento ficam na splash da WebView, que assume sem corte) -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
-        <item name="android:background">@drawable/splash</item>
+        <item name="windowSplashScreenBackground">@color/splash_black</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_logo</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
+        <item name="android:background">@color/splash_black</item>
+        <item name="android:navigationBarColor">@color/splash_black</item>
+        <item name="android:statusBarColor">@color/splash_black</item>
     </style>
 </resources>

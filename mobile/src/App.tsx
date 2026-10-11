@@ -31,6 +31,8 @@ function usePath(): [string, Nav] {
 }
 
 export default function App() {
+  // avisa a splash que o app abriu (primeira renderização concluída)
+  useEffect(() => { requestAnimationFrame(() => requestAnimationFrame(() => window.dispatchEvent(new Event("rota:ready")))); }, []);
   const [path, nav] = usePath();
   const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
   const toggle = () => {
