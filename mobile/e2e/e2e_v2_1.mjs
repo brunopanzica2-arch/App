@@ -89,10 +89,10 @@ const f1 = await shot("01_home_sem_entregas");
 let h = await home();
 pass("P0.1 mapa real na home sem cartas", h.mapState === "operational" && variance(f1, { x: 0, y: 150, w: 412, h: 350 }) > 12, `estado=${h.mapState} variância=${variance(f1, { x: 0, y: 150, w: 412, h: 350 }).toFixed(1)}`);
 pass("P0.3 GPS automático (sem ponto manual)", h.gpsState === "ok" && /^-23\.937/.test(h.fix), `gps=${h.gpsState} fix=${h.fix}`);
-pass("UX home vazia: CTA Importar", await page.getByRole("button", { name: /Importar cartas/ }).isVisible(), "botão visível");
+pass("UX home vazia: CTA Importar", await page.getByRole("button", { name: /Importar cartas/ }).last().isVisible(), "botão visível");
 
 // 2. importação por texto livre, sem separador/cabeçalho
-await page.getByRole("button", { name: /Importar cartas/ }).first().click();
+await page.getByRole("button", { name: /Importar cartas/ }).last().click();
 await page.getByRole("tab", { name: /Colar texto/ }).click();
 await shot("02_importacao_vazia");
 await page.locator("#text").fill(FREE);
@@ -146,7 +146,7 @@ await page.waitForTimeout(1500);
 
 // 6. concluir uma entrega: recompensa
 await page.getByRole("button", { name: /^(Entregue|Entregar todas)/ }).first().click();
-if (await page.getByRole("dialog", { name: "Confirmar entrega" }).count()) await page.getByRole("button", { name: "Entregar todas" }).click();
+if (await page.getByRole("dialog", { name: "Confirmar entrega" }).count()) await page.getByRole("dialog", { name: "Confirmar entrega" }).getByRole("button", { name: "Entregar todas" }).click();
 await page.getByTestId("reward").waitFor();
 await page.waitForTimeout(500);
 await shot("09_apos_uma_entrega_recompensa");
@@ -159,7 +159,7 @@ while ((await home()).phase !== "completed" && guard++ < 40) {
   const btn = page.getByRole("button", { name: /^(Entregue|Entregar todas)/ }).first();
   if (!(await btn.count())) break;
   await btn.click();
-  if (await page.getByRole("dialog", { name: "Confirmar entrega" }).count()) await page.getByRole("button", { name: "Entregar todas" }).click();
+  if (await page.getByRole("dialog", { name: "Confirmar entrega" }).count()) await page.getByRole("dialog", { name: "Confirmar entrega" }).getByRole("button", { name: "Entregar todas" }).click();
   await page.waitForTimeout(700);
 }
 await waitHome(() => document.querySelector("[data-testid=map-home]")?.dataset.phase === "completed", 60000);
