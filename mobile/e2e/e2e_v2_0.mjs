@@ -14,6 +14,7 @@ const pass = (id, ok, d) => { results[id] = { ok, detail: d }; console.log(`${ok
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
 const ctx = await browser.newContext({ viewport: { width: 412, height: 915 }, deviceScaleFactor: 2, locale: "pt-BR", serviceWorkers: "block",
   geolocation: { latitude: -23.9480025, longitude: -46.3406209, accuracy: 12 }, permissions: ["geolocation"] });
+await ctx.addInitScript(() => { try { localStorage.setItem("rota.intro.skip", "1"); } catch {} }); // a abertura tem teste próprio (e2e/abertura.mjs)
 const page = await ctx.newPage();
 page.setDefaultTimeout(240000);
 const errors = [];
@@ -24,7 +25,7 @@ page.on("request", (r) => { if (r.url().includes("nominatim")) nominatim++; });
 const shot = (n) => page.screenshot({ path: `${OUT}/${n}.png` });
 
 await page.goto(BASE);
-await page.waitForSelector("#root > *"); // 2.3: o app só inicia depois da entrada da abertura animada
+await page.waitForSelector("[data-testid=map-home]"); // o banco só abre quando a primeira tela (carregada sob demanda) monta
 await page.evaluate(() => new Promise((res, rej) => {
   const o = indexedDB.open("rota-santos");
   o.onsuccess = () => { const db = o.result, tx = db.transaction("settings", "readwrite");
@@ -32,10 +33,9 @@ await page.evaluate(() => new Promise((res, rej) => {
     tx.oncomplete = () => { db.close(); res(); }; tx.onerror = () => rej(tx.error); };
 }));
 await page.reload();
-await page.waitForFunction(() => !document.getElementById("splash"), null, { timeout: 60000 }); // abertura animada terminou
 
 // 1. estado vazio
-await page.getByRole("button", { name: /Importar cartas/ }).first().waitFor();
+await page.getByRole("button", { name: /Importar lista/ }).first().waitFor();
 pass("UX-01 mapa na tela inicial", await page.getByTestId("map-home").isVisible(), "tela inicial é o mapa com ação Importar");
 await page.waitForFunction(() => ["operational", "error"].includes(document.querySelector("[data-testid=map-home]")?.dataset.mapState), null, { timeout: 120000 });
 await page.waitForFunction(() => document.querySelector("[data-testid=map-home]")?.dataset.gpsState === "ok", null, { timeout: 60000 }).catch(() => {});

@@ -1,3 +1,4 @@
+import { StopListSkeleton } from "../ui/states";
 import { CheckCircle2, RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
 import { confirmEntrance, confirmPin, invalidateConfirmation, isStale, revertLast, trustOf } from "../core/address";
@@ -7,7 +8,7 @@ import { normalizeAddress } from "../core/normalize";
 import { cancelGeocode, geocodeBatch, getSettings, importPositions, stopsOf } from "../core/service";
 import { Button } from "../ui/button";
 import { useAsync } from "../ui/hooks";
-import { Alert, Badge, Card, Progress, Select, Spinner } from "../ui/misc";
+import { Alert, Badge, Card, Progress, Select } from "../ui/misc";
 import RouteMap from "../ui/RouteMap";
 import { PRECISION_LABEL } from "../ui/utils";
 
@@ -101,7 +102,7 @@ export function AddressesPage({ batchId }: { batchId: string }) {
     }
   }
 
-  if (!data) return <Spinner />;
+  if (!data) return <StopListSkeleton />;
   return (
     <div className="space-y-3">
       <div className="flex gap-2">

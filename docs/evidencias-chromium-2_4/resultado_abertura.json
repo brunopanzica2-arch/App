@@ -1,0 +1,54 @@
+{
+  "1ª do dia: cena 1 (cartão) antes da cena 2": {
+    "ok": true,
+    "d": "150:s1-in 450:s1-in 900:s1-hold 1500:s1-out 2050:s2 2250:s2 2600:s2 3000:s2 3300:s2 3550:handoff 3900:none"
+  },
+  "fonte do cartão carregada (sem fallback)": {
+    "ok": true,
+    "d": "true"
+  },
+  "anúncio 'Carregando rota' em aria-live": {
+    "ok": true,
+    "d": "Carregando rota"
+  },
+  "animação com aria-hidden": {
+    "ok": true,
+    "d": "true"
+  },
+  "abertura completa dura ~3,5–5 s e some": {
+    "ok": true,
+    "d": "3978 ms"
+  },
+  "foco vai para o conteúdo principal": {
+    "ok": true,
+    "d": "activeElement#main-content"
+  },
+  "não há skeleton/spinner de tela cheia depois": {
+    "ok": true,
+    "d": "ok"
+  },
+  "2ª abertura do dia: só cena 2 curta": {
+    "ok": true,
+    "d": "modo=short fase inicial=s2; 1312 ms até sumir (inclui espera dos dados)"
+  },
+  "tocar na tela pula a abertura": {
+    "ok": true,
+    "d": "688 ms após o toque"
+  },
+  "opção 'Pular abertura': nenhuma abertura": {
+    "ok": true,
+    "d": "sem overlay aos 400 ms"
+  },
+  "opção existe em Ajustes": {
+    "ok": true,
+    "d": "marcada"
+  },
+  "reduced motion: ~800 ms, sem movimento na rota": {
+    "ok": true,
+    "d": "modo=reduced; 1349 ms (inclui espera dos dados); traço da rota=0px"
+  },
+  "jank na abertura (quadros >50 ms)": {
+    "ok": true,
+    "d": "190 quadros, 4 >50 ms, pior 350 ms (GL por software: pior caso)"
+  }
+}

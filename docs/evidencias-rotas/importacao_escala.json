@@ -6,7 +6,7 @@
    "lidas": 1,
    "validas": 1,
    "enderecosUnicos": 1,
-   "ms": 7
+   "ms": 6
   },
   {
    "linhas": 10,
@@ -20,14 +20,14 @@
    "lidas": 28,
    "validas": 28,
    "enderecosUnicos": 27,
-   "ms": 12
+   "ms": 8
   },
   {
    "linhas": 211,
    "lidas": 211,
    "validas": 211,
    "enderecosUnicos": 132,
-   "ms": 37
+   "ms": 32
   },
   {
    "linhas": 300,
@@ -41,7 +41,7 @@
    "lidas": 500,
    "validas": 500,
    "enderecosUnicos": 150,
-   "ms": 42
+   "ms": 61
   },
   {
    "linhas": 1000,

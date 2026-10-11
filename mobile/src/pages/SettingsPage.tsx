@@ -1,3 +1,4 @@
+import { StopListSkeleton } from "../ui/states";
 import { MapPin, Save } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { Settings } from "../core/db";
@@ -8,9 +9,10 @@ import { quotaUsed } from "../core/geocode";
 import { collectDiagnostics } from "../core/diagnostics";
 import { usageReport } from "../core/geoqueue";
 import { Button } from "../ui/button";
-import { Alert, Card, Input, Label, Select, Spinner } from "../ui/misc";
+import { Alert, Card, Input, Label, Select } from "../ui/misc";
 import RouteMap from "../ui/RouteMap";
 import { LocationModeCard, NavPrefsCard } from "./NavPrefsCard";
+import { IntroPrefsCard } from "./IntroPrefsCard";
 import { PRECISION_LABEL } from "../ui/utils";
 
 export function SettingsPage() {
@@ -26,7 +28,7 @@ export function SettingsPage() {
     getSettings().then((x) => { setS(x); if (x.start) setPin({ lat: x.start.lat, lon: x.start.lon }); usageReport(x.geocoder?.costPerQueryBRL).then(setUsage); });
   }, []);
   const candidates = useMemo(() => cands, [cands]);
-  if (!s) return <Spinner />;
+  if (!s) return <StopListSkeleton />;
 
   async function geocodeStart() {
     try {
@@ -76,6 +78,7 @@ export function SettingsPage() {
       {msg && <Alert kind={msg.kind}>{msg.text}</Alert>}
       <LocationModeCard />
       <NavPrefsCard />
+      <IntroPrefsCard />
       <Card className="space-y-3">
         <div className="font-semibold">Ponto de partida</div>
         <Input aria-label="Endereço de partida" value={s.startAddress} onChange={(e) => setS({ ...s, startAddress: e.target.value })} />

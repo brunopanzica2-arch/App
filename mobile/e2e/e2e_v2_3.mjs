@@ -19,6 +19,7 @@ const lines = rows.filter((r, i) => i % 9 === 0).slice(0, 7).map((r) => `${r.rua
 const browser = await chromium.launch({ args: ["--use-gl=swiftshader", "--enable-webgl", "--ignore-gpu-blocklist", "--enable-unsafe-swiftshader"], executablePath: process.env.CHROMIUM_PATH || undefined });
 const ctx = await browser.newContext({ viewport: { width: 412, height: 915 }, deviceScaleFactor: 1, locale: "pt-BR", serviceWorkers: "block",
   geolocation: { latitude: -23.9372, longitude: -46.3318, accuracy: 10 }, permissions: ["geolocation"] });
+await ctx.addInitScript(() => { try { localStorage.setItem("rota.intro.skip", "1"); } catch {} }); // a abertura tem teste próprio (e2e/abertura.mjs)
 const page = await ctx.newPage();
 page.setDefaultTimeout(120000);
 const errors = [];
@@ -31,7 +32,7 @@ const home = () => page.evaluate(() => { const e = document.querySelector("[data
 const waitHome = (cond, t = 120000) => page.waitForFunction(cond, null, { timeout: t });
 
 await page.goto(BASE);
-await page.waitForSelector("#root > *"); // 2.3: o app só inicia depois da entrada da abertura animada
+await page.waitForSelector("[data-testid=map-home]"); // o banco só abre quando a primeira tela (carregada sob demanda) monta
 await page.evaluate(() => new Promise((res, rej) => {
   const o = indexedDB.open("rota-santos");
   o.onsuccess = () => { const db = o.result, tx = db.transaction("settings", "readwrite");
@@ -39,7 +40,6 @@ await page.evaluate(() => new Promise((res, rej) => {
     tx.oncomplete = () => { db.close(); res(); }; tx.onerror = () => rej(tx.error); };
 }));
 await page.reload();
-await page.waitForFunction(() => !document.getElementById("splash"), null, { timeout: 60000 }); // abertura animada terminou
 await waitHome(() => ["operational", "error"].includes(document.querySelector("[data-testid=map-home]")?.dataset.mapState));
 await waitHome(() => document.querySelector("[data-testid=map-home]")?.dataset.gpsState === "ok").catch(() => {});
 
@@ -85,7 +85,7 @@ pass("BUSCA-07 'Corrigir posição' alterna para 'Pronto'", await page.getByRole
 await page.getByRole("button", { name: "Fechar resultado" }).click();
 
 // ---------------------------------------------------------------- 2. importar, rota e guarda
-await page.getByRole("button", { name: /Importar cartas/ }).last().click();
+await page.getByRole("button", { name: /Importar lista/ }).last().click();
 await page.getByRole("tab", { name: /Colar texto/ }).click();
 await page.locator("#text").fill(lines.join("\n"));
 await page.getByRole("button", { name: "Pré-visualizar" }).click();

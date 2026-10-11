@@ -30,6 +30,7 @@ const FREE = lines.join("\n");
 const browser = await chromium.launch({ args: ["--use-gl=swiftshader", "--enable-webgl", "--ignore-gpu-blocklist", "--enable-unsafe-swiftshader"], executablePath: process.env.CHROMIUM_PATH || undefined });
 const ctx = await browser.newContext({ viewport: { width: 412, height: 915 }, deviceScaleFactor: 1, locale: "pt-BR", serviceWorkers: "block",
   geolocation: { latitude: -23.9372, longitude: -46.3318, accuracy: 10 }, permissions: ["geolocation"] });
+await ctx.addInitScript(() => { try { localStorage.setItem("rota.intro.skip", "1"); } catch {} }); // a abertura tem teste próprio (e2e/abertura.mjs)
 const page = await ctx.newPage();
 page.setDefaultTimeout(120000);
 const errors = [];
@@ -75,7 +76,7 @@ const waitHome = (cond, t = 120000) => page.waitForFunction(cond, null, { timeou
 
 // ---------------------------------------------------------------- semente: sem ponto manual (a origem é o GPS)
 await page.goto(BASE);
-await page.waitForSelector("#root > *"); // 2.3: o app só inicia depois da entrada da abertura animada
+await page.waitForSelector("[data-testid=map-home]"); // o banco só abre quando a primeira tela (carregada sob demanda) monta
 await page.evaluate(() => new Promise((res, rej) => {
   const o = indexedDB.open("rota-santos");
   o.onsuccess = () => { const db = o.result, tx = db.transaction("settings", "readwrite");
@@ -83,7 +84,6 @@ await page.evaluate(() => new Promise((res, rej) => {
     tx.oncomplete = () => { db.close(); res(); }; tx.onerror = () => rej(tx.error); };
 }));
 await page.reload();
-await page.waitForFunction(() => !document.getElementById("splash"), null, { timeout: 60000 }); // abertura animada terminou
 
 // 1. home sem entregas
 await waitHome(() => ["operational", "error"].includes(document.querySelector("[data-testid=map-home]")?.dataset.mapState));
@@ -93,10 +93,10 @@ const f1 = await shot("01_home_sem_entregas");
 let h = await home();
 pass("P0.1 mapa real na home sem cartas", h.mapState === "operational" && variance(f1, { x: 0, y: 150, w: 412, h: 350 }) > 12, `estado=${h.mapState} variância=${variance(f1, { x: 0, y: 150, w: 412, h: 350 }).toFixed(1)}`);
 pass("P0.3 GPS automático (sem ponto manual)", h.gpsState === "ok" && /^-23\.937/.test(h.fix), `gps=${h.gpsState} fix=${h.fix}`);
-pass("UX home vazia: CTA Importar", await page.getByRole("button", { name: /Importar cartas/ }).last().isVisible(), "botão visível");
+pass("UX home vazia: CTA Importar", await page.getByRole("button", { name: /Importar lista/ }).last().isVisible(), "botão visível");
 
 // 2. importação por texto livre, sem separador/cabeçalho
-await page.getByRole("button", { name: /Importar cartas/ }).last().click();
+await page.getByRole("button", { name: /Importar lista/ }).last().click();
 await page.getByRole("tab", { name: /Colar texto/ }).click();
 await shot("02_importacao_vazia");
 await page.locator("#text").fill(FREE);

@@ -1,0 +1,66 @@
+/* Abertura Panzica Productions. Tokens como custom properties. Só transform/opacity (e stroke-dashoffset na rota). */
+.ab {
+  --ab-bg: #000; --ab-bg2: #0b1020; --ab-fg: #f8fafc; --ab-brand: #7c3aed; --ab-brand-light: #c4b5fd; --ab-road: #1c2540;
+  --ab-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --ab-font: "Bebas Neue", "Arial Narrow", Impact, sans-serif;
+  --ab-fade-in: 600ms; --ab-hold: 900ms; --ab-fade-out: 500ms; --ab-route: 1200ms; --ab-pin-d: 520ms; --ab-brand-d: 500ms; --ab-handoff: 320ms;
+  position: fixed; inset: 0; z-index: 99999; overflow: hidden; background: var(--ab-bg); color: var(--ab-fg);
+  display: grid; place-items: center; touch-action: manipulation; user-select: none; -webkit-user-select: none;
+  transition: background-color var(--ab-handoff) ease;
+}
+.ab[data-phase="handoff"] { background-color: transparent; pointer-events: none; }
+.ab[data-phase="done"] { display: none; }
+.ab[data-mode="short"] { --ab-route: 500ms; --ab-pin-d: 240ms; --ab-brand-d: 240ms; }
+
+/* ---------- Cena 1: cartão do estúdio ---------- */
+.ab-s1 { position: absolute; inset: 0; display: grid; place-items: center; opacity: 0; will-change: opacity; }
+.ab-title {
+  position: relative; display: block; text-align: center; padding: 0 1rem; font-family: var(--ab-font); font-weight: 400;
+  font-size: clamp(40px, 11.8vw, 76px); line-height: 1; letter-spacing: 0.24em; margin-right: -0.24em; color: #e9e9ee;
+  transform: scale(1.04); will-change: transform, opacity; text-wrap: balance;
+}
+.ab-title .ab-sub { display: block; margin-top: 0.35em; font-size: 0.5em; letter-spacing: 0.5em; margin-right: -0.5em; color: #9ca3af; }
+.ab-beam {
+  position: absolute; inset: -10% 0; pointer-events: none; mix-blend-mode: overlay; opacity: 0; will-change: transform, opacity;
+  background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, 0.95) 50%, transparent 62%); transform: translateX(-70%);
+}
+.ab[data-phase="s1-in"] .ab-s1, .ab[data-phase="s1-hold"] .ab-s1 { opacity: 1; transition: opacity var(--ab-fade-in) var(--ab-ease); }
+.ab[data-phase="s1-in"] .ab-title, .ab[data-phase="s1-hold"] .ab-title { transform: none; transition: transform calc(var(--ab-fade-in) + var(--ab-hold)) var(--ab-ease); }
+.ab[data-phase="s1-hold"] .ab-beam { opacity: 1; transform: translateX(70%); transition: transform var(--ab-hold) cubic-bezier(0.45, 0, 0.2, 1), opacity 120ms linear; }
+.ab[data-phase="s1-out"] .ab-s1 { opacity: 0; transition: opacity var(--ab-fade-out) ease-in; }
+.ab[data-phase="s1-out"] .ab-title { transform: none; }
+.ab[data-mode="reduced"] .ab-title { transform: none; }
+.ab[data-mode="reduced"][data-phase="s1-in"] .ab-s1, .ab[data-mode="reduced"][data-phase="s1-hold"] .ab-s1 { transition-duration: 250ms; }
+.ab[data-mode="reduced"][data-phase="s1-out"] .ab-s1 { transition-duration: 250ms; }
+
+/* ---------- Cena 2: rota até o pino ---------- */
+.ab-s2 { position: absolute; inset: 0; opacity: 0; background: var(--ab-bg2); will-change: opacity; }
+.ab[data-phase="s2"] .ab-s2, .ab[data-phase="wait"] .ab-s2 { opacity: 1; transition: opacity 260ms ease-out; }
+.ab[data-phase="handoff"] .ab-s2 { opacity: 0; transition: opacity var(--ab-handoff) ease-in; }
+.ab-map { position: absolute; inset: 0; width: 100%; height: 100%; }
+.ab-streets { fill: none; stroke: var(--ab-road); stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+.ab-route { fill: none; stroke: var(--ab-brand); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 100; stroke-dashoffset: 100; stroke-opacity: 0;
+  filter: drop-shadow(0 0 6px rgba(124, 58, 237, 0.55)); }
+.ab[data-phase="s2"] .ab-route, .ab[data-phase="wait"] .ab-route { stroke-opacity: 1; stroke-dashoffset: 0; transition: stroke-dashoffset var(--ab-route) var(--ab-ease), stroke-opacity 80ms linear; }
+.ab[data-mode="reduced"] .ab-route { stroke-dashoffset: 0; stroke-opacity: 1; transition: none; }
+.ab-pin { transform-box: fill-box; transform-origin: 50% 100%; opacity: 0; transform: translateY(-28px); will-change: transform, opacity; }
+.ab[data-phase="s2"] .ab-pin, .ab[data-phase="wait"] .ab-pin { animation: ab-pin-drop var(--ab-pin-d) var(--ab-ease) calc(var(--ab-route) * 0.78) forwards; }
+.ab[data-mode="reduced"] .ab-pin { opacity: 1; transform: none; animation: none; }
+@keyframes ab-pin-drop { 0% { opacity: 0; transform: translateY(-28px); } 55% { opacity: 1; transform: translateY(3px); } 100% { opacity: 1; transform: none; } }
+.ab-brand { position: absolute; left: 0; right: 0; top: 14%; display: grid; justify-items: center; gap: 10px; opacity: 0; transform: translateY(10px); will-change: transform, opacity; }
+.ab[data-phase="s2"] .ab-brand, .ab[data-phase="wait"] .ab-brand { animation: ab-rise var(--ab-brand-d) var(--ab-ease) calc(var(--ab-route) * 0.85) forwards; }
+.ab[data-mode="reduced"] .ab-brand { opacity: 1; transform: none; animation: none; }
+.ab[data-phase="handoff"] .ab-brand { opacity: 1; transform: translate(-36vw, -9vh) scale(0.3); transition: transform var(--ab-handoff) var(--ab-ease), opacity var(--ab-handoff) ease-in; opacity: 0; }
+@keyframes ab-rise { to { opacity: 1; transform: none; } }
+.ab-logo { width: 72px; height: 72px; }
+.ab-appname { font-family: var(--ab-font); font-size: 30px; letter-spacing: 0.2em; margin-right: -0.2em; color: var(--ab-fg); }
+.ab-appname b { color: var(--ab-brand-light); font-weight: 400; }
+.ab[data-phase="handoff"] .ab-map { opacity: 0; transition: opacity var(--ab-handoff) ease-in; }
+.ab-wait { position: absolute; left: 0; right: 0; bottom: 12%; text-align: center; font-size: 13px; color: #94a3b8; opacity: 0; }
+.ab[data-phase="wait"] .ab-wait { opacity: 1; transition: opacity 300ms ease; }
+.ab-sr { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- entrada do app depois da abertura: lista de paradas com stagger curto (≤ 250 ms no total) ---------- */
+@keyframes rota-stagger { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.rota-enter [data-stagger] { animation: rota-stagger 220ms var(--ab-ease, cubic-bezier(0.16, 1, 0.3, 1)) both; }
+ @media (prefers-reduced-motion: reduce) { .rota-enter [data-stagger] { animation: none; } }

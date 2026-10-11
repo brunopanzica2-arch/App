@@ -1,8 +1,9 @@
+import { StopListSkeleton } from "../ui/states";
 import { Download } from "lucide-react";
 import { exportRows, report, shareFile } from "../core/service";
 import { Button } from "../ui/button";
 import { useAsync, useCurrentBatch } from "../ui/hooks";
-import { Card, Spinner, Stat } from "../ui/misc";
+import { Card, Stat } from "../ui/misc";
 import { REASON_LABEL, STATUS_LABEL, fmtDist, fmtTime } from "../ui/utils";
 
 export function ReportsPage() {
@@ -24,7 +25,7 @@ export function ReportsPage() {
   }
 
   if (!batchId) return <Card>Nenhum lote importado.</Card>;
-  if (!rep) return <Spinner />;
+  if (!rep) return <StopListSkeleton />;
   const delivered = rep.counts.delivered || 0;
   const r = rep.route;
   return (

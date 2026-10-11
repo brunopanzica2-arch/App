@@ -17,15 +17,18 @@ export function useAsync<T>(fn: () => Promise<T>, deps: unknown[]): [T | undefin
 }
 
 /** Lote atual (o mais recente se nenhum foi escolhido). */
-export function useCurrentBatch(): [string | null, (id: string) => void] {
+/** O 3º item indica que a leitura do cache terminou (antes disso `null` não significa "sem lote"). */
+export function useCurrentBatch(): [string | null, (id: string) => void, boolean] {
   const [id, setId] = useState<string | null>(null);
+  const [resolved, setResolved] = useState(false);
   useEffect(() => {
     (async () => {
       const s = await getSettings();
-      if (s.currentBatch && (await db.batches.get(s.currentBatch))) return setId(s.currentBatch);
+      if (s.currentBatch && (await db.batches.get(s.currentBatch))) { setId(s.currentBatch); setResolved(true); return; }
       const last = (await db.batches.orderBy("createdAt").reverse().first())?.id ?? null;
       setId(last);
+      setResolved(true);
     })();
   }, []);
-  return [id, (v) => { setId(v); void saveSettings({ currentBatch: v }); }];
+  return [id, (v) => { setId(v); setResolved(true); void saveSettings({ currentBatch: v }); }, resolved];
 }

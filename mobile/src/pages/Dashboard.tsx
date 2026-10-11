@@ -1,3 +1,4 @@
+import { StopListSkeleton } from "../ui/states";
 import { AlertTriangle, MapPinned, Route as RouteIcon, Upload } from "lucide-react";
 import type { Nav } from "../App";
 import { trustSummary } from "../core/address";
@@ -5,7 +6,7 @@ import { db } from "../core/db";
 import { getSettings, stopsOf, TERMINAL } from "../core/service";
 import { Button } from "../ui/button";
 import { useAsync, useCurrentBatch } from "../ui/hooks";
-import { Alert, Card, Progress, Select, Spinner, Stat } from "../ui/misc";
+import { Alert, Card, Progress, Select, Stat } from "../ui/misc";
 import { fmtDist, fmtTime } from "../ui/utils";
 
 export function Dashboard({ nav }: { nav: Nav }) {
@@ -20,7 +21,7 @@ export function Dashboard({ nav }: { nav: Nav }) {
     return { stops, unlocated, letters, addresses, route };
   }, [batchId]);
 
-  if (!batches) return <Spinner />;
+  if (!batches) return <StopListSkeleton />;
   if (!batches.length)
     return (
       <Card className="space-y-3 text-center">
@@ -43,7 +44,7 @@ export function Dashboard({ nav }: { nav: Nav }) {
         {batches.map((b) => <option key={b.id} value={b.id}>{b.date} · {b.reference} ({b.report.inserted} cartas)</option>)}
       </Select>
       {!settings?.start?.confirmed && <Alert kind="warn">Ponto de partida não confirmado — vá em Ajustes.</Alert>}
-      {!data ? <Spinner /> : (
+      {!data ? <StopListSkeleton /> : (
         <>
           <Card className="p-3 text-center">
             <div className="text-2xl font-extrabold">{total} cartas / {data.stops.length + new Set(data.unlocated.map((l) => l.addressKey)).size} imóveis / {new Set(data.letters.map((l) => l.neighborhood).filter(Boolean)).size} bairros</div>

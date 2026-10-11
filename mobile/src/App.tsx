@@ -1,14 +1,20 @@
 import { History, ListChecks, Map as MapIcon, Moon, Settings, Sun } from "lucide-react";
-import { useEffect, useState } from "react";
-import { AddressesPage } from "./pages/Addresses";
-import { DeliveriesPage } from "./pages/Deliveries";
-import { MapHome } from "./pages/MapHome";
-import { ImportPage } from "./pages/Import";
-import { PlanPage } from "./pages/Plan";
-import { ReportsPage } from "./pages/Reports";
-import { RoutePage } from "./pages/RoutePage";
-import { SettingsPage } from "./pages/SettingsPage";
+import { lazy, Suspense, useEffect, useState } from "react";
+import { signalDataReady } from "./intro/ready";
+import { ErrorBoundary, StopListSkeleton } from "./ui/states";
 import { cn } from "./ui/utils";
+
+
+// Código dividido por tela: o mapa (MapLibre, ~1 MB) não bloqueia o início; carrega em paralelo à abertura.
+const lazyPage = <K extends string>(load: () => Promise<Record<K, React.ComponentType<any>>>, k: K) => lazy(() => load().then((m) => ({ default: m[k] })));
+const AddressesPage = lazyPage(() => import("./pages/Addresses"), "AddressesPage");
+const DeliveriesPage = lazyPage(() => import("./pages/Deliveries"), "DeliveriesPage");
+const MapHome = lazyPage(() => import("./pages/MapHome"), "MapHome");
+const ImportPage = lazyPage(() => import("./pages/Import"), "ImportPage");
+const PlanPage = lazyPage(() => import("./pages/Plan"), "PlanPage");
+const ReportsPage = lazyPage(() => import("./pages/Reports"), "ReportsPage");
+const RoutePage = lazyPage(() => import("./pages/RoutePage"), "RoutePage");
+const SettingsPage = lazyPage(() => import("./pages/SettingsPage"), "SettingsPage");
 
 export type Nav = (path: string) => void;
 
@@ -31,8 +37,6 @@ function usePath(): [string, Nav] {
 }
 
 export default function App() {
-  // avisa a splash que o app abriu (primeira renderização concluída)
-  useEffect(() => { requestAnimationFrame(() => requestAnimationFrame(() => window.dispatchEvent(new Event("rota:ready")))); }, []);
   const [path, nav] = usePath();
   const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
   const toggle = () => {
@@ -45,6 +49,8 @@ export default function App() {
   const [, seg, arg] = pathOnly.split("/");
   const focusKey = new URLSearchParams(query).get("stop") ?? undefined;
   const isMap = !seg;
+  // telas que não são o mapa não esperam dados próprios para a abertura terminar; o mapa sinaliza quando lê o cache
+  useEffect(() => { if (!isMap) signalDataReady(); }, [isMap]);
   let page: React.ReactNode;
   let title = "Rota Santos";
   switch (seg) {
@@ -58,14 +64,18 @@ export default function App() {
     default: page = <MapHome nav={nav} focusKey={focusKey} />; title = "Mapa";
   }
   return (
-    <div className={isMap ? "h-dvh overflow-hidden" : "min-h-dvh pb-20"}>
+    <div className={isMap ? "h-dvh overflow-hidden" : "min-h-dvh pb-20"} {...(isMap ? { id: "main-content", tabIndex: -1, "data-main": true } : {})}>
       <header hidden={isMap} className="sticky top-0 z-20 flex items-center gap-2 border-b border-app bg-[var(--bg)]/90 px-4 py-2 backdrop-blur">
         <h1 className="flex-1 truncate text-lg font-bold">{title}</h1>
         <button onClick={toggle} className="rounded-xl p-2" aria-label={dark ? "Modo claro" : "Modo escuro"}>
           {dark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </button>
       </header>
-      {isMap ? page : <main className="mx-auto max-w-5xl p-3">{page}</main>}
+      <ErrorBoundary key={pathOnly} area={seg || "mapa"}>
+        <Suspense fallback={<div className="p-3"><StopListSkeleton /></div>}>
+          {isMap ? page : <main id="main-content" tabIndex={-1} data-main className="mx-auto max-w-5xl p-3 outline-none">{page}</main>}
+        </Suspense>
+      </ErrorBoundary>
       <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-app bg-[var(--card)] pb-[env(safe-area-inset-bottom)]" aria-label="Navegação principal">
         {TABS.map((t) => {
           const active = t.path === "/" ? isMap || seg === "rota" : seg === t.path.slice(1) || (t.path === "/entregas" && ["importar", "enderecos", "planejar"].includes(seg));

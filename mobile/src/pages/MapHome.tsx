@@ -14,11 +14,13 @@ import { type AddressHit, searchDeliveries, type SearchResult } from "../core/se
 import { addLetterFromHit, previewRouteTo } from "../core/searchActions";
 import { searchService, setSearchUser } from "../core/searchRuntime";
 import type { PlanResult } from "../core/plan";
-import { getNavPrefs, getSettings, quickPlan, recordEvent, reportSegment, resumableSession, saveSettings, type StopView, stopsOf, TERMINAL, undoLastEvent } from "../core/service";
+import { cancelPlan, getNavPrefs, getSettings, quickPlan, recordEvent, reportSegment, resumableSession, saveSettings, type StopView, stopsOf, TERMINAL, undoLastEvent } from "../core/service";
 import { nav as navApi, parseVoiceCommand } from "../native/rotaNav";
 import { Button } from "../ui/button";
 import { useCurrentBatch } from "../ui/hooks";
-import { Alert, Badge, Spinner } from "../ui/misc";
+import { Alert, Badge } from "../ui/misc";
+import { OfflineBanner, StepProgress, StopListSkeleton } from "../ui/states";
+import { signalDataReady } from "../intro/ready";
 import RouteMap, { type MapState } from "../ui/RouteMap";
 import { CompletionCard, EndedCard, RewardToast } from "../ui/GameUi";
 import { useNavigation } from "../ui/useNavigation";
@@ -28,7 +30,7 @@ type Follow = "off" | "2d" | "3d";
 const ICON: Record<string, any> = { left: CornerUpLeft, sharp_left: CornerUpLeft, slight_left: CornerUpLeft, right: CornerUpRight, sharp_right: CornerUpRight, slight_right: CornerUpRight };
 
 export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
-  const [batchId, setBatchId] = useCurrentBatch();
+  const [batchId, setBatchId, batchResolved] = useCurrentBatch();
   const [data, setData] = useState<Awaited<ReturnType<typeof stopsOf>> | null>(null);
   const [route, setRoute] = useState<Route | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -36,6 +38,7 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
   const [follow, setFollow] = useState<Follow>("off");
   const [detail, setDetail] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  const [prog, setProg] = useState<{ stage: string; p: number } | null>(null);
   const [toast, setToast] = useState<{ text: string; undo?: boolean } | null>(null);
   const [reasonOpen, setReasonOpen] = useState(false);
   const [resume, setResume] = useState<{ stops: number; letters: number } | null>(null);
@@ -65,7 +68,9 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
   const returnTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const prevFollow = useRef<Follow>("3d");
 
+  useEffect(() => { if (loaded) signalDataReady(); }, [loaded]);
   const reload = useCallback(async () => {
+    if (!batchResolved) return; // ainda lendo o cache: continua no skeleton (sem piscar "Nenhuma entrega")
     if (!batchId) { setLoaded(true); setStats(await getDayStats()); return; }
     const d = await stopsOf(batchId);
     const rs = (await db.routes.where("batchId").equals(batchId).toArray()).sort((a, b) => b.version - a.version);
@@ -77,7 +82,7 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
     if (st.lastFix) setUserBias({ lat: st.lastFix.lat, lon: st.lastFix.lon });
     setStats(await getDayStats());
     setLoaded(true);
-  }, [batchId]);
+  }, [batchId, batchResolved]);
   useEffect(() => { void reload(); }, [reload]);
   useEffect(() => { void resumableSession().then((r) => setResume(r ? { stops: r.stops, letters: r.letters } : null)); getNavPrefs().then((p) => setSpeech(p.speech)); }, [batchId]);
   useEffect(() => { if (focusKey) setSel(focusKey); }, [focusKey]);
@@ -162,10 +167,10 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
       // origem: GPS atual (fix recente) se houver; senão o ponto de partida confirmado em Ajustes
       let here: { lat: number; lon: number } | null = null;
       try { const f = await N.awaitFirstFix(ui.gps === "ok" ? 1000 : 6000); here = { lat: f.lat, lon: f.lon }; } catch { /* sem GPS: usa a partida salva */ }
-      await quickPlan(batchId, here, (st, p) => setBusy(`${st} ${Math.round(p * 100)}%`));
+      await quickPlan(batchId, here, (st, p) => setProg({ stage: st, p }));
       await reload();
     } catch (e) { setToast({ text: (e as Error).message }); }
-    setBusy(null);
+    setBusy(null); setProg(null);
   }
 
   async function mark(ls: Letter[], status: Letter["status"], reason: string | null = null) {
@@ -284,7 +289,11 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
     await replan();
   }
 
-  if (!loaded) return <Spinner />;
+  if (!loaded) return (
+    <div className="fixed inset-x-0 top-0 grid content-end bg-[var(--bg)] p-3" style={{ bottom: "calc(3.5rem + env(safe-area-inset-bottom))" }} data-testid="home-loading">
+      <StopListSkeleton count={4} />
+    </div>
+  );
 
   const cur = current?.stop;
   const curLetters = cur?.letters.filter((l) => !TERMINAL.includes(l.status) && l.status !== "postponed") ?? [];
@@ -341,9 +350,10 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
             <button onClick={() => setSearchOpen(true)} className="card flex min-w-0 flex-1 items-center gap-2 px-3 py-3 text-left shadow-lg" aria-label="Buscar endereço ou entrega">
               <Search className="h-5 w-5 shrink-0" /> <span className="muted truncate">Buscar em Santos…</span>
             </button>
-            <Button variant="secondary" size="lg" className="shrink-0" onClick={() => nav("/importar")} aria-label="Importar cartas"><Upload className="h-5 w-5" /> Importar</Button>
+            <Button variant="secondary" size="lg" className="shrink-0" onClick={() => nav("/importar")} aria-label="Importar lista"><Upload className="h-5 w-5" /> Importar</Button>
           </div>
         )}
+        <div className="pointer-events-auto mt-2 overflow-hidden rounded-xl"><OfflineBanner /></div>
         <GpsChip ui={ui} onRetry={() => void N.locate({ ask: true })} />
         {navigating && ui.rerouting && <div className="pointer-events-auto mt-2 rounded-xl bg-amber-100 p-2 text-sm font-semibold text-amber-900" role="status">Recalculando a rota…</div>}
         {navigating && ui.offRoute && !ui.rerouting && <div className="pointer-events-auto mt-2 rounded-xl bg-amber-100 p-2 text-sm font-semibold text-amber-900" role="status">Você saiu da rota.</div>}
@@ -380,13 +390,21 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
       <section ref={sheetRef} className="absolute inset-x-0 bottom-0 max-h-[70%] overflow-y-auto rounded-t-3xl border-t border-app bg-[var(--card)] p-3 shadow-[0_-8px_24px_rgba(0,0,0,.18)]" aria-label="Entrega atual" data-testid="sheet">
         <button onClick={() => setSheetMode(sheetMode === "compact" ? "normal" : "compact")} aria-label={sheetMode === "compact" ? "Expandir painel" : "Recolher painel"} aria-expanded={sheetMode !== "compact"}
           className="mx-auto mb-1 grid h-6 w-24 place-items-center"><span className="h-1.5 w-10 rounded-full bg-neutral-400" aria-hidden /></button>
-        {busy && <div className="mb-2"><Spinner label={busy} /></div>}
+        {busy && (() => {
+          const order = ["matriz", "otimização", "geometria"], at = prog ? Math.max(0, order.indexOf(prog.stage)) : 0;
+          const names = ["Calculando distâncias a pé", "Otimizando a ordem das paradas", "Desenhando o trajeto"];
+          return (
+            <div className="mb-2"><StepProgress title={busy} onCancel={() => cancelPlan()} done={at === 0 && prog ? Math.round(prog.p * 100) : undefined} total={at === 0 && prog ? 100 : undefined}
+              hint={at === 1 ? "A otimização usa até ~10 s." : undefined}
+              steps={names.map((label, i) => ({ label, state: i < at ? "done" as const : i === at ? "active" as const : "todo" as const }))} /></div>
+          );
+        })()}
 
         {view.phase === "empty" ? (
           <div className="space-y-3 text-center" data-testid="state-empty">
             <div className="text-lg font-bold">Nenhuma entrega ainda</div>
             <p className="text-sm muted">Cole os endereços ou importe a planilha. Sem separador, sem cabeçalho.</p>
-            <Button size="lg" className="w-full" onClick={() => nav("/importar")}><Upload className="h-5 w-5" /> Importar cartas</Button>
+            <Button size="lg" className="w-full" onClick={() => nav("/importar")}><Upload className="h-5 w-5" /> Importar lista</Button>
           </div>
         ) : view.phase === "unplanned" ? (
           <div className="space-y-3" data-testid="state-unplanned">

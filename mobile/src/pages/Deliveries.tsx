@@ -1,3 +1,4 @@
+import { StopListSkeleton } from "../ui/states";
 import { Search, Trash2, Upload } from "lucide-react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useMemo, useRef, useState } from "react";
@@ -6,7 +7,7 @@ import { db } from "../core/db";
 import { batchUndoSummary, diagnoseLegacy, reprocessLegacy, stopsOf, TERMINAL, undoBatch } from "../core/service";
 import { Button } from "../ui/button";
 import { useAsync, useCurrentBatch } from "../ui/hooks";
-import { Alert, Badge, Card, Input, Select, Spinner } from "../ui/misc";
+import { Alert, Badge, Card, Input, Select } from "../ui/misc";
 import { STOP_STATUS_LABEL } from "../ui/utils";
 
 type Filter = "todas" | "pendentes" | "concluidas" | "nao_localizadas";
@@ -63,7 +64,7 @@ export function DeliveriesPage({ nav }: { nav: Nav }) {
     if (next) setBatchId(next.id);
   }
 
-  if (!batches) return <Spinner />;
+  if (!batches) return <StopListSkeleton />;
   const total = data?.letters.length ?? 0;
   const done = data?.letters.filter((l) => TERMINAL.includes(l.status)).length ?? 0;
 
@@ -108,7 +109,7 @@ export function DeliveriesPage({ nav }: { nav: Nav }) {
                 const r = rows[v.index];
                 return (
                   <li key={r.key} className="absolute left-0 top-0 w-full border-b border-app" style={{ transform: `translateY(${v.start}px)` }} data-index={v.index} ref={virt.measureElement}>
-                    <button className="flex w-full items-center gap-3 py-2 text-left" onClick={() => (r.located ? nav(`/?stop=${encodeURIComponent(r.key)}`) : nav(`/enderecos/${batchId}`))}>
+                    <button className="flex w-full items-center gap-3 py-2 text-left" {...(v.index < 7 ? { "data-stagger": "", style: { animationDelay: `${v.index * 25}ms` } } : {})} onClick={() => (r.located ? nav(`/?stop=${encodeURIComponent(r.key)}`) : nav(`/enderecos/${batchId}`))}>
                       <b className="w-9 text-right">{r.seq ?? "—"}</b>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate font-semibold">{r.title}</span>

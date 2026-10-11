@@ -1,3 +1,4 @@
+import { StopListSkeleton } from "../ui/states";
 import { routePoint } from "../core/address";
 import { ChevronDown, ChevronUp, Crosshair, ExternalLink, ListOrdered, Pin, RotateCcw, Search, SkipForward, Undo2, X } from "lucide-react";
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -9,7 +10,7 @@ import {
 } from "../core/service";
 import { Button } from "../ui/button";
 import { useAsync, useCurrentBatch } from "../ui/hooks";
-import { Alert, Badge, Card, Input, Select, Spinner } from "../ui/misc";
+import { Alert, Badge, Card, Input, Select } from "../ui/misc";
 import RouteMap, { MapLegend } from "../ui/RouteMap";
 import { PRECISION_LABEL, REASON_LABEL, STATUS_LABEL, STOP_STATUS_LABEL, fmtDist, fmtTime } from "../ui/utils";
 
@@ -68,7 +69,7 @@ export function RoutePage({ routeId, nav }: { routeId?: string; nav: Nav }) {
   const virt = useVirtualizer({ count: filtered.length, getScrollElement: () => listRef.current, estimateSize: () => 64, overscan: 8 });
 
   if (!routeId) return <Card>Nenhuma rota calculada para o lote atual. <Button className="mt-2" onClick={() => nav("/")}>Ir ao painel</Button></Card>;
-  if (!route || !stopsData) return <Spinner />;
+  if (!route || !stopsData) return <StopListSkeleton />;
 
   const letters = stopsData.letters;
   const pendingLetters = letters.filter((l) => !TERMINAL.includes(l.status) && l.status !== "postponed").length;

@@ -1,0 +1,68 @@
+# Abertura 2.4 — cartão do estúdio + rota até o pino
+
+## O que mudou e por quê
+| Antes (2.3.1) | Agora (2.4.0) |
+|---|---|
+| Uma cena só (logo + letras + roda) de 4,3 s, app pesado (1,7 MB num bloco) só começava 1,4 s depois | Cena 1 "PANZICA PRODUCTIONS" (2,0 s) → Cena 2 rota/pino (1,5 s) → entrada do app (320 ms). O app carrega **em paralelo** desde o início |
+| Spinner/roda sem relação com o carregamento real | Sem spinner de tela cheia: se os dados não chegaram, entra **skeleton no formato do cartão de parada** |
+| Sempre completa | Completa na 1ª abertura do dia; nas demais só a cena 2 curta (~0,7 s); tocar pula; "Pular abertura" em Ajustes; reduced motion = cartão estático ~0,8 s |
+| Bundle único | Código dividido por tela: o mapa (MapLibre, ~1,1 MB) é um bloco à parte |
+
+## Sequência (tempos reais do código, `src/intro/policy.ts`)
+- **Cena 0**: splash nativo do Android = só fundo preto (ícone vazio) → emenda sem corte.
+- **Cena 1** (2000 ms): fade-in 600 ms com escala 1,04→1,00, feixe de luz passando pelas letras (900 ms, `mix-blend-mode: overlay`), fade-out 500 ms. Fonte **Bebas Neue** (SIL OFL, local em `public/fonts/bebas-neue/`, `preload` + `font-display: block`). Sem elementos de terceiros.
+- **Cena 2** (1500 ms): fundo do app entra do preto; ruas decorativas; a rota é desenhada (`stroke-dashoffset`, `cubic-bezier(0.16,1,0.3,1)`); o pino cai com assentamento curto (sem bounce); o logo e o nome aparecem.
+- **Entrada** (320 ms): o logo encolhe e sobe em direção ao canto; a lista de paradas entra com stagger de 25 ms (≤ 7 itens, ≤ 250 ms no total).
+- Só `transform`, `opacity` e `stroke-dashoffset` são animados.
+
+## Regras (testadas)
+- 1ª do dia/instalação nova → completa. Mesmo dia → só cena 2 curta. Dia seguinte → completa. (Interpretei "aberto do zero" como "primeira vez do dia"; ao fechar e reabrir no mesmo dia vale a regra do mesmo dia.)
+- Tocar na tela (ou Esc/Enter) pula a qualquer momento; é idempotente.
+- Opção "Pular abertura" (Ajustes → Abertura do app) tem prioridade. Som discreto: **desligado por padrão**; o navegador/WebView não informa se o celular está no silencioso, então o controle é o botão de desligar (honestidade: não dá para respeitar o modo silencioso automaticamente).
+- Dados não prontos ao fim da cena 2: espera até 2,5 s com o fundo do app (não congela no pino) e entra; se não chegar, o skeleton assume.
+- Acessibilidade: animação com `aria-hidden`; "Carregando rota" em `aria-live`; no fim o foco vai para `#main-content`.
+
+## Estados cobertos
+Vazio (botão grande **Importar lista**) · com rota no cache (abre direto, sem tela de espera) · offline (banner) · carregando (skeleton) · processamento com etapas reais e **Cancelar** (cálculo de rota: distâncias → ordem → trajeto; importação: "Localizando endereços 124/187") · erro (Error Boundary por tela, "Tentar de novo"/"Recarregar", dados locais intactos).
+
+**Desvio consciente do pedido:** o banner offline diz "Sem internet · tudo continua salvo neste aparelho. Buscas de endereço retomam quando voltar." e **não** "ações serão enviadas depois", porque o app é local-first e não tem fila de envio para servidor; prometer isso seria falso.
+
+## Defeito real encontrado e corrigido
+`useCurrentBatch` devolvia `null` enquanto lia o cache, então o mapa mostrava "Nenhuma entrega ainda" por um instante mesmo com rota salva. Agora há o sinal `resolved` e a tela fica no skeleton até o cache responder.
+
+## Medições (Lighthouse 13.5, perfil mobile simulado, Chromium headless, build de produção local)
+| Métrica | Antes (2.3.1) | Depois (2.4.0, 2 execuções) |
+|---|---|---|
+| Pontuação desempenho | 0,52 | 0,50 / 0,50 |
+| FCP | 0,9 s | 1,9 s / 1,8 s |
+| LCP | 3,6 s | 4,5 s / 4,6 s |
+| CLS | 0,03 | 0,001 |
+| TBT | 6070 ms | 3270 / 3320 ms |
+| Speed Index | 8,4 s | 4,8 / 4,9 s |
+| TTI | 10,1 s | 8,0 / 8,2 s |
+
+Leitura honesta: o bloqueio da thread principal caiu ~45% e o Speed Index quase metade (código dividido), mas **FCP e LCP pioraram**: a abertura agora nasce de preto e o primeiro texto só aparece depois que o React monta e faz fade-in de 600 ms; antes o texto estava no HTML. Melhoria possível (não feita): pôr o cartão do estúdio como HTML estático no `index.html` e sincronizar o React com ele. Lighthouse usa CPU 4× mais lenta e rede simulada: não substitui medir no seu aparelho.
+
+Quadros durante a abertura (Chromium com GL por software, pior caso): 190 quadros, 4 acima de 50 ms, pior 350 ms (momento em que o bloco do mapa é processado). **60 fps em Android barato não foi medido.**
+
+## Testes
+- Vitest: `tests/intro_policy.test.ts` (8), `tests/abertura.test.tsx` (10), `tests/states.test.tsx` (11), `tests/home_states.test.tsx` (5: vazio, carregando/skeleton, com rota no cache, offline, volta online). Suíte completa: 231 passam, 3 puladas.
+- Playwright (viewport 412×915): `e2e/abertura.mjs` — 1ª do dia, 2ª do dia, tocar para pular, opção "Pular abertura", reduced motion, fonte, aria, foco, jank. `e2e/e2e_v2_0|1|3.mjs` seguem passando (regressão visual 0,00–0,14%).
+- Quadros: `docs/evidencias-chromium-2_4/` (`filmstrip_abertura.png`).
+
+## NÃO testado / depende de você no aparelho
+- Android real (o emulador desta máquina não roda): splash nativo preto sem corte, 60 fps, som, tela de bloqueio.
+- Modo silencioso (não detectável pelo app), rede lenta/avião no meio da importação, reabrir o app várias vezes no dia, fechar durante a geocodificação.
+- PWA: o projeto **não tem manifest nem service worker** (é Capacitor); não implementei "splash de manifest".
+- Skills `app-entregas-*` foram aplicadas depois de aparecerem com o prefixo `anthropic-skills:`; `frontend-design` não existe nesta conta/sessão (não carregada).
+
+## Lista para testar no celular
+1. Instalar o APK 2.4.0; abrir pela primeira vez: ver cartão → rota/pino → app. Medir se está liso.
+2. Fechar e abrir de novo no mesmo dia: só a rota curta.
+3. Tocar na tela no meio: pula sem travar.
+4. Ajustes → Abertura do app → "Pular abertura": abrir direto.
+5. Acessibilidade → remover animações: cartão estático ~0,8 s.
+6. Modo avião antes de abrir: banner "Sem internet" e paradas do cache.
+7. Rede lenta (3G) com a lista grande: skeleton aparece, sem tela branca.
+8. Importar 187+ endereços: ver "Localizando endereços n/total", tocar Cancelar.
+9. Modo silencioso com o som da abertura ligado: confirmar o volume baixo (o app não detecta silencioso).

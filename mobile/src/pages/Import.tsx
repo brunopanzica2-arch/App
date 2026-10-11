@@ -3,7 +3,8 @@ import { useState } from "react";
 import type { Nav } from "../App";
 import { type Batch } from "../core/db";
 import { commitImport, DuplicateImportError, FIELDS, type Prepared, prepareFile, prepareText, preview, type Table } from "../core/importer";
-import { batchUndoSummary, geocodeBatch, saveSettings, undoBatch } from "../core/service";
+import { batchUndoSummary, cancelGeocode, geocodeBatch, saveSettings, undoBatch } from "../core/service";
+import { StepProgress } from "../ui/states";
 import { Button } from "../ui/button";
 import { Alert, Card, Input, Label, Progress, Select } from "../ui/misc";
 import { cn } from "../ui/utils";
@@ -184,7 +185,11 @@ export function ImportPage({ nav }: { nav: Nav }) {
         <Card className="space-y-3">
           <div className="text-lg font-bold">Lote: {result.reference}</div>
           <div className="text-sm">Inseridas: <b>{result.report.inserted}</b> · com erro: <b>{result.report.withErrors.length}</b> · duplicadas: <b>{result.report.duplicates.length}</b></div>
-          {progress && (<div><div className="mb-1 text-sm">Localizando endereços ({progress[0]}/{progress[1]}) — 1 por segundo…</div><Progress value={progress[0] / Math.max(progress[1], 1)} /></div>)}
+          {progress && (
+            <StepProgress title="Preparando suas entregas" done={progress[0]} total={progress[1]} onCancel={() => cancelGeocode()}
+              hint="O provedor público limita a 1 consulta por segundo. O que já foi localizado fica salvo se você cancelar."
+              steps={[{ label: `Importadas ${result?.report?.inserted ?? ""} cartas`.replace("  ", " "), state: "done" }, { label: "Localizando endereços", detail: `${progress[0]}/${progress[1]}`, state: "active" }, { label: "Calcular a melhor rota (no mapa)", state: "todo" }]} />
+          )}
           {!result.geo && !progress && (
             <Alert kind="info">Endereços ainda NÃO localizados. Para lotes grandes, localize em “Revisar endereços” (1 consulta/s ao serviço público, com cota diária) ou importe coordenadas.
               <Button className="mt-2" size="sm" variant="secondary" onClick={() => geocode(result)}>Localizar agora</Button></Alert>

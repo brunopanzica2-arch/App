@@ -45,3 +45,11 @@ body { font-size: 17px; -webkit-tap-highlight-color: transparent; padding-top: e
 .reward-in { animation: rewardIn .32s cubic-bezier(.2,.9,.3,1.2); }
 @keyframes pulseOnce { 0% { box-shadow: 0 0 0 0 rgba(124,58,237,.55); } 100% { box-shadow: 0 0 0 16px rgba(124,58,237,0); } }
 .pulse-once { animation: pulseOnce .6s ease-out 1; }
+
+/* skeletons (abertura 2.4): shimmer sutil só em transform/opacity; estático com reduced motion */
+.sk { position: relative; overflow: hidden; display: block; background: color-mix(in srgb, var(--fg) 9%, transparent); }
+.sk::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--fg) 10%, transparent), transparent); animation: sk-shimmer 1.4s ease-in-out infinite; }
+@keyframes sk-shimmer { to { transform: translateX(100%); } }
+.sk-indet { animation: sk-indet 1.2s cubic-bezier(.4,0,.2,1) infinite; }
+@keyframes sk-indet { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }
+@media (prefers-reduced-motion: reduce) { .sk::after, .sk-indet { animation: none !important; } }
