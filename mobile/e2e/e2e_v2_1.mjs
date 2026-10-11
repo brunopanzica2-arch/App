@@ -228,9 +228,10 @@ const lm = await page.getByTestId("location-mode").innerText();
 pass("ajustes: 3 origens distintas", /localização atual/i.test(lm) && /ponto de partida manual/i.test(lm) && /última posição/i.test(lm), lm.replace(/\n/g, " | ").slice(0, 200));
 
 // 11. regressão visual (pixels) nas telas determinísticas
-const masks = { gps: { x: 0, y: 95, w: 412, h: 40 } };
+// regiões dinâmicas mascaradas: chip de GPS (idade do fix), recompensa temporária e tempo ativo
+const masks = { gps: { x: 0, y: 60, w: 412, h: 170 }, time: { x: 300, y: 690, w: 100, h: 50 } };
 const reg = {};
-for (const n of ["01_home_sem_entregas", "03_importacao_texto_livre", "10_rota_concluida"]) reg[n] = diffAgainstBaseline(n, [masks.gps]);
+for (const n of ["01_home_sem_entregas", "03_importacao_texto_livre", "10_rota_concluida"]) reg[n] = diffAgainstBaseline(n, [masks.gps, masks.time]);
 const worst = Object.entries(reg).sort((a, b) => b[1].ratio - a[1].ratio)[0];
 pass("regressão visual (pixelmatch, <2% de pixels diferentes)", Object.values(reg).every((r) => r.ratio < 0.02), JSON.stringify(Object.fromEntries(Object.entries(reg).map(([k, v]) => [k, v.created ? "baseline criada" : (v.ratio * 100).toFixed(2) + "%"]))));
 void worst; void f3; void f5; void f6; void f12; void f14;

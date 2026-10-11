@@ -133,7 +133,18 @@ export function AddressesPage({ batchId }: { batchId: string }) {
         <Card className="space-y-2">
           <div className="font-semibold">{sel.display}</div>
           <div className="text-xs muted">Original: {sel.original}</div>
-          {candidates.length > 1 && <div className="text-xs">{candidates.map((c, i) => <div key={i}>{String.fromCharCode(65 + i)} — {c.label}</div>)}</div>}
+          {sel.source && <div className="text-xs muted" data-testid="provenance">Origem: {sel.source}</div>}
+          {sel.reason && <div className="text-xs text-amber-700">{sel.reason}</div>}
+          {candidates.length > 0 && (
+            <div className="space-y-1 text-xs" data-testid="candidates">
+              {candidates.map((c, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="flex-1"><b>{i === 0 ? "Melhor sugestão" : `Alternativa ${String.fromCharCode(65 + i - 1)}`}</b> — {c.label}</span>
+                  <Button size="sm" variant="secondary" onClick={() => setPin({ lat: c.lat, lon: c.lon })}>Usar este ponto</Button>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="text-xs">Confiança atual: <b>{trustOf(sel).label}</b>{isStale(sel) && <b className="text-amber-700"> · confirmação antiga (mais de 1 ano)</b>}</div>
           <Alert kind="info">Arraste o pino roxo até a <b>portaria</b> do imóvel. "Confirmar portaria" só quando o ponto for a entrada real; senão use "Confirmar posição".</Alert>
           <label className="block text-xs">Observação da entrada (opcional, ex.: portão azul, interfone 12)

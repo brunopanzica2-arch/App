@@ -53,6 +53,23 @@ export function splitStreet(raw?: string | null): [string | null, string] {
   return [type, tokens.map((t, i) => (i < tokens.length - 1 ? TITLES[t] ?? t : t)).join(" ")];
 }
 
+/** Exibição COM acentos: usa o texto original (tokens abreviados são expandidos; chaves e consultas continuam sem acento). */
+export function prettyKeep(raw?: string | null): string {
+  const toks = clean(raw).replace(/\//g, " / ").split(" ").filter(Boolean);
+  const stop = new Set(["de", "da", "do", "das", "dos", "e"]);
+  return toks.map((t, i) => {
+    const n = normText(t).replace(/\./g, "");
+    if (i === 0 && STREET_TYPES[n]) {
+      const full = STREET_TYPES[n];
+      if (normText(t).replace(/\./g, "") === full) return t.toLowerCase()[0].toUpperCase() + t.toLowerCase().slice(1).replace(/\.$/, ""); // digitado por extenso (com acento)
+      return ({ PRACA: "Praça", SERVIDAO: "Servidão" } as Record<string, string>)[full] ?? pretty(full);
+    }
+    if (i < toks.length - 1 && TITLES[n]) return pretty(TITLES[n]);
+    const lower = t.toLowerCase();
+    return i && stop.has(lower) ? lower : lower[0].toUpperCase() + lower.slice(1);
+  }).join(" ");
+}
+
 export const pretty = (s: string) =>
   s.split(" ").filter(Boolean).map((w, i) => (["DE", "DA", "DO", "DAS", "DOS", "E"].includes(w) && i ? w.toLowerCase() : w[0] + w.slice(1).toLowerCase())).join(" ");
 
@@ -93,9 +110,11 @@ export function normalizeAddress(street?: string | null, number?: string | null,
   }
   if (normText(cityRaw) !== normText(defaultCity)) issues.push(`Município diferente do padrão: ${cityRaw}`);
   const streetPretty = [type ? pretty(type) : "", pretty(name)].filter(Boolean).join(" ");
+  // exibição com acentos (a chave e a consulta usam streetPretty sem acento)
+  const streetShown = prettyKeep(street) || streetPretty;
   const nb = clean(neighborhood) || null;
-  const display = [streetPretty + (num ? `, ${num}` : ", S/N"), nb ? pretty(normText(nb)) : null,
-    `${pretty(normText(cityRaw))}/${state}`, cepN].filter(Boolean).join(" - ");
+  const display = [streetShown + (num ? `, ${num}` : ", S/N"), nb ? prettyKeep(nb) : null,
+    `${prettyKeep(cityRaw)}/${state}`, cepN].filter(Boolean).join(" - ");
   return {
     type, name, number: num, neighborhood: nb, city: cityRaw, state, cep: cepN, original, issues, errors,
     key: [type ?? "", name, num ?? "S/N", normText(cityRaw), state].join("|"),
