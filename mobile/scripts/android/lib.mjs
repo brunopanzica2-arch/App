@@ -63,7 +63,7 @@ export async function cdpConnect(port = 9333, tries = 40) {
     else if (m.method === "Runtime.consoleAPICalled") logs.push(`${m.params.type}: ${m.params.args.map((a) => a.value ?? a.description ?? "").join(" ")}`.slice(0, 300));
     else if (m.method === "Runtime.exceptionThrown") logs.push(`EXCEPTION: ${m.params.exceptionDetails?.exception?.description ?? m.params.exceptionDetails?.text}`.slice(0, 400));
   };
-  const send = (method, params = {}) => new Promise((res, rej) => { const i = ++id; pending.set(i, { res, rej }); ws.send(JSON.stringify({ id: i, method, params })); setTimeout(() => pending.has(i) && (pending.delete(i), rej(new Error(`timeout CDP ${method}`))), 60000); });
+  const send = (method, params = {}) => new Promise((res, rej) => { const i = ++id; pending.set(i, { res, rej }); ws.send(JSON.stringify({ id: i, method, params })); setTimeout(() => pending.has(i) && (pending.delete(i), rej(new Error(`timeout CDP ${method}`))), 300000); });
   await send("Runtime.enable");
   const evaluate = async (expression) => {
     const r = await send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true });
