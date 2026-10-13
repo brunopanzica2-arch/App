@@ -45,7 +45,9 @@ const leaveEnter = () => { document.documentElement.classList.add("rota-enter");
 export function Abertura({ store, reducedMotion, now, onDone, appName = "Rota Santos" }: Props) {
   const st = store === undefined ? defaultStore() : store;
   const [mode] = useState<IntroMode>(() => decideIntro({ store: st, reducedMotion: reducedMotion ?? prefersReduced(), now }));
-  const [phase, setPhase] = useState<Phase>(mode === "none" ? "done" : mode === "short" ? "s2" : "s1-in");
+  // cartão do estúdio ESTÁTICO do index.html (pinta antes do JS): se existir, a cena 1 é dele e o React só assume na cena 2
+  const [pre] = useState(() => mode === "full" && typeof document !== "undefined" && document.documentElement.classList.contains("ab-pre-on") && !!document.getElementById("ab-pre"));
+  const [phase, setPhase] = useState<Phase>(mode === "none" ? "done" : mode === "short" ? "s2" : pre ? "s1-hold" : "s1-in");
   const [live, setLive] = useState(mode === "none" ? "" : "Carregando rota");
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const finished = useRef(false);
@@ -55,10 +57,19 @@ export function Abertura({ store, reducedMotion, now, onDone, appName = "Rota Sa
   const clear = () => { timers.current.forEach(clearTimeout); timers.current = []; };
   const later = (ms: number, fn: () => void) => { timers.current.push(setTimeout(fn, ms)); };
 
+  const dropPre = (fast = false) => {
+    const el = document.getElementById("ab-pre");
+    if (!el) return;
+    if (!fast) return el.remove();
+    el.classList.add("skip"); // some em fade curto em vez de cortar
+    setTimeout(() => el.remove(), 300);
+  };
+
   const finish = useCallback(() => {
     if (finished.current) return; // idempotente: pular + fim natural não duplicam
     finished.current = true;
     clear();
+    dropPre();
     setPhase("done");
     setLive(dataReady() ? "Pronto" : "Carregando dados");
     leaveEnter();
@@ -73,7 +84,7 @@ export function Abertura({ store, reducedMotion, now, onDone, appName = "Rota Sa
     later(TIMING.handoff, finish);
   }, [finish]);
 
-  const skip = useCallback(() => { if (!finished.current) handoff(); }, [handoff]);
+  const skip = useCallback(() => { if (!finished.current) { dropPre(true); handoff(); } }, [handoff]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (mode === "none") { finished.current = true; leaveEnter(); doneCb.current?.(); return; }
@@ -94,6 +105,14 @@ export function Abertura({ store, reducedMotion, now, onDone, appName = "Rota Sa
       later(TIMING.routeShort, afterS2);
     } else {
       if (introSound(st)) chime();
+      const scene1 = TIMING.fadeIn + TIMING.hold + TIMING.fadeOut;
+      if (pre) {
+        // a cena 1 já está tocando no HTML estático desde o carregamento da página: o React só espera o que falta dela
+        const left = Math.max(0, scene1 - (performance.now() - ((window as any).__abPreT0 ?? 0)));
+        later(left, () => { dropPre(); setPhase("s2"); });
+        later(left + TIMING.route, afterS2);
+        return clear;
+      }
       later(TIMING.fadeIn, () => setPhase("s1-hold"));
       later(TIMING.fadeIn + TIMING.hold, () => setPhase("s1-out"));
       later(TIMING.fadeIn + TIMING.hold + TIMING.fadeOut, () => setPhase("s2"));
@@ -117,12 +136,11 @@ export function Abertura({ store, reducedMotion, now, onDone, appName = "Rota Sa
   return (
     <div className="ab" data-testid="abertura" data-mode={mode} data-phase={armed ? phase : "pre"} onPointerDown={skip}>
       <div className="ab-sr" role="status" aria-live="polite">{live}</div>
-      <div className="ab-s1" aria-hidden="true">
+      {!pre && <div className="ab-s1" aria-hidden="true">
         <div className="ab-title">
           <span style={{ display: "block" }}>PANZICA</span> <span style={{ display: "block" }}>PRODUCTIONS</span>
-          <span className="ab-beam" />
         </div>
-      </div>
+      </div>}
       <div className="ab-s2" aria-hidden="true">
         <svg className="ab-map" viewBox="0 0 360 640" preserveAspectRatio="xMidYMid slice" focusable="false">
           <path className="ab-streets" d={STREETS} />

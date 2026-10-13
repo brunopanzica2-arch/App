@@ -13,11 +13,35 @@
       @font-face{font-family:"Bebas Neue";font-style:normal;font-weight:400;font-display:block;src:url("./fonts/bebas-neue/bebas-neue-latin-400-normal.woff2") format("woff2")}
       html,body{background:#000}
       /* cena 0: só preto até a abertura montar (a splash nativa do Android também é só preto) */
+      /* cartão do estúdio ESTÁTICO (cena 1): pinta no 1º quadro, antes do JS; só quando a política do dia manda tocar a abertura completa.
+         Mesmos tempos de src/intro/policy.ts: fade-in 600 + segura 900 + fade-out 500 = 2000 ms. */
+      #ab-pre{display:none;position:fixed;inset:0;z-index:100000;place-items:center;pointer-events:none;background:#000;animation:ab-pre-bg 2000ms linear both}
+      html.ab-pre-on #ab-pre{display:grid}
+      #ab-pre .t{position:relative;text-align:center;padding:0 1rem;font-family:"Bebas Neue","Arial Narrow",Impact,sans-serif;font-weight:400;font-size:clamp(40px,11.8vw,76px);line-height:1;letter-spacing:.24em;margin-right:-.24em;color:transparent;background:linear-gradient(105deg,transparent 40%,#fff 50%,transparent 60%) 130% 0/260% 100% no-repeat,linear-gradient(#d9d9e0,#d9d9e0);-webkit-background-clip:text;background-clip:text;opacity:0;animation:ab-pre-t 2000ms cubic-bezier(.16,1,.3,1) both,ab-pre-g 900ms cubic-bezier(.45,0,.2,1) 600ms both;will-change:transform,opacity}
+      #ab-pre .t span{display:block}
+      #ab-pre.skip{animation:none;opacity:0;transition:opacity .25s ease}
+      #ab-pre.skip .t{animation:none;opacity:0}
+      @keyframes ab-pre-t{0%{opacity:0;transform:scale(1.04)}30%{opacity:1;transform:none}75%{opacity:1;transform:none}100%{opacity:0;transform:none}}
+      @keyframes ab-pre-g{from{background-position:130% 0}to{background-position:-30% 0}}
+      @keyframes ab-pre-bg{0%,99%{opacity:1}100%{opacity:0}}
+      @media (prefers-reduced-motion:reduce){html.ab-pre-on #ab-pre{display:none}}
       #boot-shell{position:fixed;inset:0;background:#000;z-index:99998;display:grid;place-items:center;color:#94a3b8;font:14px system-ui,sans-serif;text-align:center;padding:24px}
       #boot-shell button{margin-top:12px;background:#7c3aed;color:#fff;border:0;border-radius:12px;padding:12px 18px;font-weight:600;font-size:15px}
     </style>
   </head>
   <body>
+    <div id="ab-pre" aria-hidden="true"><div class="t"><span>PANZICA</span> <span>PRODUCTIONS</span></div></div>
+    <script>
+      // Mesma regra de src/intro/policy.ts (decideIntro → "full"); testada em tests/intro_policy.test.ts. Falha em silêncio = sem cartão estático (o React decide).
+      try {
+        var d = new Date(), day = d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+        var reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (!reduced && localStorage.getItem('rota.intro.skip') !== '1' && localStorage.getItem('rota.intro.last') !== day) {
+          document.documentElement.classList.add('ab-pre-on');
+          window.__abPreT0 = performance.now();
+        }
+      } catch (e) {}
+    </script>
     <div id="boot-shell" aria-hidden="true"><div id="boot-msg"></div></div>
     <div id="abertura-root"></div>
     <div id="root"></div>

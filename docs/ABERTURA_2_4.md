@@ -30,18 +30,17 @@ Vazio (botão grande **Importar lista**) · com rota no cache (abre direto, sem 
 ## Defeito real encontrado e corrigido
 `useCurrentBatch` devolvia `null` enquanto lia o cache, então o mapa mostrava "Nenhuma entrega ainda" por um instante mesmo com rota salva. Agora há o sinal `resolved` e a tela fica no skeleton até o cache responder.
 
-## Medições (Lighthouse 13.5, perfil mobile simulado, Chromium headless, build de produção local)
-| Métrica | Antes (2.3.1) | Depois (2.4.0, 2 execuções) |
+## Medições (Lighthouse 13.5, perfil mobile simulado, Chromium headless, mesma máquina, 3 rodadas alternadas)
+Versão antiga = 2.3.1; nova = 2.4.x com o cartão do estúdio estático no `index.html`.
+| Métrica | Antiga (2.3.1) | Nova |
 |---|---|---|
-| Pontuação desempenho | 0,52 | 0,50 / 0,50 |
-| FCP | 0,9 s | 1,9 s / 1,8 s |
-| LCP | 3,6 s | 4,5 s / 4,6 s |
-| CLS | 0,03 | 0,001 |
-| TBT | 6070 ms | 3270 / 3320 ms |
-| Speed Index | 8,4 s | 4,8 / 4,9 s |
-| TTI | 10,1 s | 8,0 / 8,2 s |
+| FCP | 0,75–0,80 s | 1,44–1,50 s |
+| LCP | 15,7–15,8 s | 4,5–4,6 s |
+| TBT | 0,75–2,4 s | 3,7–3,9 s |
+| Speed Index | 2,5–2,8 s | 4,6–4,7 s |
+| Pontuação | 0,46–0,56 | 0,50–0,51 |
 
-Leitura honesta: o bloqueio da thread principal caiu ~45% e o Speed Index quase metade (código dividido), mas **FCP e LCP pioraram**: a abertura agora nasce de preto e o primeiro texto só aparece depois que o React monta e faz fade-in de 600 ms; antes o texto estava no HTML. Melhoria possível (não feita): pôr o cartão do estúdio como HTML estático no `index.html` e sincronizar o React com ele. Lighthouse usa CPU 4× mais lenta e rede simulada: não substitui medir no seu aparelho.
+Leitura honesta: **LCP caiu ~70%** (a versão antiga só "terminava" de pintar quando a roda/animação acabava), mas **FCP, TBT e Speed Index ficaram piores** nesta máquina: a nova tela carrega o app (React + banco + 1,1 MB do mapa) em paralelo à abertura, então a thread principal fica ocupada durante a animação. Uma medição anterior em outra máquina deu o contrário para TBT/SI, o que mostra que **o Lighthouse aqui oscila muito**; use só como ordem de grandeza e meça no seu aparelho. Pontuação geral: praticamente igual.
 
 Quadros durante a abertura (Chromium com GL por software, pior caso): 190 quadros, 4 acima de 50 ms, pior 350 ms (momento em que o bloco do mapa é processado). **60 fps em Android barato não foi medido.**
 

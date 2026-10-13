@@ -131,4 +131,37 @@ describe("Abertura", () => {
     expect(document.activeElement?.id).toBe("main-content");
     vi.unstubAllGlobals();
   });
+
+  it("com o cartão estático do index.html: o React não duplica a cena 1 e assume na cena 2 no instante certo", () => {
+    document.documentElement.classList.add("ab-pre-on");
+    document.body.insertAdjacentHTML("beforeend", '<div id="ab-pre"></div>');
+    (window as any).__abPreT0 = performance.now() - 700; // a página já está há 700 ms no ar
+    render(<Abertura store={mem()} reducedMotion={false} />);
+    expect(document.querySelector(".ab-s1")).toBeNull();
+    adv(50);
+    const left = SCENE1 - 700;
+    adv(left - 100);
+    expect(document.getElementById("ab-pre")).not.toBeNull();
+    expect(phase()).not.toBe("s2");
+    adv(150);
+    expect(phase()).toBe("s2");
+    expect(document.getElementById("ab-pre")).toBeNull();
+    document.documentElement.classList.remove("ab-pre-on");
+    delete (window as any).__abPreT0;
+  });
+
+  it("tocar durante o cartão estático: ele some em fade curto (sem corte seco) e a abertura termina", () => {
+    document.documentElement.classList.add("ab-pre-on");
+    document.body.insertAdjacentHTML("beforeend", '<div id="ab-pre"></div>');
+    (window as any).__abPreT0 = performance.now();
+    const onDone = vi.fn();
+    render(<Abertura store={mem()} reducedMotion={false} onDone={onDone} />);
+    adv(100);
+    fireEvent.pointerDown(screen.getByTestId("abertura"));
+    expect(document.getElementById("ab-pre")).toHaveClass("skip");
+    adv(400);
+    expect(document.getElementById("ab-pre")).toBeNull();
+    expect(onDone).toHaveBeenCalledTimes(1);
+    document.documentElement.classList.remove("ab-pre-on");
+  });
 });

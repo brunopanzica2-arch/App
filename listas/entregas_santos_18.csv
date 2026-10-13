@@ -1,0 +1,19 @@
+﻿identificador;destinatario;logradouro;numero;complemento;bairro;municipio;uf;cep;observacoes
+ENT001;;Rua João Éboli;53;;;Santos;SP;;Na malha de Santos só existe 'Rua Doutor João Éboli': conferir o nome
+ENT002;;Avenida Conselheiro Nébias;78;;;Santos;SP;;
+ENT003;;Rua Doutor Cochrane;197;;;Santos;SP;;
+ENT004;;Rua Tiro Naval;8;;;Santos;SP;;
+ENT005;;Avenida Conselheiro Nébias;95;;;Santos;SP;;Você escreveu 'avenida nebias': conferir se é a Av. Conselheiro Nébias
+ENT006;;Rua Sete de Setembro;35;;;Santos;SP;;Na malha consta como 'Rua 7 de Setembro' (mesma rua)
+ENT007;;Rua Cerquinho;21;;;Santos;SP;;
+ENT008;;Rua São Paulo;94;;;Santos;SP;;
+ENT009;;Rua Doutor Cesário Bastos;1;;;Santos;SP;;
+ENT010;;Rua Antônio Bento;278;;;Santos;SP;;Na malha há 'Rua Antonio Bento' e 'Rua Doutor Antônio Bento': conferir qual
+ENT011;;Rua Antônio Bento;234;;;Santos;SP;;Na malha há 'Rua Antonio Bento' e 'Rua Doutor Antônio Bento': conferir qual
+ENT012;;Rua Silveira Lobo;15;;;Santos;SP;;
+ENT013;;Rua São Paulo;37;;;Santos;SP;;
+ENT014;;Rua Joaquim Nabuco;5;;;Santos;SP;;
+ENT015;;Rua General Câmara;85;;;Santos;SP;;
+ENT016;;Rua Professor Manuel de Abreu;117;;;Santos;SP;;
+ENT017;;Rua Capitão Adolfo Millon;12;;;Santos;SP;;Na malha consta 'Rua Adolfo Millon' (sem 'Capitão'): conferir
+ENT018;;Rua Pastor Narciso de Andrade;42;;;Santos;SP;;Não encontrada na malha offline (só 'Praça Coronel Narciso de Andrade'): conferir o nome

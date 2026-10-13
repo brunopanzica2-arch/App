@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { decideIntro, introSkip, introSound, KEY_LAST, KEY_SKIP, localDay, markShown, setIntroSkip, setIntroSound, type Store } from "../src/intro/policy";
 
@@ -44,5 +45,32 @@ describe("política da abertura", () => {
   it("dia local usa a data local (não UTC)", () => {
     expect(localDay(new Date(2026, 9, 11, 23, 30))).toBe("2026-10-11");
     expect(KEY_LAST && KEY_SKIP).toBeTruthy();
+  });
+});
+
+describe("script inline do index.html = mesma regra de decideIntro('full')", () => {
+  const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const code = html.match(/<script>\s*\/\/ Mesma regra[\s\S]*?<\/script>/)![0].replace(/<\/?script>/g, "");
+  const run = (store: Store, reduced: boolean, now: Date) => {
+    const cls = new Set<string>();
+    const RealDate = Date;
+    const fakeDate = class extends RealDate { constructor() { super(now.getTime()); } } as unknown as DateConstructor;
+    const win: any = {};
+    new Function("document", "localStorage", "matchMedia", "performance", "window", "Date", code)(
+      { documentElement: { classList: { add: (c: string) => cls.add(c) } } }, store, () => ({ matches: reduced }), { now: () => 5 }, win, fakeDate);
+    return cls.has("ab-pre-on");
+  };
+  it.each([
+    ["instalação nova", {}, false, true],
+    ["já abriu hoje", { "rota.intro.last": "2026-10-11" }, false, false],
+    ["abriu ontem", { "rota.intro.last": "2026-10-10" }, false, true],
+    ["pular ligado", { "rota.intro.skip": "1" }, false, false],
+    ["reduzir animações", {}, true, false],
+  ])("%s", (_n, init, reduced, expected) => {
+    const m = new Map(Object.entries(init as Record<string, string>));
+    const store: Store = { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => void m.set(k, v) };
+    const now = new Date(2026, 9, 11, 10, 0);
+    expect(run(store, reduced as boolean, now)).toBe(expected);
+    expect(decideIntro({ store, reducedMotion: reduced as boolean, now }) === "full").toBe(expected);
   });
 });
