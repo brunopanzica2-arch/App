@@ -132,7 +132,11 @@ export function computePlan(g: Graph, req: PlanRequest, progress?: (stage: strin
     }
   }
   if (snapEnd) snaps.push(snapEnd);
-  if (!okStops.length) throw new PlanError("Nenhuma parada alcançável pela malha de pedestres a partir da origem.");
+  if (!okStops.length) {
+    const lab = new Map(req.stops.map((s) => [s.key, (s.label ?? s.key).split(" - ")[0]]));
+    const why = excluded.slice(0, 3).map((x) => `${lab.get(x.key)}: ${x.reason}`).join(" · ");
+    throw new PlanError(`Nenhuma parada alcançável pela malha de pedestres a partir da origem. ${why}${excluded.length > 3 ? ` (+${excluded.length - 3})` : ""}`.trim());
+  }
   const solver = r.solver(snaps);
   const t1 = performance.now();
   const sigs = snaps.map(snapSig);

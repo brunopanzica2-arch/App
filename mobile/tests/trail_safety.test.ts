@@ -103,3 +103,47 @@ describe("J: reportar trecho inadequado e recalcular evitando-o", () => {
     expect(alt.leg.distance).toBeGreaterThan(0);
   });
 });
+
+describe("2.6 — via PARTICULAR urbana (vila/condomínio) é alcançável com aviso; trilha privada continua vedada", () => {
+  const r = new Router(g, { ...DEFAULT_PROFILE });
+  // arestas privadas: urbanas (calçadas/ruas) × trilha/terra
+  const privUrban: number[] = [], privTrail: number[] = [];
+  for (let e = 0; e < g.m; e++) if (g.eflags[e] & 2) (r.suit[e] === 1 ? privUrban : r.suit[e] === 3 || r.suit[e] === 2 ? privTrail : []).push(e);
+
+  it("existem as duas classes na malha real (senão o teste não prova nada)", () => {
+    expect(privUrban.length).toBeGreaterThan(20);
+    expect(privTrail.length).toBeGreaterThan(0);
+  });
+  it("trilha/terra privada segue VEDADA (o incidente)", () => {
+    for (const e of privTrail.slice(0, 200)) expect(r.edgeOk[e] === 0 || r.suit[e] >= 2).toBe(true);
+    const bad = privTrail.filter((e) => r.edgeOk[e] === 1 && r.suit[e] < 2);
+    expect(bad).toEqual([]);
+  });
+  it("via particular urbana: permitida, com aviso 'via particular' e penalidade (nunca atalho gratuito)", () => {
+    const ok = privUrban.filter((e) => r.edgeOk[e] === 1);
+    expect(ok.length / privUrban.length).toBeGreaterThan(0.8);
+    expect([...r.suitWhy.values()].some((w) => /via particular/.test(w))).toBe(true);
+    // penalidade: percorrer a aresta privada custa mais que a pública equivalente (tempo extra = pen)
+    const e = ok.find((x) => g.len[x] > 20)!;
+    const base = g.len[e] / ((DEFAULT_PROFILE.walk_speed_kmh) / 3.6);
+    expect(r.wFwd[e]).toBeGreaterThan(base + 60 * g.share[e]);
+  });
+  it("entrega NUMA via particular urbana a ~1 km: a parada é alcançável e a rota avisa", () => {
+    const e = privUrban.find((x) => r.edgeOk[x] === 1 && g.len[x] > 15)!;
+    const la = (g.lat[g.ea[e]] + g.lat[g.eb[e]]) / 2, lo = (g.lon[g.ea[e]] + g.lon[g.eb[e]]) / 2;
+    const res = computePlan(g, {
+      start: { lat: la + 0.006, lon: lo + 0.004 }, mode: "open", strategy: "global", profile: { ...DEFAULT_PROFILE }, timeLimitMs: 800, maxSnap: 150,
+      stops: [{ key: "vila", lat: la, lon: lo, service: 30, label: "Vila particular, 10" }],
+    });
+    expect(res.order.map((o) => o.key)).toEqual(["vila"]);
+    expect(res.excluded).toEqual([]);
+  });
+  it("erro 'nenhuma parada alcançável' agora diz QUAIS paradas e POR QUÊ", () => {
+    // ponto no meio do oceano: nenhuma malha a menos de 150 m
+    let msg = "";
+    try { computePlan(g, { start: { lat: -23.9372, lon: -46.3318 }, mode: "open", strategy: "global", profile: { ...DEFAULT_PROFILE }, timeLimitMs: 300, maxSnap: 150, stops: [{ key: "mar", lat: -24.2, lon: -46.1, service: 30, label: "Rua do Mar, 1 - Santos" }] }); } catch (e) { msg = (e as Error).message; }
+    expect(msg).toMatch(/Nenhuma parada alcançável/);
+    expect(msg).toMatch(/Rua do Mar, 1/);
+    expect(msg).toMatch(/m da malha|conectada|trilha/);
+  });
+});

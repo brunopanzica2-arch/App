@@ -73,6 +73,10 @@ export function classifyEdge(g: Graph, e: number, p: Profile): EdgeSuit {
   const forbid = p.trail_forbid_m ?? 150;
   const trailLike = hw === HW.PATH || hw === HW.TRACK || hw === HW.BRIDLEWAY
     || ((hw === HW.FOOTWAY || hw === HW.CYCLEWAY) && (surf === SURF.UNPAVED || !!(attr & ATTR.TRAILHINT)));
+  const priv = !!(g.eflags[e] & F_PRIVATE) && p.private_policy !== "allow";
+  // acesso PRIVADO: trilha/caminho/piso de terra = vedado (o incidente do morro); via urbana particular (vila, rua de condomínio) = permitida só
+  // como último trecho, com forte penalidade e aviso. Nunca atalho por propriedade privada sem dado de piso.
+  if (priv && (trailLike || surf === SURF.UNPAVED)) return { suit: 3, mult: 15, why: "acesso privado em trilha/caminho/piso sem pavimento" };
   if (trailLike) {
     const urbanish = !!(attr & ATTR.LIT) || (!!(attr & ATTR.DESIGNATED) && surf === SURF.PAVED); // caminho iluminado/pavimentado e designado a pedestres
     if (urbanish && !(attr & ATTR.TRAILHINT)) return { suit: 1, mult: 1.5, why: "caminho iluminado/designado a pedestres, não confirmado como calçada" };
@@ -81,6 +85,7 @@ export function classifyEdge(g: Graph, e: number, p: Profile): EdgeSuit {
     if (trailM >= forbid) return { suit: 3, mult: 15, why: `trilha contínua de ~${Math.round(trailM)} m (path/track/piso sem pavimento)` };
     return { suit: 2, mult: 6, why: "trecho de trilha/caminho não urbano" };
   }
+  if (priv) return { suit: 1, mult: 1, why: "via particular (acesso privado): confirmar a entrada" };
   if (hw === HW.MOTORWAY) return { suit: 1, mult: 3, why: "via expressa liberada a pedestres (confirmar)" };
   if (surf === SURF.UNPAVED) return { suit: 1, mult: 2, why: "piso sem pavimento" };
   if (hw === HW.SERVICE) return { suit: 0, mult: 1.15, why: "" };
@@ -211,7 +216,8 @@ export class Router {
     const { n, m } = g;
     // perfil urbano: acesso PRIVADO é vedado (a menos que o usuário permita explicitamente); fora dele, vale a política escolhida
     const urban = p.urban_safe !== false && p.pedestrian !== false;
-    const privForbid = p.private_policy === "forbid" || (urban && p.private_policy !== "allow");
+    const privForbid = p.private_policy === "forbid";
+    const privSoft = urban && p.private_policy !== "allow" && !privForbid; // urbano: via particular só com penalidade (trilha privada é vedada em classifyEdge)
     this.nodeOk = new Uint8Array(n);
     this.nodePen = new Float64Array(n);
     for (let i = 0; i < n; i++) {
@@ -223,6 +229,7 @@ export class Router {
       }
       if (ok && f & N_PRIVATE) {
         if (privForbid) ok = false;
+        else if (privSoft) this.nodePen[i] += p.private_penalty_s * 1.5;
         else if (p.private_policy === "penalize") this.nodePen[i] += p.private_penalty_s;
       }
       this.nodeOk[i] = ok ? 1 : 0;
@@ -245,6 +252,7 @@ export class Router {
       }
       if (f & F_PRIVATE) {
         if (privForbid) ok = 0;
+        else if (privSoft) pen += p.private_penalty_s * 2 * g.share[e];
         else if (p.private_policy === "penalize") pen += p.private_penalty_s * g.share[e];
       }
       const md = MODE_CODE[edgeMode(f, p)];
