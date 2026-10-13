@@ -2,6 +2,7 @@
 import { type Batch, db, type Letter, uid } from "./db";
 import { parseFreeAddress } from "./freetext";
 import { clean, normalizeAddress, normText, parseAddressLine } from "./normalize";
+import { explodeMultiAddressText } from "./freetext";
 import { type Inferred, inferRows, inferSchema } from "./schema";
 
 export const FIELDS: [string, string][] = [
@@ -193,7 +194,11 @@ export function fromInferred(inf: Inferred, original: string): Prepared {
 
 /** Texto colado ou conteúdo de arquivo CSV/TSV/TXT: detecta tudo sozinho. */
 export function prepareText(raw: string, forced?: { delimiter?: string | null; hasHeader?: boolean }): Prepared {
-  return fromInferred(inferSchema(raw, forced), raw.replace(/^\ufeff/, ""));
+  // vários endereços na mesma linha ("Rua A 53, Avenida B 78, …") viram um por linha ANTES de detectar delimitador/colunas
+  const { text, extra } = forced?.delimiter === undefined ? explodeMultiAddressText(raw) : { text: raw, extra: 0 };
+  const p = fromInferred(inferSchema(text, forced), text.replace(/^\ufeff/, ""));
+  if (extra > 0) p.warnings.unshift(`Separei ${extra + 1} endereços que estavam juntos na mesma linha. Confira a prévia.`);
+  return p;
 }
 
 export async function prepareFile(file: File, forced?: { delimiter?: string | null; hasHeader?: boolean }): Promise<Prepared> {
@@ -218,6 +223,7 @@ export function preview(t: Table, mapping: Record<string, string | null>) {
     warningRows: rows.filter((r) => r.warnings.length).length,
     duplicateIds: [...new Set(ids.filter((x, i) => ids.indexOf(x) !== i))],
     uniqueAddresses: new Set(rows.map((r) => r.key).filter(Boolean)).size,
+    withNumber: rows.filter((r) => !r.errors.length && !!r.values.number && !/^S\s*\/?\s*N$/i.test(r.values.number)).length,
     rows: [...rows.filter((r) => r.errors.length), ...rows.filter((r) => !r.errors.length)].slice(0, 30), // inválidas primeiro (revisão)
   };
 }

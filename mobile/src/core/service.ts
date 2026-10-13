@@ -1,5 +1,6 @@
 /** Regras de negócio do app (dados locais). */
 import { Capacitor } from "@capacitor/core";
+import { refineByAnchors } from "./anchors";
 import { type Address, DEFAULT_NAV, db, type DeliveryEvent, type Letter, type LetterStatus, type NavPrefs, type Route, type Settings, uid } from "./db";
 import { routePoint, trustOf, type Trust } from "./address";
 import { QuotaError, resolve, setDailyQuota, setProvider } from "./geocode";
@@ -46,6 +47,8 @@ export async function geocodeBatch(batchId: string, onProgress?: (done: number, 
   geoSignal = { aborted: false };
   try {
     const r = await runQueue(batchId, { email: s.nominatimEmail, signal: geoSignal, onProgress });
+    // números que o provedor não tem: estima pela numeração entre vizinhos já localizados (rotulado "estimado", nunca porta)
+    try { await refineByAnchors(); } catch { /* estimativa é um bônus: nunca derruba a geocodificação */ }
     return { addresses: r.total, errors: r.errors, stopped: r.stopped, message: r.message, remaining: r.remaining, failed: r.failed };
   } finally {
     geoSignal = null;
@@ -602,4 +605,20 @@ export async function reportSegment(route: Route, pos: { lat: number; lon: numbe
   list.push({ key: best.key, at: new Date().toISOString(), lat: best.lat, lon: best.lon, street: best.street, note });
   await saveSettings({ reportedEdges: list.slice(-40) });
   return { key: best.key, street: best.street, meters: Math.round(best.len) };
+}
+
+/** Situação dos números do lote: o que o usuário precisa saber para confiar (ou não) em cada ponto. */
+export async function numberStatusSummary(batchId: string) {
+  const letters = await db.letters.where("batchId").equals(batchId).toArray();
+  const keys = [...new Set(letters.filter((l) => !l.excluded).map((l) => l.addressKey).filter(Boolean) as string[])];
+  const out = { total: keys.length, located: 0, estimated: 0, streetOnly: 0, notFound: 0, noNumber: 0 };
+  for (const a of (await db.addresses.bulkGet(keys)).filter(Boolean) as Address[]) {
+    if (!a.number) out.noNumber++;
+    else if (a.entrance || ["exact", "manual", "test"].includes(a.precision) || a.confirmedAt) out.located++;
+    else if (a.precision === "interpolated") out.estimated++;
+    else if (a.lat != null) out.streetOnly++;
+    else out.notFound++;
+  }
+  out.notFound += keys.length - (await db.addresses.bulkGet(keys)).filter(Boolean).length; // ainda sem consulta
+  return out;
 }

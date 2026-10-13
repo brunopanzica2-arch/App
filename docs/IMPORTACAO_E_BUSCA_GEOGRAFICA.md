@@ -28,3 +28,14 @@ Texto livre/CSV/TSV/XLSX sem expor separador (inferência de esquema). Medido em
 | 1000 | 1000 | 150 | 94 |
 
 Tempo de geocodificação de 300/500/1000 endereços **não foi medido** (depende do provedor; o público limita a ~1 req/s e a cota diária do app).
+
+## 2.5 — "não está identificando o número" (causas encontradas e correções)
+**Causa 1 (defeito do app):** a lista colada **numa linha só** ("Rua A 53, Avenida B 78, Rua C 197…", ou separada por `;`/`|`) era lida como **1 endereço**: só o 1º número era reconhecido e os outros 17 sumiam (com `;` nenhum número era reconhecido). Correção: `splitMultiAddress` / `explodeMultiAddressText` (`src/core/freetext.ts`) separam os endereços onde uma palavra de via (Rua, Av., Travessa, Praça…) vem depois de separador ou de um número. Não corta "Rua da Praça 15", não mexe em planilha com cabeçalho. A prévia avisa "Separei N endereços que estavam juntos na mesma linha" e mostra **"Números identificados: N de M"**. Testes: `tests/multi_address.test.ts` (10), `e2e/lista18.mjs`.
+
+**Causa 2 (dados):** o OpenStreetMap tem poucos números de casa em Santos (medi 33 em ~1,3 km²). Para "Rua João Éboli 53" o Nominatim devolve só a rua. Isso **não dá para corrigir no app**; o que foi feito:
+1. 2ª consulta em texto livre ("Rua X 53, Santos, SP") quando a estruturada não acha o número (no Nominatim público só enquanto a cota diária < 50 %).
+2. **Estimativa pela numeração** (`src/core/anchors.ts`): se dois números da MESMA rua já têm posição confiável (provedor com número, porta marcada, coordenada importada) e **cercam** o procurado (≤ 450 m entre eles), o ponto é interpolado e marcado "ESTIMADA entre os nºs X e Y" (precisão `interpolated`, nunca exata, nunca porta). Não extrapola. Prefere o mesmo lado da rua (paridade). Nunca sobrescreve porta confirmada/exato/manual/teste.
+3. **"Marcar a porta aqui (GPS)"** (Detalhes da parada): grava a posição real com GPS (precisão ≤ 30 m) como porta confirmada; ela vira âncora e melhora os vizinhos. É a forma de o app "aprender" os números que o mapa não tem.
+4. Após importar, o resumo mostra: localizados/confirmados · estimados · só a rua (número NÃO confirmado) · não encontrados.
+
+**Limite honesto:** o app não consegue inventar números que nenhuma fonte tem; sem âncoras que cerquem o número, ele fica "só a rua" e a rota avisa "Destinos aproximados — confirme no local".

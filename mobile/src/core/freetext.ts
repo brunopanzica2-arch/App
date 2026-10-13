@@ -139,3 +139,46 @@ export function parseFreeAddress(input: string): FreeAddress {
   void stripAccents;
   return out;
 }
+
+/* ---------------------------------------------------------------------------------------------------------------
+ * Vários endereços colados na MESMA linha ("Rua A 53, Avenida B 78, Rua C 197"; ou separados por ";", "|", "1)" …).
+ * Um novo endereço começa numa palavra de tipo de via (Rua, Av., Travessa, Praça…) que vem logo depois de um separador
+ * (, ; |) ou de um número (o número da casa anterior). "Rua da Praça 15" não corta (a palavra "Praça" vem depois de "da").
+ * --------------------------------------------------------------------------------------------------------------- */
+const SPLIT_TYPE = /^(R|RUA|AV|AVE|AVN|AVENIDA|TV|TRV|TRAV|TRAVESSA|PC|PCA|PRACA|AL|ALAMEDA|EST|ESTR|ESTRADA|ROD|RODOVIA|LG|LGO|LARGO|VD|VIADUTO|BC|BECO|LADEIRA|VIELA|CAMINHO|PASSAGEM|PSG|PRACETA)$/;
+const NUM_TOKEN = /^\d{1,6}[A-Z]?$/;
+
+export function splitMultiAddress(line: string): string[] {
+  const tokens = clean(line).split(" ").filter(Boolean);
+  if (tokens.length < 4) return [clean(line)];
+  const bare = (t: string) => N(t).replace(/[,;|]+$/g, "");
+  const cuts: number[] = [];
+  for (let i = 1; i < tokens.length - 1; i++) {
+    if (!SPLIT_TYPE.test(bare(tokens[i]))) continue;
+    const prev = tokens[i - 1];
+    const afterSep = /[,;|]$/.test(prev);
+    const afterNumber = NUM_TOKEN.test(bare(prev)) || /^\d{1,3}[).:]$/.test(prev);
+    if (!(afterSep || afterNumber)) continue;
+    // "R" sozinho só vale se a palavra seguinte parece nome (evita "Rua R 5")
+    if (bare(tokens[i]) === "R" && !/^[A-Za-zÀ-ú]{3,}/.test(tokens[i + 1])) continue;
+    const marker = /^\d{1,3}[).:]$/.test(prev);
+    if (marker && i === 1) continue; // "1) Rua A…": o marcador é do primeiro endereço
+    cuts.push(marker ? i - 1 : i); // o marcador "2)" pertence ao endereço seguinte
+  }
+  if (!cuts.length) return [clean(line)];
+  const parts: string[] = [];
+  let from = 0;
+  for (const c of [...cuts, tokens.length]) { parts.push(tokens.slice(from, c).join(" ")); from = c; }
+  return parts.map((p) => clean(p.replace(/^\d{1,3}[).:]\s+/, "").replace(/[,;|\s]+$/g, ""))).filter(Boolean);
+}
+
+/** Aplica `splitMultiAddress` ao texto inteiro, linha a linha. Não mexe em tabelas (CSV/TSV com cabeçalho de colunas conhecido). */
+export function explodeMultiAddressText(raw: string): { text: string; extra: number } {
+  const lines = raw.replace(/^﻿/, "").split(/\r\n?|\n/);
+  const head = stripAccents(lines.find((l) => l.trim()) ?? "").toLowerCase();
+  const looksLikeTable = /(logradouro|endereco|street|numero|bairro|cep)/.test(head) && (head.match(/[;\t|]/g) ?? []).length >= 2;
+  if (looksLikeTable) return { text: raw, extra: 0 };
+  let extra = 0;
+  const out = lines.flatMap((l) => { const p = splitMultiAddress(l); extra += p.length - 1; return p; });
+  return extra > 0 ? { text: out.join("\n"), extra } : { text: raw, extra: 0 };
+}

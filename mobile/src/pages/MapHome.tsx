@@ -3,7 +3,8 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Nav } from "../App";
-import { routePoint } from "../core/address";
+import { confirmEntrance, routePoint } from "../core/address";
+import { refineByAnchors } from "../core/anchors";
 import { type DayStats, db, type Letter, type Route } from "../core/db";
 import { setUserBias } from "../core/geocode";
 import { hudText, precisionNote } from "../core/hud";
@@ -205,6 +206,7 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
   /** Encerrar: para GPS/voz/serviço, limpa câmera e instruções e tira a rota do mapa (sem apagar cartas). */
   async function endNav() {
     if (!route) return;
+    if (openStopsN > 0 && !window.confirm(`Encerrar a navegação? ${openStopsN} parada(s) pendente(s) continuam salvas e você pode retomar a rota.`)) return;
     await N.stop();
     await endSession(route.id);
     setFollow("off"); setSel(null); setReward(null); setDetail(false);
@@ -444,6 +446,7 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
                   </div>
                   {sheetMode !== "compact" && <div className="mt-1 flex flex-wrap gap-1"><Badge color={cur.trust.approximate ? "#b45309" : "#16a34a"}>{cur.trust.label}</Badge></div>}
                   {note && <p className="mt-1 text-sm text-amber-700" role="note">{note}</p>}
+                  {cur.address.source?.startsWith("estimado") && cur.address.reason && <p className="mt-1 text-sm text-amber-700" role="note" data-testid="estimated-note">{cur.address.reason}</p>}
                 </div>
                 {navigating && ui.nearStopKey === current!.rs.key && ui.nearStopText && (
                   <Alert kind="ok">{ui.nearStopText}</Alert>
@@ -457,7 +460,7 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
                   <Button variant="secondary" size="lg" className={cn("whitespace-normal px-2 text-base", sheetMode === "compact" ? "h-16" : "h-14")} disabled={!curLetters.length} onClick={() => mark(curLetters, "postponed")}><SkipForward className="h-5 w-5" /> Pular</Button>
                   {sheetMode !== "compact" && <Button variant="secondary" size="lg" className="h-14 whitespace-normal" onClick={() => setDetail(!detail)}><Info className="h-5 w-5" /> Detalhes</Button>}
                 </div>
-                {detail && <Details stop={cur} onMark={(l, s) => mark([l], s)} nav={nav} batchId={batchId!} reload={reload} />}
+                {detail && <Details stop={cur} onMark={(l, s) => mark([l], s)} nav={nav} batchId={batchId!} reload={reload} fix={ui.fix} onToast={(text) => setToast({ text })} />}
               </>
             ) : null}
             <div className="grid grid-cols-2 gap-2">
@@ -608,7 +611,16 @@ export function Modal({ title, children, onClose }: { title: string; children: R
   );
 }
 
-function Details({ stop, onMark, nav, batchId }: { stop: StopView; onMark: (l: Letter, s: Letter["status"]) => void; nav: Nav; batchId: string; reload: () => void }) {
+function Details({ stop, onMark, nav, batchId, reload, fix, onToast }: { stop: StopView; onMark: (l: Letter, s: Letter["status"]) => void; nav: Nav; batchId: string; reload: () => void; fix: { lat: number; lon: number; accuracy?: number } | null; onToast: (t: string) => void }) {
+  /** Marca a porta com o GPS (só com precisão ≤ 30 m). Vira posição confirmada e âncora para estimar os números vizinhos. */
+  async function markDoor() {
+    if (!fix) return onToast("Sem posição do GPS ainda. Aguarde o ponto azul aparecer.");
+    if ((fix.accuracy ?? 999) > 30) return onToast(`GPS impreciso (±${Math.round(fix.accuracy ?? 0)} m). Chegue mais perto da porta ou aguarde melhorar (precisa de ≤ 30 m).`);
+    await confirmEntrance(stop.key, fix.lat, fix.lon, `marcada com GPS no local (±${Math.round(fix.accuracy ?? 0)} m)`, "gps");
+    const r = await refineByAnchors();
+    onToast(`Porta marcada: ${stop.address.display.split(" - ")[0]}.${r.refined ? ` ${r.refined} número(s) vizinho(s) estimado(s) a partir dela.` : ""}`);
+    reload();
+  }
   return (
     <div className="space-y-2 rounded-xl border border-app p-2" data-testid="details">
       {stop.letters.map((l) => (
@@ -618,6 +630,7 @@ function Details({ stop, onMark, nav, batchId }: { stop: StopView; onMark: (l: L
         </div>
       ))}
       <div className="grid grid-cols-1 gap-2 pt-1">
+        <Button variant="success" className="whitespace-normal" onClick={() => void markDoor()} data-testid="mark-door"><Crosshair className="h-4 w-4" /> Marcar a porta aqui (GPS)</Button>
         <Button variant="secondary" className="whitespace-normal" onClick={() => nav(`/enderecos/${batchId}`)}><Download className="h-4 w-4" /> Corrigir endereço / ajustar portaria</Button>
       </div>
     </div>

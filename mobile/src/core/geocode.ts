@@ -95,8 +95,9 @@ export function classify(item: any, wanted: string | null): Candidate {
   };
 }
 
-export async function search(q: Record<string, string>, email = ""): Promise<Candidate[]> {
-  const key = providerId() + "|" + JSON.stringify(q);
+export async function search(q0: Record<string, string>, email = ""): Promise<Candidate[]> {
+  const { _n: wantedNum, ...q } = q0; // `_n` = número procurado (para classificar), não vai para o provedor
+  const key = providerId() + "|" + JSON.stringify(q0);
   const cached = await db.geocache.get(key);
   if (cached) return cached.result;
   const params: Record<string, string> = { ...q, format: "jsonv2", addressdetails: "1", limit: "8", countrycodes: "br", "accept-language": "pt-BR", viewbox: SANTOS_VIEWBOX, bounded: "0" };
@@ -105,7 +106,7 @@ export async function search(q: Record<string, string>, email = ""): Promise<Can
   for (let attempt = 0, delay = 1000; attempt < 3; attempt++, delay *= 2) {
     try {
       const items = await http(params);
-      const wanted = q.street?.split(" ")[0];
+      const wanted = wantedNum ?? q.street?.split(" ")[0];
       const res = items.map((it) => classify(it, /^\d/.test(wanted || "") ? wanted! : null));
       await db.geocache.put({ q: key, at: new Date().toISOString(), result: res });
       return res;
@@ -144,6 +145,15 @@ export async function resolve(na: NormalizedAddress, email = "", force = false):
     const { postalcode, ...rest } = q;
     void postalcode;
     cands = await search(rest, email);
+  }
+  // o provedor achou a rua mas NÃO o número: tenta a busca em texto livre ("Rua X 53, Santos"), que às vezes casa o número onde a estruturada não casa
+  // (no Nominatim público só enquanto a cota diária estiver abaixo de 50 %: a 2ª consulta não pode esgotar o dia)
+  if (na.number && !cands.some((c) => ["exact", "interpolated"].includes(c.precision)) && (!isPublicProvider() || quotaUsed() < dailyQuota * 0.5)) {
+    try {
+      const free = await search({ q: `${na.street} ${na.number}, ${na.neighborhood ? na.neighborhood + ", " : ""}${na.city}, ${na.state}`, countrycodes: "br", _n: na.number }, email);
+      const hit = free.filter((c) => ["exact", "interpolated"].includes(c.precision));
+      if (hit.length) cands = [...hit, ...cands];
+    } catch (e) { if (e instanceof QuotaError) throw e; /* a busca livre é um bônus */ }
   }
   if (!cands.length && na.number) cands = await search({ street: na.street, city: na.city, state: na.state, country: "Brasil" }, email);
   const base: Address = {

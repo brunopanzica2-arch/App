@@ -255,8 +255,8 @@ for (const [n, hsh] of [["Mapa", "#/"], ["Entregas", "#/entregas"], ["Ajustes", 
   ax.push({ n, v: r.violations.map((v) => `${v.id}(${v.nodes.length})`) });
 }
 pass("axe sem violações (A/AA)", ax.every((a) => !a.v.length), JSON.stringify(ax));
-const scoped = nomUrls.length > 0 && nomUrls.every((u) => /viewbox=/.test(u) && /city=Santos/i.test(decodeURIComponent(u)) && /state=SP/i.test(decodeURIComponent(u)));
-pass("geocodificação: escopo Santos/SP (viewbox+cidade+UF) e sem consulta em massa", scoped && nominatim <= 20, `${nominatim} consultas interceptadas (nenhuma saiu para a rede); todas com viewbox de Santos, city=Santos, state=SP: ${scoped}`);
+const scoped = nomUrls.length > 0 && nomUrls.every((u) => /viewbox=/.test(u) && ((/city=Santos/i.test(decodeURIComponent(u)) && /state=SP/i.test(decodeURIComponent(u))) || /q=.*santos,\+?sp/i.test(decodeURIComponent(u).replace(/ /g, "+"))));
+pass("geocodificação: escopo Santos/SP (viewbox+cidade+UF) e sem consulta em massa", scoped && nominatim <= 30, `${nominatim} consultas interceptadas (nenhuma saiu para a rede); todas com viewbox de Santos, city=Santos, state=SP: ${scoped}`);
 pass("sem erros de página", errors.length === 0, errors.slice(0, 3).join(" | ") || "nenhum");
 
 fs.writeFileSync(path.join(OUT, "resultado_e2e_2_1.json"), JSON.stringify({ ambiente: "Chromium (NÃO Android)", data: new Date().toISOString(), results, screenshots: shotFiles }, null, 2));

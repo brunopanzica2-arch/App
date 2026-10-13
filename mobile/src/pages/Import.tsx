@@ -3,7 +3,7 @@ import { useState } from "react";
 import type { Nav } from "../App";
 import { type Batch } from "../core/db";
 import { commitImport, DuplicateImportError, FIELDS, type Prepared, prepareFile, prepareText, preview, type Table } from "../core/importer";
-import { batchUndoSummary, cancelGeocode, geocodeBatch, saveSettings, undoBatch } from "../core/service";
+import { batchUndoSummary, cancelGeocode, geocodeBatch, numberStatusSummary, saveSettings, undoBatch } from "../core/service";
 import { StepProgress } from "../ui/states";
 import { Button } from "../ui/button";
 import { Alert, Card, Input, Label, Progress, Select } from "../ui/misc";
@@ -26,6 +26,7 @@ export function ImportPage({ nav }: { nav: Nav }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<[number, number] | null>(null);
+  const [numbers, setNumbers] = useState<Awaited<ReturnType<typeof numberStatusSummary>> | null>(null);
   const [result, setResult] = useState<(Batch & { geo?: { addresses: number; errors: string[] } }) | null>(null);
   const [manual, setManual] = useState({ street: "", number: "", complement: "", neighborhood: "", cep: "", external_id: "", recipient: "" });
 
@@ -46,6 +47,7 @@ export function ImportPage({ nav }: { nav: Nav }) {
     setProgress([0, 1]);
     const geo = await geocodeBatch(b.id, (d, t) => setProgress([d, t]));
     setResult({ ...b, geo });
+    setNumbers(await numberStatusSummary(b.id));
     setProgress(null);
   }
 
@@ -112,7 +114,7 @@ export function ImportPage({ nav }: { nav: Nav }) {
             <div><Label htmlFor="file">Arquivo CSV ou XLSX</Label>
               <input id="file" type="file" accept=".csv,.txt,.tsv,.xlsx" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="block w-full text-sm" /></div>
           ) : (
-            <div><Label htmlFor="text">Cole as linhas (planilha copiada ou um endereço por linha)</Label>
+            <div><Label htmlFor="text">Cole os endereços: um por linha, vários na mesma linha separados por vírgula, ou a planilha copiada</Label>
               <textarea id="text" rows={7} value={text} onChange={(e) => setText(e.target.value)} className="w-full rounded-xl border border-app bg-transparent p-3 font-mono text-sm" /></div>
           )}
           <div className="grid grid-cols-2 gap-3">
@@ -162,6 +164,7 @@ export function ImportPage({ nav }: { nav: Nav }) {
               <div className="grid grid-cols-2 gap-1 text-sm">
                 <div>Linhas lidas: <b>{pv.total}</b> <span className="sr-only">Linhas: {pv.total}</span></div><div>Válidas: <b>{pv.total - pv.errorRows}</b></div>
                 <div>Precisam de correção: <b className="text-problem">{pv.errorRows}</b></div><div>Ambíguas (alerta): <b>{pv.warningRows}</b></div>
+                <div data-testid="numbers-found" className="col-span-2">Números identificados: <b>{pv.withNumber} de {pv.total}</b>{pv.withNumber < pv.total - pv.errorRows ? <span className="text-amber-700"> · {pv.total - pv.errorRows - pv.withNumber} sem número</span> : null}</div>
                 <div>Imóveis únicos: <b>{pv.uniqueAddresses}</b></div><div>Cartas por imóvel: <b>até {Math.max(1, Math.round(pv.total / Math.max(pv.uniqueAddresses, 1)))}</b></div>
               </div>
               {pv.duplicateIds.length > 0 && <Alert kind="warn">Identificadores repetidos (registrados como duplicados): {pv.duplicateIds.join(", ")}</Alert>}
@@ -193,6 +196,13 @@ export function ImportPage({ nav }: { nav: Nav }) {
           {!result.geo && !progress && (
             <Alert kind="info">Endereços ainda NÃO localizados. Para lotes grandes, localize em “Revisar endereços” (1 consulta/s ao serviço público, com cota diária) ou importe coordenadas.
               <Button className="mt-2" size="sm" variant="secondary" onClick={() => geocode(result)}>Localizar agora</Button></Alert>
+          )}
+          {numbers && (
+            <Alert kind={numbers.located === numbers.total ? "ok" : "warn"}>
+              <div data-testid="number-status"><b>Números dos endereços ({numbers.total}):</b>{" "}
+                {numbers.located} localizado(s) ou confirmado(s) · {numbers.estimated} estimado(s) pelos vizinhos · {numbers.streetOnly} só a rua (número NÃO confirmado) · {numbers.notFound} não encontrado(s).
+                {numbers.estimated + numbers.streetOnly + numbers.notFound > 0 && " Na rua, use “Marcar a porta aqui (GPS)”: ela passa a valer como posição exata e ajuda a estimar os vizinhos."}</div>
+            </Alert>
           )}
           {result.geo && <Alert kind={result.geo.errors.length ? "warn" : "ok"}>{result.geo.addresses} imóveis consultados{result.geo.errors.length ? ` · ${result.geo.errors.length} falha(s) de rede (tente de novo em Validar endereços)` : ""}.</Alert>}
           <div className="grid gap-2">

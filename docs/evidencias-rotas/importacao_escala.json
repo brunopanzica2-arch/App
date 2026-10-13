@@ -6,49 +6,49 @@
    "lidas": 1,
    "validas": 1,
    "enderecosUnicos": 1,
-   "ms": 7
+   "ms": 8
   },
   {
    "linhas": 10,
    "lidas": 10,
    "validas": 10,
    "enderecosUnicos": 10,
-   "ms": 4
+   "ms": 6
   },
   {
    "linhas": 28,
    "lidas": 28,
    "validas": 28,
    "enderecosUnicos": 27,
-   "ms": 24
+   "ms": 13
   },
   {
    "linhas": 211,
    "lidas": 211,
    "validas": 211,
    "enderecosUnicos": 132,
-   "ms": 28
+   "ms": 34
   },
   {
    "linhas": 300,
    "lidas": 300,
    "validas": 300,
    "enderecosUnicos": 150,
-   "ms": 28
+   "ms": 65
   },
   {
    "linhas": 500,
    "lidas": 500,
    "validas": 500,
    "enderecosUnicos": 150,
-   "ms": 85
+   "ms": 84
   },
   {
    "linhas": 1000,
    "lidas": 1000,
    "validas": 1000,
    "enderecosUnicos": 150,
-   "ms": 102
+   "ms": 131
   }
  ]
 }

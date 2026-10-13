@@ -1,0 +1,22 @@
+{
+  "prévia: 20 endereços separados de UMA linha": {
+    "ok": true,
+    "d": "Separei 20 endereços que estavam juntos na mesma linha. Confira a prévia."
+  },
+  "prévia: 'Números identificados: 20 de 20'": {
+    "ok": true,
+    "d": "Números identificados: 20 de 20"
+  },
+  "resumo dos números: 2 localizados, 1 estimado pelos vizinhos, resto só rua/não encontrado": {
+    "ok": true,
+    "d": "Números dos endereços (20): 2 localizado(s) ou confirmado(s) · 1 estimado(s) pelos vizinhos · 0 só a rua (número NÃO confirmado) · 17 não encontrado(s). Na rua, use “Marcar a porta aqui (GPS)”: ela passa a valer como posição exata"
+  },
+  "consulta em texto livre usada como 2ª tentativa para números não achados": {
+    "ok": true,
+    "d": "54 consultas; ex.: rua silveira lobo 15, santos, sp"
+  },
+  "mapa abre com os 20 imóveis (não vazio)": {
+    "ok": true,
+    "d": "state-empty=0"
+  }
+}
