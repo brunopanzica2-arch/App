@@ -46,13 +46,13 @@ await waitHome(() => document.querySelector("[data-testid=map-home]")?.dataset.g
 // ---------------------------------------------------------------- 1. busca universal (sem nenhuma entrega importada)
 await page.getByRole("button", { name: "Buscar endereço ou entrega" }).click();
 const box = page.getByLabel("Buscar", { exact: true });
-await box.pressSequentially("rua joaquim tavora 480", { delay: 40 });
+await box.pressSequentially("rua joaquim tavora 9999", { delay: 40 });
 await page.getByTestId("addr-results").locator("li button").first().waitFor();
 const firstTitle = await page.getByTestId("addr-results").locator("li button b").first().innerText();
 const resText = await page.getByTestId("addr-results").innerText();
 await shot("01_busca_enderecos_offline");
 pass("BUSCA-01 autocomplete de ruas sem nenhuma entrega importada", /Joaquim/i.test(firstTitle), `1º resultado: ${firstTitle}`);
-pass("BUSCA-02 número digitado preservado e marcado 'não confirmado' (nunca S/N)", /480/.test(firstTitle) && /não confirmado/i.test(resText) && !/S\/N/.test(resText), resText.replace(/\n/g, " | ").slice(0, 160));
+pass("BUSCA-02 número digitado preservado e marcado 'não confirmado' (nunca S/N)", /9999/.test(firstTitle) && /não confirmado/i.test(resText) && !/S\/N/.test(resText), resText.replace(/\n/g, " | ").slice(0, 160));
 pass("BUSCA-03 digitar NÃO consulta o Nominatim público", nomUrls.length === 0, `${nomUrls.length} consulta(s) durante a digitação`);
 
 // submeter: 1 consulta, escopo Santos
@@ -84,6 +84,16 @@ await shot("05_corrigir_posicao");
 pass("BUSCA-07 'Corrigir posição' alterna para 'Pronto'", await page.getByRole("button", { name: "Pronto" }).isVisible(), "ok");
 await page.getByRole("button", { name: "Fechar resultado" }).click();
 
+// número que EXISTE na base do IBGE: resultado com número localizado, offline
+await page.getByRole("button", { name: "Buscar endereço ou entrega" }).click();
+await page.getByLabel("Buscar", { exact: true }).fill("rua tiro naval 8");
+await page.getByTestId("addr-results").getByText(/Tiro Naval/).first().waitFor();
+const ibge = await page.getByTestId("addr-results").innerText();
+await shot("05b_busca_numero_ibge");
+pass("BUSCA-08 número existente na base do IBGE aparece como 'Número localizado' (offline)", /Número localizado/.test(ibge) && /IBGE/.test(ibge) && !/não confirmado/.test(ibge.split("\n")[2] ?? ""), ibge.replace(/\n/g, " | ").slice(0, 200));
+await page.keyboard.press("Escape").catch(() => {});
+await page.getByRole("button", { name: /Fechar/ }).first().click().catch(() => {});
+
 // ---------------------------------------------------------------- 2. importar, rota e guarda
 await page.getByRole("button", { name: /Importar lista/ }).last().click();
 await page.getByRole("tab", { name: /Colar texto/ }).click();
@@ -92,7 +102,7 @@ await page.getByRole("button", { name: "Pré-visualizar" }).click();
 await page.getByTestId("inferred").waitFor();
 await page.getByRole("button", { name: /Confirmar e localizar/ }).click();
 await page.getByText(/Lote:/).waitFor();
-await page.getByText(/imóveis consultados/).waitFor();
+await page.getByText(/consultados? no provedor online/).waitFor();
 await page.getByRole("button", { name: "Revisar endereços" }).click();
 await page.getByLabel("Importar coordenadas").setInputFiles(path.join(TD, "posicoes_teste_osm.csv"));
 await page.getByText(/Coordenadas:/).waitFor();

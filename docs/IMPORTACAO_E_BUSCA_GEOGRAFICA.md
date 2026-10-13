@@ -39,3 +39,6 @@ Tempo de geocodificação de 300/500/1000 endereços **não foi medido** (depend
 4. Após importar, o resumo mostra: localizados/confirmados · estimados · só a rua (número NÃO confirmado) · não encontrados.
 
 **Limite honesto:** o app não consegue inventar números que nenhuma fonte tem; sem âncoras que cerquem o número, ele fica "só a rua" e a rota avisa "Destinos aproximados — confirme no local".
+
+## 2.6 — números pela base do IBGE (offline)
+Ver `docs/BASE_ENDERECOS_IBGE.md`. Resumo: 17 das 18 ruas da lista do usuário têm o número no CNEFE; o provedor online (Nominatim) devolveu 0 números. O app resolve primeiro offline pelo IBGE e só consulta a rede para o resto. Também separa vários endereços colados na mesma linha com mais separadores (`e`, `/`, `-`, `;`, `|`, marcadores) e número antes da rua ("53 Rua X").

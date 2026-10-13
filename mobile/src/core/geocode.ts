@@ -7,6 +7,7 @@
  */
 import { pickBest, SANTOS_VIEWBOX } from "./rank";
 import { confirmPin } from "./address";
+import { localLookup, patchFromLocal } from "./localgeo";
 import { CapacitorHttp, Capacitor } from "@capacitor/core";
 import { type Address, type Candidate, db } from "./db";
 import { type NormalizedAddress, normText } from "./normalize";
@@ -139,8 +140,25 @@ export function queryFor(na: NormalizedAddress): Record<string, string> {
 export async function resolve(na: NormalizedAddress, email = "", force = false): Promise<Address> {
   const existing = await db.addresses.get(na.key);
   if (existing && !force && (existing.confirmedAt || existing.entrance || ["exact", "interpolated", "manual", "test"].includes(existing.precision))) return existing;
+  // 1) base local do IBGE (offline, sem cota): número encontrado resolve na hora, sem consultar o provedor
+  const loc = /^santos$/i.test(na.city) ? localLookup(na) : null;
+  const lp = loc ? patchFromLocal(loc, na.number) : null;
+  const baseOf = (): Address => ({
+    key: na.key, display: na.display, original: na.original, street: na.street, number: na.number, neighborhood: na.neighborhood, city: na.city, cep: na.cep,
+    lat: null, lon: null, precision: "not_found", confidence: 0, source: null, candidates: [], needsReview: true, reason: null, verifiedAt: null, confirmedAt: null,
+  });
+  if (lp && (loc!.kind === "exact" || loc!.kind === "face")) {
+    const a = { ...baseOf(), ...lp } as Address;
+    await db.addresses.put(a);
+    return a;
+  }
   const q = queryFor(na);
-  let cands = await search(q, email);
+  let cands: Candidate[];
+  try { cands = await search(q, email); } catch (e) {
+    // sem internet / provedor fora: a estimativa do IBGE (entre vizinhos da mesma rua) ainda vale, rotulada
+    if (lp && !(e instanceof QuotaError)) { const a = { ...baseOf(), ...lp } as Address; await db.addresses.put(a); return a; }
+    throw e;
+  }
   if (!cands.length && q.postalcode) {
     const { postalcode, ...rest } = q;
     void postalcode;
@@ -163,8 +181,9 @@ export async function resolve(na: NormalizedAddress, email = "", force = false):
     reason: "Endereço não localizado pelo provedor.", verifiedAt: new Date().toISOString(), confirmedAt: null,
   };
   if (!cands.length) {
-    await db.addresses.put(base);
-    return base;
+    const a = lp ? ({ ...base, ...lp } as Address) : loc?.kind === "ambiguous" ? { ...base, candidates: loc.candidates.map((c) => ({ lat: c.lat, lon: c.lon, label: `${c.street}, ${na.number} (IBGE)`, precision: "interpolated" as const, confidence: 0.5, road: c.street, houseNumber: na.number, city: "Santos" })), reason: loc.reason } : base;
+    await db.addresses.put(a);
+    return a;
   }
   const pick = pickBest(cands, { city: na.city, neighborhood: na.neighborhood, cep: na.cep, user: userBias })!;
   const best = pick.best.c;
@@ -187,8 +206,10 @@ export async function resolve(na: NormalizedAddress, email = "", force = false):
     ...base, lat: best.lat, lon: best.lon, precision: best.precision, confidence: Math.round(conf * 1000) / 1000,
     needsReview: reasons.length > 0 || !good(best), reason: reasons.join(" ") || null,
   };
-  await db.addresses.put(addr);
-  return addr;
+  // o provedor só achou a rua/bairro, mas o IBGE estima o número entre vizinhos: a estimativa (rotulada) é melhor que o ponto genérico da rua
+  const final: Address = lp && !good(best) ? ({ ...addr, ...lp, candidates: [...(lp.candidates ?? []), ...addr.candidates].slice(0, 5) } as Address) : addr;
+  await db.addresses.put(final);
+  return final;
 }
 
 export async function confirmAddress(key: string, lat: number, lon: number) {

@@ -1,11 +1,11 @@
 {
   "BUSCA-01 autocomplete de ruas sem nenhuma entrega importada": {
     "ok": true,
-    "detail": "1º resultado: Rua Joaquim Távora, 480"
+    "detail": "1º resultado: Rua Joaquim Távora, 9999"
   },
   "BUSCA-02 número digitado preservado e marcado 'não confirmado' (nunca S/N)": {
     "ok": true,
-    "detail": "Rua Joaquim Távora, 480 | Santos/SP · rua (posição aproximada) | Número não confirmado — ponto aproximado na rua | Ruas do mapa offline. Toque na lupa para cons"
+    "detail": "Rua Joaquim Távora, 9999 | Santos/SP · rua (posição aproximada) | Número não confirmado — ponto aproximado na rua | Ruas do mapa offline. Toque na lupa para con"
   },
   "BUSCA-03 digitar NÃO consulta o Nominatim público": {
     "ok": true,
@@ -13,11 +13,11 @@
   },
   "BUSCA-04 enviar consulta ao provedor: 1 requisição, escopo Santos/SP": {
     "ok": true,
-    "detail": "https://nominatim.openstreetmap.org/search?street=480+rua+joaquim+tavora&city=Santos&state=SP&country=Brasil&format=jsonv2&addressdetails=1&limit=8&countrycodes=br&accept-language=pt-BR&viewbox=-46.46,-23.8,-46.25,-24.03"
+    "detail": "https://nominatim.openstreetmap.org/search?street=9999+rua+joaquim+tavora&city=Santos&state=SP&country=Brasil&format=jsonv2&addressdetails=1&limit=8&countrycodes=br&accept-language=pt-BR&viewbox=-46.46,-23.8,-46.25,-24.0"
   },
   "BUSCA-05 cartão: 4 ações e 'Número não confirmado'": {
     "ok": true,
-    "detail": "Rua Joaquim Távora, 480 | Santos/SP · rua (posição aproximada) | Número não confirmado |  | Número 480 não confirmado: ponto aproximado na rua, não a porta. |  | Adicionar carta | Traçar rota até aqui | Ver no mapa | Cor"
+    "detail": "Rua Joaquim Távora, 9999 | Santos/SP · rua (posição aproximada) | Número não confirmado |  | Número 9999 não confirmado: ponto aproximado na rua, não a porta. |  | Adicionar carta | Traçar rota até aqui | Ver no mapa | C"
   },
   "BUSCA-06 'Traçar rota até aqui' calcula rota a pé": {
     "ok": true,
@@ -26,6 +26,10 @@
   "BUSCA-07 'Corrigir posição' alterna para 'Pronto'": {
     "ok": true,
     "detail": "ok"
+  },
+  "BUSCA-08 número existente na base do IBGE aparece como 'Número localizado' (offline)": {
+    "ok": true,
+    "detail": "Rua Tiro Naval, 8 | Santos/SP · CENTRO · IBGE (Censo 2022) | Número localizado | Rua Tiro Naval, 8 | Santos/SP · rua (posição aproximada) | Número não confirmado — ponto aproximado na rua | Ruas do ma"
   },
   "SEG-01 selo de segurança visível; 'Rota revisada' só se nada aproximado/não verificado": {
     "ok": true,

@@ -1,0 +1,13 @@
+{
+ "fonte": "IBGE, Censo Demográfico 2022, Cadastro Nacional de Endereços para Fins Estatísticos (CNEFE)",
+ "url": "https://ftp.ibge.gov.br/Cadastro_Nacional_de_Enderecos_para_Fins_Estatisticos/Censo_Demografico_2022/Arquivos_CNEFE/CSV/Municipio/35_SP/3548500_SANTOS.zip",
+ "municipio": "Santos/SP (3548500)",
+ "linhas_csv": 231082,
+ "descartadas": 6833,
+ "registros": 57582,
+ "logradouros": 1319,
+ "sha256_zip": "f49d02bb7f71373b65c3c73e5636a89633116209668a1754a4d1fb8e94121d4f",
+ "aviso": "Pontos do CNEFE são para fins estatísticos: nível 1 = ponto do endereço, nível 2 = face da quadra. Confirme a porta em campo.",
+ "bytes": 1015974,
+ "sha256_bin": "7d24dc03bc20f845654cbce302a41ff195f61ceb9ef99702b3514ccc65f30571"
+}

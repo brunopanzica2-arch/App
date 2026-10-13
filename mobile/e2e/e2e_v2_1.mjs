@@ -109,7 +109,7 @@ const okFree = pick.every((r) => prev.includes(String(r.num)));
 pass("IMP texto livre: rua e número reconhecidos sem separador", okFree && /Linhas lidas:\s*9/.test(await page.locator("main").innerText()), `${lines.length} linhas; prévia contém todos os números`);
 await page.getByRole("button", { name: /Confirmar e localizar/ }).click();
 await page.getByText(/Lote:/).waitFor();
-await page.getByText(/imóveis consultados/).waitFor(); // geocodificação em segundo plano termina antes de importar as posições
+await page.getByText(/consultados? no provedor online/).waitFor(); // geocodificação em segundo plano termina antes de importar as posições
 const res = await page.locator("main").innerText();
 pass("IMP 3 cartas no mesmo imóvel preservadas", /Inseridas:\s*9/.test(res) && /duplicadas:\s*0/.test(res), (res.match(/Inseridas:[^\n]*/) || [""])[0]);
 // posições TESTE (fixtures) → rota
@@ -196,7 +196,7 @@ await page.getByRole("button", { name: "Pré-visualizar" }).click();
 await page.getByTestId("inferred").waitFor();
 await page.getByRole("button", { name: /Confirmar e localizar/ }).click();
 await page.getByText(/Lote:/).waitFor();
-await page.getByText(/imóveis consultados/).waitFor();
+await page.getByText(/consultados? no provedor online/).waitFor();
 await page.getByRole("button", { name: "Revisar endereços" }).click();
 await page.getByLabel("Importar coordenadas").setInputFiles(path.join(TD, "posicoes_teste_osm.csv"));
 await page.getByText(/Coordenadas:/).waitFor();

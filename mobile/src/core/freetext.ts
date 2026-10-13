@@ -52,6 +52,11 @@ function takeComplement(tokens: string[]): { comp: string | null; rest: string[]
 export function parseFreeAddress(input: string): FreeAddress {
   const notes: string[] = [];
   let s = clean(input).replace(/^\s*\d{1,3}\s*[).\-:]\s+(?=\S)/, ""); // "1) Rua X 10"
+  { // número ANTES da rua ("53 Rua João Éboli", "53, Rua João Éboli"): leva o número para depois do nome da rua
+    const t = s.split(" ");
+    const first = (t[0] ?? "").replace(/,$/, "");
+    if (NUMTOK.test(N(first)) && t[1] && TYPE_RE.test(N(t[1]).replace(/\.$/, "")) && t.length > 2) s = [...t.slice(1), first].join(" ");
+  }
   const out: FreeAddress = { street: null, number: null, complement: null, neighborhood: null, city: null, state: null, cep: null, confidence: 0, notes };
   const cm = s.match(/\b(\d{5})-?(\d{3})\b/);
   if (cm) { out.cep = `${cm[1]}-${cm[2]}`; s = clean(s.replace(cm[0], " ")); }
@@ -149,26 +154,33 @@ const SPLIT_TYPE = /^(R|RUA|AV|AVE|AVN|AVENIDA|TV|TRV|TRAV|TRAVESSA|PC|PCA|PRACA
 const NUM_TOKEN = /^\d{1,6}[A-Z]?$/;
 
 export function splitMultiAddress(line: string): string[] {
-  const tokens = clean(line).split(" ").filter(Boolean);
+  const tokens = clean(line).replace(/([,;|])(?=[A-Za-zÀ-ú])/g, "$1 ").split(" ").filter(Boolean); // "184,Avenida" → "184, Avenida"
   if (tokens.length < 4) return [clean(line)];
   const bare = (t: string) => N(t).replace(/[,;|]+$/g, "");
-  const cuts: number[] = [];
+  const isType = (t: string) => SPLIT_TYPE.test(bare(t));
+  const CONNECT = new Set(["E", "&", "+", "/", "-", "–", "—"]);
+  const marker = (t: string) => /^\d{1,3}[).:]$/.test(t);
+  const cuts: { at: number; drop: number }[] = []; // `at` = 1º token do próximo endereço; `drop` = tokens conectores/marcadores a descartar antes dele
+  let lastCut = 0;
   for (let i = 1; i < tokens.length - 1; i++) {
-    if (!SPLIT_TYPE.test(bare(tokens[i]))) continue;
+    if (!isType(tokens[i])) continue;
+    // o trecho anterior precisa ser um endereço de verdade (ter uma palavra de via): "53 Rua X" e "João - Rua X" não cortam
+    if (!tokens.slice(lastCut, i).some(isType)) continue;
     const prev = tokens[i - 1];
     const afterSep = /[,;|]$/.test(prev);
-    const afterNumber = NUM_TOKEN.test(bare(prev)) || /^\d{1,3}[).:]$/.test(prev);
-    if (!(afterSep || afterNumber)) continue;
-    // "R" sozinho só vale se a palavra seguinte parece nome (evita "Rua R 5")
-    if (bare(tokens[i]) === "R" && !/^[A-Za-zÀ-ú]{3,}/.test(tokens[i + 1])) continue;
-    const marker = /^\d{1,3}[).:]$/.test(prev);
-    if (marker && i === 1) continue; // "1) Rua A…": o marcador é do primeiro endereço
-    cuts.push(marker ? i - 1 : i); // o marcador "2)" pertence ao endereço seguinte
+    const afterNumber = NUM_TOKEN.test(bare(prev)) && !marker(prev);
+    const afterConnector = CONNECT.has(N(prev).replace(/[,;|]+$/g, "")) || /^[-–—/&+]$/.test(prev);
+    const afterMarker = marker(prev);
+    if (!(afterSep || afterNumber || afterConnector || afterMarker)) continue;
+    if (bare(tokens[i]) === "R" && !/^[A-Za-zÀ-ú]{3,}/.test(tokens[i + 1])) continue; // "R" sozinho só vale se a palavra seguinte parece nome
+    const drop = afterConnector || afterMarker ? 1 : 0;
+    cuts.push({ at: i, drop });
+    lastCut = i;
   }
   if (!cuts.length) return [clean(line)];
   const parts: string[] = [];
   let from = 0;
-  for (const c of [...cuts, tokens.length]) { parts.push(tokens.slice(from, c).join(" ")); from = c; }
+  for (const c of [...cuts, { at: tokens.length, drop: 0 }]) { parts.push(tokens.slice(from, c.at - c.drop).join(" ")); from = c.at; }
   return parts.map((p) => clean(p.replace(/^\d{1,3}[).:]\s+/, "").replace(/[,;|\s]+$/g, ""))).filter(Boolean);
 }
 

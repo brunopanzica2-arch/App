@@ -115,3 +115,24 @@ describe("Minhas entregas", () => {
     expect(searchDeliveries(ls, "zzz")).toHaveLength(0);
   });
 });
+
+describe("busca com a base local do IBGE", () => {
+  it("'rua tiro naval 8' → resultado com número CONFIRMADO NA FONTE (offline)", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { parseCnefe } = await import("../src/core/cnefe");
+    const { setLocalBase, localBase } = await import("../src/core/localgeo");
+    const { lookupCnefe } = await import("../src/core/cnefe");
+    const b = readFileSync(new URL("../public/santos-enderecos.bin", import.meta.url));
+    setLocalBase(parseCnefe(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) as ArrayBuffer));
+    const r = lookupCnefe(localBase()!, { street: "rua tiro naval", number: "8" });
+    expect(["exact", "face"]).toContain(r.kind);
+    const svc = createSearchService({
+      index: async () => idx, user: () => null, liveRemote: () => false, online: () => true, remote: async () => [],
+      local: (p) => { const x = lookupCnefe(localBase()!, { street: p.street, number: p.number }); return x.lat != null && (x.kind === "exact" || x.kind === "face")
+        ? [{ id: "i", title: `${x.street}, ${p.number}`, subtitle: "IBGE", lat: x.lat, lon: x.lon!, precision: "exact", numberAsked: p.number, numberConfirmed: true, note: x.reason, source: "malha", score: 2 }] : []; },
+    });
+    const res = await svc.query("rua tiro naval 8");
+    expect(res.hits[0].numberConfirmed).toBe(true);
+    expect(res.hits[0].title).toMatch(/Tiro Naval, 8/);
+  });
+});

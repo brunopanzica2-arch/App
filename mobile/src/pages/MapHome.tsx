@@ -446,7 +446,7 @@ export function MapHome({ nav, focusKey }: { nav: Nav; focusKey?: string }) {
                   </div>
                   {sheetMode !== "compact" && <div className="mt-1 flex flex-wrap gap-1"><Badge color={cur.trust.approximate ? "#b45309" : "#16a34a"}>{cur.trust.label}</Badge></div>}
                   {note && <p className="mt-1 text-sm text-amber-700" role="note">{note}</p>}
-                  {cur.address.source?.startsWith("estimado") && cur.address.reason && <p className="mt-1 text-sm text-amber-700" role="note" data-testid="estimated-note">{cur.address.reason}</p>}
+                  {(cur.address.source?.startsWith("estimado") || cur.address.source?.includes("|estimado") || cur.address.source?.includes("|face")) && cur.address.reason && <p className="mt-1 text-sm text-amber-700" role="note" data-testid="estimated-note">{cur.address.reason}</p>}
                 </div>
                 {navigating && ui.nearStopKey === current!.rs.key && ui.nearStopText && (
                   <Alert kind="ok">{ui.nearStopText}</Alert>

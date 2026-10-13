@@ -27,7 +27,7 @@ export function ImportPage({ nav }: { nav: Nav }) {
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<[number, number] | null>(null);
   const [numbers, setNumbers] = useState<Awaited<ReturnType<typeof numberStatusSummary>> | null>(null);
-  const [result, setResult] = useState<(Batch & { geo?: { addresses: number; errors: string[] } }) | null>(null);
+  const [result, setResult] = useState<(Batch & { geo?: { addresses: number; errors: string[]; local?: { resolved: number; checked: number; ambiguous: number } } }) | null>(null);
   const [manual, setManual] = useState({ street: "", number: "", complement: "", neighborhood: "", cep: "", external_id: "", recipient: "" });
 
   async function load() {
@@ -204,7 +204,8 @@ export function ImportPage({ nav }: { nav: Nav }) {
                 {numbers.estimated + numbers.streetOnly + numbers.notFound > 0 && " Na rua, use “Marcar a porta aqui (GPS)”: ela passa a valer como posição exata e ajuda a estimar os vizinhos."}</div>
             </Alert>
           )}
-          {result.geo && <Alert kind={result.geo.errors.length ? "warn" : "ok"}>{result.geo.addresses} imóveis consultados{result.geo.errors.length ? ` · ${result.geo.errors.length} falha(s) de rede (tente de novo em Validar endereços)` : ""}.</Alert>}
+          {result.geo?.local && result.geo.local.resolved > 0 && <Alert kind="ok"><span data-testid="ibge-local">{result.geo.local.resolved} de {result.geo.local.checked} endereço(s) localizados <b>offline</b> pela base do IBGE (Censo 2022), sem gastar consultas.{result.geo.local.ambiguous ? ` ${result.geo.local.ambiguous} ${result.geo.local.ambiguous === 1 ? "precisa" : "precisam"} de confirmação do nome da rua.` : ""}</span></Alert>}
+          {result.geo && <Alert kind={result.geo.errors.length ? "warn" : "ok"}>{result.geo.addresses} {result.geo.addresses === 1 ? "imóvel consultado" : "imóveis consultados"} no provedor online{result.geo.errors.length ? ` · ${result.geo.errors.length} falha(s) de rede (tente de novo em Validar endereços)` : ""}.</Alert>}
           <div className="grid gap-2">
             <Button onClick={() => nav(`/enderecos/${result.id}`)}>Revisar endereços</Button>
             <Button variant="secondary" onClick={() => nav("/")}>Ver no mapa</Button>

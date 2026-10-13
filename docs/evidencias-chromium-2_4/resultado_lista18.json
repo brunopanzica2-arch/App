@@ -7,16 +7,28 @@
     "ok": true,
     "d": "Números identificados: 20 de 20"
   },
-  "resumo dos números: 2 localizados, 1 estimado pelos vizinhos, resto só rua/não encontrado": {
+  "resumo dos números: quase todos LOCALIZADOS pela base do IBGE (offline)": {
     "ok": true,
-    "d": "Números dos endereços (20): 2 localizado(s) ou confirmado(s) · 1 estimado(s) pelos vizinhos · 0 só a rua (número NÃO confirmado) · 17 não encontrado(s). Na rua, use “Marcar a porta aqui (GPS)”: ela passa a valer como posição exata"
+    "d": "Números dos endereços (20): 18 localizado(s) ou confirmado(s) · 1 estimado(s) pelos vizinhos · 0 só a rua (número NÃO confirmado) · 1 não encontrado(s). Na rua, use “Marcar a porta aqui (GPS)”: ela passa a valer como posição exata e ajuda a estimar os vizinhos"
   },
-  "consulta em texto livre usada como 2ª tentativa para números não achados": {
+  "aviso 'localizados offline pela base do IBGE'": {
     "ok": true,
-    "d": "54 consultas; ex.: rua silveira lobo 15, santos, sp"
+    "d": "19 de 20 endereço(s) localizados offline pela base do IBGE (Censo 2022), sem gastar consultas. 1 precisa de confirmação do nome da rua."
+  },
+  "a rede pública quase não é usada (só o que a base local não resolve)": {
+    "ok": true,
+    "d": "3 consulta(s) ao provedor para 20 endereços"
   },
   "mapa abre com os 20 imóveis (não vazio)": {
     "ok": true,
     "d": "state-empty=0"
+  },
+  "rota calculada com a lista: ≥ 18 paradas no mapa": {
+    "ok": true,
+    "d": "20 cartas · 19 paradas · 1 não loc. · 0 concluídas · 20 pendentes"
+  },
+  "selo de segurança da rota presente (nada de 'Rota revisada' falso)": {
+    "ok": true,
+    "d": "Destinos aproximados — confirme no local | 1 destino(s) com posição aproximada (número não confirmado no local)"
   }
 }

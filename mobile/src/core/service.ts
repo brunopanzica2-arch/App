@@ -1,6 +1,7 @@
 /** Regras de negócio do app (dados locais). */
 import { Capacitor } from "@capacitor/core";
 import { refineByAnchors } from "./anchors";
+import { ensureLocalBase, resolveBatchLocally } from "./localgeo";
 import { type Address, DEFAULT_NAV, db, type DeliveryEvent, type Letter, type LetterStatus, type NavPrefs, type Route, type Settings, uid } from "./db";
 import { routePoint, trustOf, type Trust } from "./address";
 import { QuotaError, resolve, setDailyQuota, setProvider } from "./geocode";
@@ -46,10 +47,13 @@ export async function geocodeBatch(batchId: string, onProgress?: (done: number, 
   setProvider(s.geocoder);
   geoSignal = { aborted: false };
   try {
+    // 1º: base do IBGE (offline, sem cota). Só o que sobrar vai ao provedor online.
+    await ensureLocalBase();
+    const local = await resolveBatchLocally(batchId);
     const r = await runQueue(batchId, { email: s.nominatimEmail, signal: geoSignal, onProgress });
     // números que o provedor não tem: estima pela numeração entre vizinhos já localizados (rotulado "estimado", nunca porta)
     try { await refineByAnchors(); } catch { /* estimativa é um bônus: nunca derruba a geocodificação */ }
-    return { addresses: r.total, errors: r.errors, stopped: r.stopped, message: r.message, remaining: r.remaining, failed: r.failed };
+    return { local, addresses: r.total, errors: r.errors, stopped: r.stopped, message: r.message, remaining: r.remaining, failed: r.failed };
   } finally {
     geoSignal = null;
   }

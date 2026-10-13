@@ -47,8 +47,8 @@ await page.getByRole("button", { name: "Pré-visualizar" }).click();
 await page.getByText("Mapeamento de colunas").waitFor();
 await page.screenshot({ path: `${OUT}/02-previa.png`, fullPage: true });
 await page.getByRole("button", { name: /Confirmar e localizar/ }).click();
-await page.getByText(/imóveis consultados/).waitFor({ timeout: 300000 });
-console.log("  ", await page.getByText(/imóveis consultados/).innerText());
+await page.getByText(/consultados? no provedor online/).waitFor({ timeout: 300000 });
+console.log("  ", await page.getByText(/consultados? no provedor online/).innerText());
 
 step("revisar endereços");
 await page.getByRole("button", { name: "Revisar endereços" }).click();

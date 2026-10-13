@@ -1,7 +1,9 @@
 /** Liga o SearchService ao app: índice de ruas da malha local (carregado uma vez) + geocodificador configurado em Ajustes. */
 import { isPublicProvider, search as geoSearch } from "./geocode";
 import { parseGraph } from "./graph";
-import { buildStreetIndex, createSearchService, type StreetEntry } from "./search";
+import { ensureLocalBase, localBase } from "./localgeo";
+import { lookupCnefe } from "./cnefe";
+import { buildStreetIndex, createSearchService, type AddressHit, type ParsedQuery, type StreetEntry } from "./search";
 
 let indexP: Promise<StreetEntry[]> | null = null;
 let userPos: { lat: number; lon: number } | null = null;
@@ -15,8 +17,22 @@ function loadIndex(): Promise<StreetEntry[]> {
   return indexP;
 }
 
+/** número encontrado na base do IBGE (offline): resultado com número CONFIRMADO NA FONTE, não só a rua */
+function localHits(p: ParsedQuery): AddressHit[] {
+  const db = localBase();
+  if (!db || !p.number) return [];
+  const r = lookupCnefe(db, { street: p.street, number: p.number });
+  if (!r.street) return [];
+  const ok = (r.kind === "exact" || r.kind === "face") && r.lat != null;
+  if (!ok && r.kind !== "estimated") return [];
+  return [{ id: `i|${r.lat!.toFixed(5)}|${r.lon!.toFixed(5)}`, title: `${r.street}, ${p.number}`, subtitle: `Santos/SP${r.locality ? ` · ${r.locality}` : ""} · IBGE (Censo 2022)`,
+    lat: r.lat!, lon: r.lon!, precision: r.kind === "exact" ? "exact" : "interpolated", numberAsked: p.number, numberConfirmed: r.kind === "exact" || r.kind === "face",
+    note: r.reason, source: "malha", score: r.kind === "exact" ? 2 : r.kind === "face" ? 1.5 : 0.8 }];
+}
+
 export const searchService = createSearchService({
-  index: () => loadIndex().catch(() => []),
+  local: localHits,
+  index: async () => { await ensureLocalBase(); return loadIndex().catch(() => []); }, // a base do IBGE carrega junto (offline, ~1 MB)
   user: () => userPos,
   // Nominatim público proíbe autocomplete: consulta só ao confirmar. Provedor próprio pode ser consultado ao digitar.
   liveRemote: () => !isPublicProvider(),

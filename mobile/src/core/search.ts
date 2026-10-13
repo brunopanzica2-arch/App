@@ -154,7 +154,7 @@ export function mergeHits(local: AddressHit[], remote: AddressHit[], limit = 8):
   const out: AddressHit[] = [];
   for (const h of all) {
     const k = normText(h.title) + (h.numberConfirmed ? "|ok" : "");
-    if (seen.has(k)) continue;
+    if (seen.has(k) || (!h.numberConfirmed && seen.has(normText(h.title) + "|ok"))) continue; // o resultado com número confirmado substitui o "só a rua" igual
     seen.add(k);
     out.push(h);
     if (out.length >= limit) break;
@@ -178,6 +178,8 @@ export function searchDeliveries<L extends { street?: string | null; number?: st
 }
 
 export interface SearchDeps {
+  /** base local de endereços (IBGE): hits com NÚMERO confirmado na fonte, offline */
+  local?: (p: ParsedQuery) => AddressHit[];
   remote: (p: ParsedQuery, signal: AbortSignal) => Promise<Candidate[]>;
   index: () => Promise<StreetEntry[]>;
   user: () => { lat: number; lon: number } | null;
@@ -199,7 +201,8 @@ export function createSearchService(deps: SearchDeps) {
       const my = (ctl = new AbortController());
       const p = parseQuery(q);
       if (normText(p.street).length < 2) return { hits: [], state: "short", message: null, fromRemote: false };
-      const local = suggestStreets(await deps.index(), q, { user: deps.user() });
+      const idx = await deps.index(); // carrega a malha e a base do IBGE ANTES de consultar (o 1º resultado já vem completo)
+      const local = mergeHits(deps.local?.(p) ?? [], suggestStreets(idx, q, { user: deps.user() }));
       if (my.signal.aborted) return { hits: local, state: "ok", message: null, fromRemote: false };
       const wantRemote = opts.submit || deps.liveRemote();
       if (!wantRemote) return { hits: local, state: local.length ? "ok" : "empty", message: local.length ? null : "Toque em buscar para consultar o provedor.", fromRemote: false };

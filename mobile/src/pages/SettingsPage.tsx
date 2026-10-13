@@ -13,6 +13,7 @@ import { Alert, Card, Input, Label, Select } from "../ui/misc";
 import RouteMap from "../ui/RouteMap";
 import { LocationModeCard, NavPrefsCard } from "./NavPrefsCard";
 import { IntroPrefsCard } from "./IntroPrefsCard";
+import { AddressSourceCard } from "./AddressSourceCard";
 import { PRECISION_LABEL } from "../ui/utils";
 
 export function SettingsPage() {
@@ -79,6 +80,7 @@ export function SettingsPage() {
       <LocationModeCard />
       <NavPrefsCard />
       <IntroPrefsCard />
+      <AddressSourceCard />
       <Card className="space-y-3">
         <div className="font-semibold">Ponto de partida</div>
         <Input aria-label="Endereço de partida" value={s.startAddress} onChange={(e) => setS({ ...s, startAddress: e.target.value })} />
