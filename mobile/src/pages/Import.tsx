@@ -30,11 +30,12 @@ export function ImportPage({ nav }: { nav: Nav }) {
   const [result, setResult] = useState<(Batch & { geo?: { addresses: number; errors: string[]; local?: { resolved: number; checked: number; ambiguous: number } } }) | null>(null);
   const [manual, setManual] = useState({ street: "", number: "", complement: "", neighborhood: "", cep: "", external_id: "", recipient: "" });
 
-  async function load() {
+  async function load(f: File | null = file) {
     setError(null);
     try {
+      if (mode === "file" && f && !/\.(csv|txt|tsv|xlsx)$/i.test(f.name)) throw new Error(`O arquivo "${f.name}" não parece CSV, TXT ou XLSX. Escolha uma planilha .csv/.xlsx ou use "Colar texto".`);
       const forced = { delimiter: delimiter === "auto" ? undefined : delimiter, hasHeader: hasHeaderForced ? hasHeader : undefined };
-      const p = mode === "file" ? await prepareFile(file!, forced) : prepareText(text, forced);
+      const p = mode === "file" ? await prepareFile(f!, forced) : prepareText(text, forced);
       setPrep(p);
       setTable(p.table);
       setMapping(p.mapping);
@@ -112,7 +113,10 @@ export function ImportPage({ nav }: { nav: Nav }) {
         <Card className="space-y-3">
           {mode === "file" ? (
             <div><Label htmlFor="file">Arquivo CSV ou XLSX</Label>
-              <input id="file" type="file" accept=".csv,.txt,.tsv,.xlsx" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="block w-full text-sm" /></div>
+              {/* sem filtro "accept": o seletor do Android deixa .csv cinza (tipo MIME variável); a extensão é validada em load() */}
+              <label htmlFor="file" className="mt-1 flex min-h-14 cursor-pointer items-center justify-center rounded-xl bg-violet-600 px-4 py-3 text-base font-semibold text-white active:opacity-80" data-testid="pick-file">{file ? "Trocar arquivo" : "Escolher arquivo"}</label>
+              <input id="file" type="file" className="sr-only" onChange={(e) => { const f = e.target.files?.[0] ?? null; setFile(f); setTable(null); if (f) void load(f); }} />
+              <div className="mt-2 text-sm muted" data-testid="file-name">{file ? `Selecionado: ${file.name}` : "Nenhum arquivo escolhido. Dica: se o arquivo não aparecer, use a aba \"Colar texto\"."}</div></div>
           ) : (
             <div><Label htmlFor="text">Cole os endereços: um por linha, vários na mesma linha separados por vírgula, ou a planilha copiada</Label>
               <textarea id="text" rows={7} value={text} onChange={(e) => setText(e.target.value)} className="w-full rounded-xl border border-app bg-transparent p-3 font-mono text-sm" /></div>
@@ -124,7 +128,7 @@ export function ImportPage({ nav }: { nav: Nav }) {
               </Select></div>
             <label className="flex items-end gap-2 pb-2 text-sm"><input type="checkbox" checked={hasHeader} onChange={(e) => { setHasHeader(e.target.checked); setHasHeaderForced(true); }} className="h-5 w-5" /> 1ª linha é cabeçalho (auto)</label>
           </div>
-          <Button onClick={load} disabled={mode === "file" ? !file : !text.trim()}>Pré-visualizar</Button>
+          <Button onClick={() => load()} disabled={mode === "file" ? !file : !text.trim()}>Pré-visualizar</Button>
         </Card>
       )}
 
@@ -178,7 +182,7 @@ export function ImportPage({ nav }: { nav: Nav }) {
                 ))}
               </div>
               <div className="text-xs muted">Prévia das 10 primeiras de {pv.total} linhas.</div>
-              <Button size="lg" onClick={() => commit()} disabled={busy}>{pv.errorRows ? `Importar ${pv.total - pv.errorRows} válidas (${pv.errorRows} ficam de fora)` : "Confirmar e localizar endereços"}</Button>
+              <Button size="lg" className="sticky bottom-20 z-10 w-full shadow-lg" onClick={() => commit()} disabled={busy}>{pv.errorRows ? `Importar ${pv.total - pv.errorRows} válidas (${pv.errorRows} ficam de fora)` : "Confirmar e localizar endereços"}</Button>
             </>
           )}
         </Card>
