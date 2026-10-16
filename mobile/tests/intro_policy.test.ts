@@ -9,10 +9,12 @@ describe("política da abertura", () => {
   it("instalação nova / primeira do dia: completa", () => {
     expect(decideIntro({ store: mem(), reducedMotion: false, now: day("2026-10-11") })).toBe("full");
   });
-  it("segunda abertura do mesmo dia: só cena 2 encurtada", () => {
+  it("2.8: TODA abertura é completa, mesmo várias no mesmo dia", () => {
     const s = mem();
-    markShown(s, day("2026-10-11"));
-    expect(decideIntro({ store: s, reducedMotion: false, now: day("2026-10-11") })).toBe("short");
+    for (let i = 0; i < 3; i++) {
+      expect(decideIntro({ store: s, reducedMotion: false, now: day("2026-10-11") })).toBe("full");
+      markShown(s, day("2026-10-11"));
+    }
   });
   it("no dia seguinte volta a completa", () => {
     const s = mem();
@@ -36,8 +38,10 @@ describe("política da abertura", () => {
     expect(() => markShown(broken)).not.toThrow();
     expect(decideIntro({ store: null, reducedMotion: false })).toBe("full");
   });
-  it("som: desligado por padrão e persistente", () => {
+  it("som: LIGADO por padrão (2.8) e persistente", () => {
     const s = mem();
+    expect(introSound(s)).toBe(true);
+    setIntroSound(s, false);
     expect(introSound(s)).toBe(false);
     setIntroSound(s, true);
     expect(introSound(s)).toBe(true);
@@ -62,7 +66,7 @@ describe("script inline do index.html = mesma regra de decideIntro('full')", () 
   };
   it.each([
     ["instalação nova", {}, false, true],
-    ["já abriu hoje", { "rota.intro.last": "2026-10-11" }, false, false],
+    ["já abriu hoje (2.8: toca de novo)", { "rota.intro.last": "2026-10-11" }, false, true],
     ["abriu ontem", { "rota.intro.last": "2026-10-10" }, false, true],
     ["pular ligado", { "rota.intro.skip": "1" }, false, false],
     ["reduzir animações", {}, true, false],

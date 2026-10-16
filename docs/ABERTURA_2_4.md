@@ -65,3 +65,20 @@ Quadros durante a abertura (Chromium com GL por software, pior caso): 190 quadro
 7. Rede lenta (3G) com a lista grande: skeleton aparece, sem tela branca.
 8. Importar 187+ endereços: ver "Localizando endereços n/total", tocar Cancelar.
 9. Modo silencioso com o som da abertura ligado: confirmar o volume baixo (o app não detecta silencioso).
+
+---
+
+## Addendum 2.8.0 — abertura em TODA abertura, mais cinematográfica, com som
+
+**O que mudou**
+- **Sempre toca:** `decideIntro` não usa mais a regra "1ª do dia". Cada abertura do app (inclusive várias no mesmo dia) roda cena 1 + cena 2 (~4,3 s). O modo "short" ficou só como legado (não é mais escolhido). Continuam valendo: tocar na tela / Esc / Enter pulam, "Pular abertura" em Ajustes, `prefers-reduced-motion` (cartão estático ~800 ms, sem som).
+- **Cena 1 (estúdio):** halo roxo que expande atrás do título, duas linhas de luz que se abrem acima/abaixo, 14 partículas de "poeira de luz" subindo, título entra com escala 1,10→1 e brilho passando (1000 ms). Tudo no HTML estático do `index.html` (pinta antes do JS); só `transform`/`opacity`.
+- **Cena 2 (rota):** rota agora 1400 ms; ponto branco (entregador) percorre a rota junto com o traço (SMIL `animateMotion`, mesma curva de desaceleração); mapa com zoom lento; ondas ao redor do pino quando pousa; logo desenhado em traço (anel + "P"); "ROTA SANTOS" aparece letra a letra. `TIMING.route` = 2300 ms.
+- **Som (novo, `src/intro/sound.ts`):** sintetizado com Web Audio (sem arquivo/licença). Eventos agendados no relógio da animação (t=0 = início da página): crescendo grave + "whoosh" (0,1 s), batida + acorde (0,7 s), faíscas (1,0 s), tiques ascendentes da rota (2,0 s), "plop" + sino do pino (3,38 s), campainha do nome (3,66 s). Compressor no mestre; pular desvanece em 180 ms. **Ligado por padrão**; desliga em Ajustes → "Som discreto na abertura". Usa o volume de MÍDIA (o app não sabe se o celular está no silencioso).
+
+**Evidências (Chromium, NÃO é Android)**
+- Vitest: política, componente (2ª abertura do dia também completa, som liga/desliga/reduced) e agendamento do som (`tests/intro_sound.test.tsx`).
+- E2E `e2e/abertura.mjs`: 2ª abertura do mesmo dia = `full` (~4,4 s). Jank sob GL por software oscila em torno do limite (6–9 quadros >50 ms em 5 execuções; limite 8; o pior quadro ~400 ms é o boot do JS, não a animação).
+- Som renderizado offline (OfflineAudioContext → `docs/evidencias-chromium-2_4/abertura_som_preview.wav`, 5,2 s): pico 0,68, sem clipping, eventos nos instantes esperados.
+
+**NÃO TESTADO:** reprodução real de áudio no aparelho Android (alto-falante, silencioso/Não perturbe, foco de áudio), sincronia som×imagem percebida em aparelho real, fluidez em celular real.

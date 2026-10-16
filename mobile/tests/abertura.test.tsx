@@ -66,19 +66,20 @@ describe("Abertura", () => {
     expect(phase()).toBe("handoff");
   });
 
-  it("2ª abertura do dia: só a cena 2 encurtada, sem cartão do estúdio", () => {
+  it("2.8: a 2ª abertura do mesmo dia também é completa (cena 1 + cena 2)", () => {
     const s = mem();
     const day = new Date(2026, 9, 11, 9, 0);
     render(<Abertura store={s} reducedMotion={false} now={day} />);
-    expect(s.m.get(KEY_LAST)).toBe("2026-10-11"); // marcou a abertura do dia
+    expect(s.m.get(KEY_LAST)).toBe("2026-10-11");
     cleanup();
     __resetReady(); signalDataReady();
     render(<Abertura store={s} reducedMotion={false} now={day} />);
-    const el = screen.getByTestId("abertura");
-    expect(el).toHaveAttribute("data-mode", "short");
+    expect(screen.getByTestId("abertura")).toHaveAttribute("data-mode", "full");
     adv(50);
+    expect(phase()).toBe("s1-in");
+    adv(SCENE1);
     expect(phase()).toBe("s2");
-    adv(TIMING.routeShort);
+    adv(TIMING.route);
     expect(phase()).toBe("handoff");
     adv(TIMING.handoff);
     expect(phase()).toBe("none");

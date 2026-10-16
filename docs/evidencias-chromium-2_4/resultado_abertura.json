@@ -1,7 +1,7 @@
 {
   "1ª do dia: cena 1 (cartão) antes da cena 2": {
     "ok": true,
-    "d": "150:s1-hold 450:s1-hold 900:s1-hold 1500:s1-hold 2050:s2 2250:s2 2600:s2 3000:s2 3300:s2 3550:handoff 3900:none"
+    "d": "150:s1-hold 450:s1-hold 800:s1-hold 1200:s1-hold 1600:s2 2050:s2 2400:s2 2800:s2 3200:s2 3500:s2 3900:s2 4300:handoff"
   },
   "fonte do cartão carregada (sem fallback)": {
     "ok": true,
@@ -17,7 +17,7 @@
   },
   "abertura completa dura ~3,5–5 s e some": {
     "ok": true,
-    "d": "3985 ms"
+    "d": "4427 ms"
   },
   "foco vai para o conteúdo principal": {
     "ok": true,
@@ -27,13 +27,13 @@
     "ok": true,
     "d": "ok"
   },
-  "2ª abertura do dia: só cena 2 curta": {
+  "2ª abertura do dia: completa de novo (cena 1 + cena 2)": {
     "ok": true,
-    "d": "modo=short fase inicial=s2; 1720 ms até sumir (inclui espera dos dados)"
+    "d": "modo=full fase inicial=s1-hold; 4484 ms até sumir"
   },
   "tocar na tela pula a abertura": {
     "ok": true,
-    "d": "447 ms após o toque"
+    "d": "430 ms após o toque"
   },
   "opção 'Pular abertura': nenhuma abertura": {
     "ok": true,
@@ -45,10 +45,10 @@
   },
   "reduced motion: ~800 ms, sem movimento na rota": {
     "ok": true,
-    "d": "modo=reduced; 1862 ms (inclui espera dos dados); traço da rota=0px"
+    "d": "modo=reduced; 1604 ms (inclui espera dos dados); traço da rota=0px"
   },
   "jank na abertura (quadros >50 ms)": {
     "ok": true,
-    "d": "171 quadros, 6 >50 ms, pior 450 ms (GL por software: pior caso)"
+    "d": "221 quadros, 6 >50 ms, pior 400 ms (GL por software: pior caso)"
   }
 }

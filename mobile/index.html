@@ -17,11 +17,20 @@
          Mesmos tempos de src/intro/policy.ts: fade-in 600 + segura 900 + fade-out 500 = 2000 ms. */
       #ab-pre{display:none;position:fixed;inset:0;z-index:100000;place-items:center;pointer-events:none;background:#000;animation:ab-pre-bg 2000ms linear both}
       html.ab-pre-on #ab-pre{display:grid}
-      #ab-pre .t{position:relative;text-align:center;padding:0 1rem;font-family:"Bebas Neue","Arial Narrow",Impact,sans-serif;font-weight:400;font-size:clamp(40px,11.8vw,76px);line-height:1;letter-spacing:.24em;margin-right:-.24em;color:transparent;background:linear-gradient(105deg,transparent 40%,#fff 50%,transparent 60%) 130% 0/260% 100% no-repeat,linear-gradient(#d9d9e0,#d9d9e0);-webkit-background-clip:text;background-clip:text;opacity:0;animation:ab-pre-t 2000ms cubic-bezier(.16,1,.3,1) both,ab-pre-g 900ms cubic-bezier(.45,0,.2,1) 600ms both;will-change:transform,opacity}
+      #ab-pre .t{position:relative;text-align:center;padding:0 1rem;font-family:"Bebas Neue","Arial Narrow",Impact,sans-serif;font-weight:400;font-size:clamp(40px,11.8vw,76px);line-height:1;letter-spacing:.24em;margin-right:-.24em;color:transparent;background:linear-gradient(105deg,transparent 40%,#fff 50%,transparent 60%) 130% 0/260% 100% no-repeat,linear-gradient(#d9d9e0,#d9d9e0);-webkit-background-clip:text;background-clip:text;opacity:0;animation:ab-pre-t 2000ms cubic-bezier(.16,1,.3,1) both,ab-pre-g 1000ms cubic-bezier(.45,0,.2,1) 700ms both;will-change:transform,opacity}
+      #ab-pre .glow{position:absolute;left:50%;top:50%;width:140vmax;height:140vmax;margin:-70vmax 0 0 -70vmax;background:radial-gradient(closest-side,rgba(124,58,237,.34),rgba(124,58,237,.1) 45%,transparent 70%);opacity:0;transform:scale(.35);animation:ab-pre-glow 2000ms cubic-bezier(.16,1,.3,1) both;will-change:transform,opacity}
+      #ab-pre .rl{position:absolute;left:50%;top:50%;width:min(82vw,520px);height:2px;margin-left:calc(min(82vw,520px)/-2);background:linear-gradient(90deg,transparent,#c4b5fd,transparent);opacity:0;transform:scaleX(0);will-change:transform,opacity}
+      #ab-pre .rl.u{margin-top:-64px;animation:ab-pre-rl 1500ms cubic-bezier(.16,1,.3,1) 250ms both}
+      #ab-pre .rl.d{margin-top:64px;animation:ab-pre-rl 1500ms cubic-bezier(.16,1,.3,1) 400ms both}
+      #ab-dust{position:absolute;inset:0;overflow:hidden}
+      #ab-dust i{position:absolute;left:var(--x);top:var(--y);width:var(--s);height:var(--s);border-radius:50%;background:#c4b5fd;opacity:0;animation:ab-pre-dust var(--d) ease-out var(--l) both;will-change:transform,opacity}
       #ab-pre .t span{display:block}
       #ab-pre.skip{animation:none;opacity:0;transition:opacity .25s ease}
-      #ab-pre.skip .t{animation:none;opacity:0}
-      @keyframes ab-pre-t{0%{opacity:0;transform:scale(1.04)}30%{opacity:1;transform:none}75%{opacity:1;transform:none}100%{opacity:0;transform:none}}
+      #ab-pre.skip .t,#ab-pre.skip .glow,#ab-pre.skip .rl,#ab-pre.skip #ab-dust{animation:none;opacity:0}
+      @keyframes ab-pre-t{0%{opacity:0;transform:scale(1.1)}30%{opacity:1;transform:none}75%{opacity:1;transform:none}100%{opacity:0;transform:scale(.985)}}
+      @keyframes ab-pre-glow{0%{opacity:0;transform:scale(.35)}35%{opacity:1;transform:scale(.8)}75%{opacity:.85;transform:scale(1)}100%{opacity:0;transform:scale(1.1)}}
+      @keyframes ab-pre-rl{0%{opacity:0;transform:scaleX(0)}30%{opacity:1}70%{opacity:.9;transform:scaleX(1)}100%{opacity:0;transform:scaleX(1.12)}}
+      @keyframes ab-pre-dust{0%{opacity:0;transform:translate3d(0,0,0)}25%{opacity:.8}100%{opacity:0;transform:translate3d(var(--dx),var(--dy),0)}}
       @keyframes ab-pre-g{from{background-position:130% 0}to{background-position:-30% 0}}
       @keyframes ab-pre-bg{0%,99%{opacity:1}100%{opacity:0}}
       @media (prefers-reduced-motion:reduce){html.ab-pre-on #ab-pre{display:none}}
@@ -30,15 +39,21 @@
     </style>
   </head>
   <body>
-    <div id="ab-pre" aria-hidden="true"><div class="t"><span>PANZICA</span> <span>PRODUCTIONS</span></div></div>
+    <div id="ab-pre" aria-hidden="true"><div class="glow"></div><div class="rl u"></div><div class="rl d"></div><div id="ab-dust"></div><div class="t"><span>PANZICA</span> <span>PRODUCTIONS</span></div></div>
     <script>
       // Mesma regra de src/intro/policy.ts (decideIntro → "full"); testada em tests/intro_policy.test.ts. Falha em silêncio = sem cartão estático (o React decide).
       try {
-        var d = new Date(), day = d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
         var reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-        if (!reduced && localStorage.getItem('rota.intro.skip') !== '1' && localStorage.getItem('rota.intro.last') !== day) {
+        if (!reduced && localStorage.getItem('rota.intro.skip') !== '1') { // 2.8: abertura em TODA abertura do app
           document.documentElement.classList.add('ab-pre-on');
           window.__abPreT0 = performance.now();
+          // poeira de luz (só transform/opacity): 14 partículas com posição/atraso variados
+          var dd = document.getElementById('ab-dust'), h = '';
+          for (var i = 0; i < 14; i++) {
+            var r = function (a, b) { return (a + Math.random() * (b - a)).toFixed(1); };
+            h += '<i style="--x:' + r(8, 92) + '%;--y:' + r(30, 80) + '%;--s:' + r(2, 5) + 'px;--d:' + Math.round(r(1100, 1700)) + 'ms;--l:' + Math.round(r(200, 1000)) + 'ms;--dx:' + r(-20, 20) + 'px;--dy:' + r(-90, -30) + 'px"></i>';
+          }
+          if (dd) dd.innerHTML = h;
         }
       } catch (e) {}
     </script>

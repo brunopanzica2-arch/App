@@ -3,14 +3,13 @@
   --ab-bg: #000; --ab-bg2: #0b1020; --ab-fg: #f8fafc; --ab-brand: #7c3aed; --ab-brand-light: #c4b5fd; --ab-road: #1c2540;
   --ab-ease: cubic-bezier(0.16, 1, 0.3, 1);
   --ab-font: "Bebas Neue", "Arial Narrow", Impact, sans-serif;
-  --ab-fade-in: 600ms; --ab-hold: 900ms; --ab-fade-out: 500ms; --ab-route: 1200ms; --ab-pin-d: 520ms; --ab-brand-d: 500ms; --ab-handoff: 320ms;
+  --ab-fade-in: 600ms; --ab-hold: 900ms; --ab-fade-out: 500ms; --ab-route: 1400ms; --ab-pin-d: 520ms; --ab-brand-d: 600ms; --ab-handoff: 320ms;
   position: fixed; inset: 0; z-index: 99999; overflow: hidden; background: var(--ab-bg); color: var(--ab-fg);
   display: grid; place-items: center; touch-action: manipulation; user-select: none; -webkit-user-select: none;
   transition: background-color var(--ab-handoff) ease;
 }
 .ab[data-phase="handoff"] { background-color: transparent; pointer-events: none; }
 .ab[data-phase="done"] { display: none; }
-.ab[data-mode="short"] { --ab-route: 500ms; --ab-pin-d: 240ms; --ab-brand-d: 240ms; }
 
 /* ---------- Cena 1: cartão do estúdio ---------- */
 .ab-s1 { position: absolute; inset: 0; display: grid; place-items: center; opacity: 0; will-change: opacity; }
@@ -59,3 +58,24 @@
 @keyframes rota-stagger { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .rota-enter [data-stagger] { animation: rota-stagger 220ms var(--ab-ease, cubic-bezier(0.16, 1, 0.3, 1)) both; }
  @media (prefers-reduced-motion: reduce) { .rota-enter [data-stagger] { animation: none; } }
+
+/* ---------- 2.8: cena 2 enriquecida (tudo transform/opacity/stroke-dashoffset) ---------- */
+.ab-map { transform: scale(1.06); transform-origin: 80% 30%; will-change: transform; }
+.ab[data-phase="s2"] .ab-map, .ab[data-phase="wait"] .ab-map { transform: none; transition: transform 2400ms cubic-bezier(0.22, 1, 0.36, 1); }
+.ab-dot { opacity: 0; filter: drop-shadow(0 0 7px #c4b5fd); }
+.ab[data-phase="s2"] .ab-dot, .ab[data-phase="wait"] .ab-dot { animation: ab-dot var(--ab-route) linear forwards; }
+@keyframes ab-dot { 0% { opacity: 0; } 8% { opacity: 1; } 90% { opacity: 1; } 100% { opacity: 0; } }
+.ab-ripple { fill: none; stroke: var(--ab-brand-light); stroke-width: 2; opacity: 0; transform-box: fill-box; transform-origin: 50% 50%; }
+.ab[data-phase="s2"] .ab-ripple, .ab[data-phase="wait"] .ab-ripple { animation: ab-ripple 900ms cubic-bezier(0.16, 1, 0.3, 1) calc(var(--ab-route) * 0.98) both; }
+.ab[data-phase="s2"] .ab-ripple.r2, .ab[data-phase="wait"] .ab-ripple.r2 { animation-delay: calc(var(--ab-route) * 0.98 + 180ms); }
+@keyframes ab-ripple { 0% { opacity: 0.9; transform: scale(0.4); } 100% { opacity: 0; transform: scale(3.4); } }
+.ab-ring, .ab-p { stroke-dasharray: 100; stroke-dashoffset: 100; }
+.ab[data-phase="s2"] .ab-ring, .ab[data-phase="wait"] .ab-ring { animation: ab-draw 700ms var(--ab-ease) calc(var(--ab-route) * 0.85) forwards; }
+.ab[data-phase="s2"] .ab-p, .ab[data-phase="wait"] .ab-p { animation: ab-draw 500ms var(--ab-ease) calc(var(--ab-route) * 0.85 + 350ms) forwards; }
+.ab[data-mode="reduced"] .ab-ring, .ab[data-mode="reduced"] .ab-p, .ab[data-phase="handoff"] .ab-ring, .ab[data-phase="handoff"] .ab-p { stroke-dashoffset: 0; animation: none; }
+@keyframes ab-draw { to { stroke-dashoffset: 0; } }
+.ab-appname span { display: inline-block; opacity: 0; transform: translateY(8px); }
+.ab-appname span.b { color: var(--ab-brand-light); }
+.ab[data-phase="s2"] .ab-appname span, .ab[data-phase="wait"] .ab-appname span { animation: ab-rise 420ms var(--ab-ease) calc(var(--ab-route) * 0.95 + var(--i) * 35ms) forwards; }
+.ab[data-mode="reduced"] .ab-appname span, .ab[data-phase="handoff"] .ab-appname span { opacity: 1; transform: none; animation: none; }
+@media (prefers-reduced-motion: reduce) { .ab-map { transform: none; transition: none; } }

@@ -22,7 +22,7 @@ const gone = (p, t = 20000) => p.waitForFunction(() => !document.querySelector("
   await p.waitForSelector("[data-testid=abertura]");
   const sr = await p.evaluate(() => document.querySelector("[data-testid=abertura] [role=status]")?.textContent);
   const t0 = Date.now(), seq = [];
-  for (const m of [150, 450, 900, 1500, 2050, 2250, 2600, 3000, 3300, 3550, 3900]) {
+  for (const m of [150, 450, 800, 1200, 1600, 2050, 2400, 2800, 3200, 3500, 3900, 4300]) {
     await p.waitForTimeout(Math.max(0, m - (Date.now() - t0)));
     seq.push({ m, ph: await phase(p) });
     await p.screenshot({ path: path.join(OUT, `full_${String(m).padStart(4, "0")}ms.png`) });
@@ -41,7 +41,7 @@ const gone = (p, t = 20000) => p.waitForFunction(() => !document.querySelector("
   await p.waitForTimeout(500);
   await p.screenshot({ path: path.join(OUT, "app_depois_da_abertura.png") });
   ok("não há skeleton/spinner de tela cheia depois", (await p.getByTestId("home-loading").count()) === 0, "ok");
-  // ---- 2. segunda abertura do dia: só cena 2 curta
+  // ---- 2. segunda abertura do dia (2.8): TAMBÉM completa
   const p2 = await ctx.newPage();
   await p2.goto(BASE, { waitUntil: "commit" });
   await p2.waitForSelector("[data-testid=abertura]");
@@ -50,7 +50,7 @@ const gone = (p, t = 20000) => p.waitForFunction(() => !document.querySelector("
   const ph0 = await phase(p2);
   await gone(p2);
   const t2 = Date.now() - s0;
-  ok("2ª abertura do dia: só cena 2 curta", mode === "short" && ph0 !== "s1-in", `modo=${mode} fase inicial=${ph0}; ${t2} ms até sumir (inclui espera dos dados)`);
+  ok("2ª abertura do dia: completa de novo (cena 1 + cena 2)", mode === "full" && t2 > 3000, `modo=${mode} fase inicial=${ph0}; ${t2} ms até sumir`);
   await p2.screenshot({ path: path.join(OUT, "app_segunda_abertura.png") });
   await ctx.close();
 }

@@ -17,7 +17,7 @@ export function IntroPrefsCard() {
       </label>
       <label className="flex items-start gap-3 py-1">
         <input type="checkbox" className="mt-1 h-5 w-5" checked={sound} disabled={skip} onChange={(e) => { setSound(e.target.checked); setIntroSound(store(), e.target.checked); }} />
-        <span><span className="block">Som discreto na abertura</span><span className="block text-xs muted">Desligado por padrão, volume baixo. O app não consegue saber se o celular está no silencioso: use este botão para desligar.</span></span>
+        <span><span className="block">Som discreto na abertura</span><span className="block text-xs muted">Ligado por padrão, volume baixo (usa o volume de mídia). O app não consegue saber se o celular está no silencioso: use este botão para desligar.</span></span>
       </label>
     </Card>
   );
