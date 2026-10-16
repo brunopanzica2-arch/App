@@ -28,7 +28,14 @@ export function keyOf(text: string): string {
   }
   return out.join(" ");
 }
-const coreTokens = (s: string) => keyOf(s).split(" ").filter((t) => t && !STOP.has(t));
+/** Grafia equivalente (Luiz/Luis, Anna/Ana, Glycerio/Glicerio, Arthur/Artur, Adolpho/Adolfo, Victorino/Vitorino): só para COMPARAR nomes. */
+export function phon(t: string): string {
+  if (/\d/.test(t) || /^[IVXLCDM]+$/.test(t)) return t; // números e algarismos romanos (Dom Pedro I ≠ Dom Pedro II) não são alterados
+  return t.replace(/PH/g, "F").replace(/TH/g, "T").replace(/CT/g, "T").replace(/Y/g, "I").replace(/W/g, "V").replace(/K/g, "C").replace(/Z/g, "S").replace(/(.)\1+/g, "$1");
+}
+const coreTokens = (s: string) => keyOf(s).split(" ").filter((t) => t && !STOP.has(t)).map(phon);
+const TITLES_P = new Set([...TITLES].map(phon));
+const isTitle = (t: string) => TITLES_P.has(t);
 
 export interface CnefeStreet { k: string; t: string; n: string; core: string[] }
 export interface CnefeDb {
@@ -106,8 +113,10 @@ function candOf(db: CnefeDb, s: number, i: number, exact: boolean): CnefeCand {
   return { street: prettyName(db, s), type: db.streets[s].t, locality: db.localities[db.loc[i]] ?? null, lat: db.lat[i] / 1e6, lon: db.lon[i] / 1e6, level: lvlOf(db, i), units: unitsOf(db, i), exactNumber: exact };
 }
 
+export interface StreetMatch { s: number; extra: number; typeOk: boolean; relaxed: boolean; /** só sobram TÍTULOS (Doutor, Coronel…) em relação ao digitado: seguro como alternativa */ safe: boolean; /** o nome oficial não é igual ao digitado (título a mais/a menos) */ adj: boolean }
+
 /** Logradouros do IBGE que casam com o nome digitado, do melhor para o pior. `relaxed` = faltou 1 palavra (típico: título "Pastor"). */
-export function matchStreets(db: CnefeDb, streetText: string): { s: number; extra: number; typeOk: boolean; relaxed: boolean }[] {
+export function matchStreets(db: CnefeDb, streetText: string): StreetMatch[] {
   let fuzzy = false;
   const [userType, name] = splitStreet(streetText);
   let toks = coreTokens(name);
@@ -119,29 +128,36 @@ export function matchStreets(db: CnefeDb, streetText: string): { s: number; extr
     if (near.length === 1) { fuzzy = true; return near[0]; }
     return t;
   });
-  const sets = toks.map((t) => db.byToken.get(t));
-  const rank = (ids: number[], relaxed: boolean, used: number) => ids.map((s) => ({
-    s, extra: db.streets[s].core.length - used, relaxed: relaxed || fuzzy, // nome corrigido por semelhança = nunca aceito sozinho
-    typeOk: !userType || strip(db.streets[s].t).toUpperCase() === userType,
-  }));
-  let out: ReturnType<typeof rank> = [];
-  if (sets.every(Boolean)) {
-    let ids = sets[0]!.slice();
-    for (const st of sets.slice(1)) { const set = new Set(st); ids = ids.filter((x) => set.has(x)); }
-    out = rank(ids, false, toks.length);
-  }
-  if (!out.length && toks.length >= 3) { // relaxado: ignora UMA palavra que a base não tem naquela rua (ex.: "Pastor")
-    const seen = new Set<number>();
-    for (let drop = 0; drop < toks.length; drop++) {
-      const rest = toks.filter((_, i) => i !== drop);
-      const ss = rest.map((t) => db.byToken.get(t));
-      if (!ss.every(Boolean)) continue;
-      let ids = ss[0]!.slice();
-      for (const st of ss.slice(1)) { const set = new Set(st); ids = ids.filter((x) => set.has(x)); }
-      for (const r of rank(ids, true, rest.length)) if (!seen.has(r.s)) { seen.add(r.s); out.push(r); }
+  const uset = new Set(toks);
+  const uT = toks.filter((t) => !isTitle(t));
+  const mk = (s: number, relaxed: boolean): StreetMatch => {
+    const core = db.streets[s].core;
+    const extraNon = core.filter((t) => !uset.has(t) && !isTitle(t)).length;
+    return {
+      s, extra: Math.max(0, core.length - toks.length), relaxed: relaxed || fuzzy, // nome corrigido por semelhança = nunca aceito sozinho
+      typeOk: !userType || strip(db.streets[s].t).toUpperCase() === userType,
+      safe: extraNon === 0, adj: relaxed || core.length !== uset.size || core.some((t) => !uset.has(t)),
+    };
+  };
+  const inter = (ts: string[]) => { const ss = ts.map((t) => db.byToken.get(t)); if (!ts.length || !ss.every(Boolean)) return [] as number[]; let ids = ss[0]!.slice(); for (const st of ss.slice(1)) { const set = new Set(st); ids = ids.filter((x) => set.has(x)); } return ids; };
+  const seen = new Set<number>();
+  let out: StreetMatch[] = [];
+  for (const s of inter(toks)) { seen.add(s); out.push(mk(s, false)); }                     // todas as palavras digitadas estão na rua do IBGE
+  if (uT.length && uT.length < toks.length || (uT.length === toks.length && !out.length)) { // título a mais no digitado ("Doutor Carvalho de Mendonça" × "Carvalho de Mendonça")
+    for (const s of inter(uT)) {
+      if (seen.has(s)) continue;
+      const nt = db.streets[s].core.filter((t) => !isTitle(t));
+      // só com o MESMO tipo de via: "Rua Pastor Narciso de Andrade" ≠ "Praça Narciso de Andrade"
+      if (nt.length === uT.length && (!userType || strip(db.streets[s].t).toUpperCase() === userType)) { seen.add(s); out.push(mk(s, false)); }
     }
   }
-  return out.sort((a, b) => Number(a.relaxed) - Number(b.relaxed) || Number(!a.typeOk) - Number(!b.typeOk) || a.extra - b.extra
+  if (!out.length && toks.length >= 3) { // relaxado: ignora UMA palavra que a base não tem naquela rua (ex.: "Pastor")
+    for (let drop = 0; drop < toks.length; drop++) {
+      const rest = toks.filter((_, i) => i !== drop);
+      for (const s of inter(rest)) if (!seen.has(s)) { seen.add(s); out.push(mk(s, true)); }
+    }
+  }
+  return out.sort((a, b) => Number(a.relaxed) - Number(b.relaxed) || Number(!a.typeOk) - Number(!b.typeOk) || a.extra - b.extra || Number(a.adj) - Number(b.adj)
     || (db.start[b.s + 1] - db.start[b.s]) - (db.start[a.s + 1] - db.start[a.s]));
 }
 
@@ -157,12 +173,19 @@ export function lookupCnefe(db: CnefeDb, q: { street: string; number: string | n
   const want = parseNum(q.number);
   const nb = q.neighborhood ? keyOf(q.neighborhood) : "";
   const best = ms[0];
-  // várias ruas igualmente boas (mesmo tipo, mesmo nº de palavras sobrando, nem relaxadas) → pode ser ambíguo
-  const tied = ms.filter((m) => m.relaxed === best.relaxed && m.typeOk === best.typeOk && m.extra === best.extra);
-  const pool = tied.length > 1 ? tied : [best];
-  const hits = want ? pool.flatMap((m) => findAll(db, m.s, want.n, want.suf).map((i) => ({ m, i }))) : [];
+  // grupos de ruas igualmente boas (mesmo tipo, mesmas palavras sobrando). Se o melhor grupo NÃO tem o número, tenta os seguintes
+  // somente se só sobram TÍTULOS ("Rua Oswaldo Cruz" × "Rua Doutor Oswaldo Cruz"); nunca outra rua de nome parecido.
+  const groups: StreetMatch[][] = [];
+  for (const m of ms) { const g = groups[groups.length - 1]; if (g && g[0].relaxed === m.relaxed && g[0].typeOk === m.typeOk && g[0].extra === m.extra) g.push(m); else groups.push([m]); }
+  let pool = groups[0];
+  let hits: { m: StreetMatch; i: number }[] = [];
+  if (want) for (const [gi, g] of groups.entries()) {
+    if (gi > 0 && !g.every((m) => m.safe && !m.relaxed)) break;
+    const h = g.flatMap((m) => findAll(db, m.s, want.n, want.suf).map((i) => ({ m, i })));
+    if (h.length) { pool = g; hits = h; break; }
+  }
   const cands = hits.slice(0, 4).map((h) => candOf(db, h.m.s, h.i, true));
-  const adjusted = (m: typeof best) => m.relaxed || m.extra > 0;
+  const adjusted = (m: StreetMatch) => m.adj;
   if (hits.length) {
     // pontos do MESMO número a menos de 100 m um do outro são o mesmo lugar (apartamentos/duplicatas); a mais que isso = ruas/bairros homônimos
     const km = (a: number, b: number) => { const dla = (db.lat[a] - db.lat[b]) / 1e6 * 111_195, dlo = (db.lon[a] - db.lon[b]) / 1e6 * 111_195 * Math.cos(-23.96 * Math.PI / 180); return Math.hypot(dla, dlo); };

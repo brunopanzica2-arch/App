@@ -100,4 +100,27 @@ describe("base IBGE/CNEFE de Santos", () => {
     for (let i = 0; i < db.num.length; i++) if (db.lat[i] / 1e6 > -23.7 || db.lat[i] / 1e6 < -24.1 || db.lon[i] / 1e6 > -46.2 || db.lon[i] / 1e6 < -46.5) bad++;
     expect(bad).toBe(0);
   });
+
+  it("grafias equivalentes (Luiz/Luis, Anna/Ana, Glycerio/Glicerio, Arthur/Artur, Adolpho/Adolfo) casam com o nome do IBGE", () => {
+    const casos: [string, string, RegExp][] = [
+      ["avenida doutor claudio luis da costa", "50", /Claudio/i], ["avenida general francisco glycerio", "121", /Glicerio/i],
+      ["rua doutor arthur porchat de assis", "14", /Artur Porchat/i], ["avenida ana costa", "464", /Anna Costa/i], ["rua doutor adolpho assis", "10", /Adolpho Assis/i],
+    ];
+    for (const [rua, n, re] of casos) { const r = lookupCnefe(db, { street: rua, number: n }); expect(r.street, `${rua} ${n}: ${r.reason}`).toMatch(re); }
+  });
+  it("título a mais no digitado ('Rua Doutor Oswaldo Cruz' × 'Rua Oswaldo Cruz') acha o número na rua certa, com aviso de nome", () => {
+    const r = lookupCnefe(db, { street: "rua oswaldo cruz", number: "319" });
+    expect(["exact", "face"]).toContain(r.kind);
+    expect(r.street).toMatch(/Doutor Oswaldo Cruz/i);
+    expect(r.nameAdjusted).toBe(true);
+  });
+  it("algarismos romanos NÃO se confundem: 'Dom Pedro I' ≠ 'Dom Pedro II'", () => {
+    const a = lookupCnefe(db, { street: "rua dom pedro i", number: "50" }), b = lookupCnefe(db, { street: "rua dom pedro ii", number: "50" });
+    if (a.street) expect(a.street).not.toMatch(/Pedro Ii$/i);
+    if (b.street) expect(b.street).toMatch(/Pedro Ii$/i);
+  });
+  it("tipo diferente não é aceito sozinho ('Rua Pastor X' × 'Praça X') — já coberto; e 'Rua São Paulo' nunca vira 'São Vicente de Paulo'", () => {
+    const r = lookupCnefe(db, { street: "rua sao paulo", number: "999999" });
+    expect(r.street ?? "").not.toMatch(/Vicente/i);
+  });
 });

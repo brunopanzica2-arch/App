@@ -143,8 +143,8 @@ export const nav = {
 export type VoiceCommand = "repeat" | "next" | "remaining" | "skip" | "pause" | "resume" | "deliver" | "unknown";
 export function parseVoiceCommand(text: string): VoiceCommand {
   const t = text.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
-  if (/\brepet/.test(t)) return "repeat";
-  if (/\bproxima\b/.test(t) && /entrega|parada|/.test(t)) return "next";
+  if (/\brep[ei]t|\bde novo\b|\bfala de novo\b/.test(t)) return "repeat";
+  if (/\bproxim[oa]\b/.test(t)) return "next";
   if (/quanto falta|falta quanto|restante/.test(t)) return "remaining";
   if (/\bpular\b|\bpula\b/.test(t)) return "skip";
   if (/\bpausar\b|\bpausa\b/.test(t)) return "pause";
