@@ -178,6 +178,8 @@ export interface PlanOptions {
   end?: { label: string; lat: number; lon: number } | null;
   timeLimitMs: number;
   fixedFirst?: string[];
+  /** força o motor a reordenar (ignora "seguir a ordem da lista") */
+  optimize?: boolean;
   includePostponed?: boolean;
   reason?: string;
 }
@@ -190,7 +192,7 @@ export async function planBatch(batchId: string, o: PlanOptions, onProgress?: (s
   if (!remaining.length) throw new Error("Não há paradas pendentes neste lote.");
   const res = await runPlan({
     start: o.start, end: o.end ?? null, mode: o.mode, strategy: o.strategy, profile: { ...s.profile, avoid_edges: (s.reportedEdges ?? []).map((x) => x.key) },
-    timeLimitMs: o.timeLimitMs, maxSnap: 150, snapReviewM: 30, fixedFirst: o.fixedFirst, cacheKey: batchId,
+    timeLimitMs: o.timeLimitMs, maxSnap: 150, snapReviewM: 30, fixedFirst: o.fixedFirst, keepOrder: s.keepListOrder !== false && !o.optimize, cacheKey: batchId,
     stops: remaining.map((st) => {
       const pend = st.letters.filter(isPending).length;
       return {

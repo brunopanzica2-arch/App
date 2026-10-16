@@ -64,6 +64,7 @@ export function PlanPage({ batchId, nav }: { batchId: string; nav: Nav }) {
             <Select id="strat" value={strategy} onChange={(e) => setStrategy(e.target.value as any)}>
               <option value="global">Global</option><option value="sectors">Por bairros</option>
             </Select></div>
+          <label className="col-span-2 flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1 h-5 w-5" checked={settings?.keepListOrder !== false} onChange={async (e) => { await saveSettings({ keepListOrder: e.target.checked }); reloadSettings(); }} data-testid="keep-order" /><span><b>Seguir a ordem da minha lista</b><span className="block text-xs muted">Ligado: as paradas ficam exatamente na ordem em que você importou (mesmo na mesma rua). Desligado: o app reordena para encurtar o caminho.</span></span></label>
           {p && <>
             <div><Label htmlFor="walk">Velocidade de caminhada (km/h)</Label><Input id="walk" type="number" step="0.5" value={p.walk_speed_kmh} onChange={(e) => setP("walk_speed_kmh", +e.target.value)} /></div>
             <div><Label htmlFor="tl">Tempo de cálculo (s)</Label><Input id="tl" type="number" value={limit} onChange={(e) => setLimit(+e.target.value)} /></div>

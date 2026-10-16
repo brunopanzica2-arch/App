@@ -25,6 +25,8 @@ export interface PlanRequest {
   maxSnap: number;
   snapReviewM?: number;
   fixedFirst?: string[];
+  /** segue a ordem de importação (importRow) em vez de reordenar; paradas inalcançáveis saem como excluídas */
+  keepOrder?: boolean;
   /** identifica o conjunto de paradas (ex.: id do lote): habilita cache de matriz e partida a quente entre cálculos */
   cacheKey?: string;
 }
@@ -97,7 +99,8 @@ export function computePlan(g: Graph, req: PlanRequest, progress?: (stage: strin
   const excluded: { key: string; reason: string }[] = [];
   const keys = req.stops.map((s) => s.key);
   // validação do prefixo fixo (alerta L)
-  const fixedKeys = req.fixedFirst || [];
+  const byRow = [...req.stops].sort((a, b) => (a.importRow ?? 0) - (b.importRow ?? 0));
+  const fixedKeys = req.keepOrder ? [...new Set([...(req.fixedFirst || []), ...byRow.map((s) => s.key)])] : req.fixedFirst || [];
   if (new Set(fixedKeys).size !== fixedKeys.length) throw new PlanError("Parada fixa duplicada.");
   for (const k of fixedKeys) if (!keys.includes(k)) throw new PlanError("Parada fixa inexistente ou sem cartas pendentes.");
 
@@ -160,8 +163,9 @@ export function computePlan(g: Graph, req: PlanRequest, progress?: (stage: strin
 
   const walk = req.profile.walk_speed_kmh / 3.6;
   const access = (i: number) => (2 * snaps[i].distance) / walk; // ida e volta a pé até o ponto do imóvel
-  const fixed = fixedKeys.map((k) => okStops.findIndex((s) => s.key === k) + 1);
-  if (fixed.some((i) => !okSet.has(i))) throw new PlanError("Parada fixa sem caminho de pedestre viável.");
+  let fixed = fixedKeys.map((k) => okStops.findIndex((s) => s.key === k) + 1);
+  if (req.keepOrder) fixed = fixed.filter((i) => i > 0 && okSet.has(i)); // ordem da lista: o que não tem caminho já saiu como excluído
+  else if (fixed.some((i) => !okSet.has(i))) throw new PlanError("Parada fixa sem caminho de pedestre viável.");
   const free = ok.filter((i) => !fixed.includes(i));
   const service = Object.fromEntries(ok.map((i) => [i, okStops[i - 1].service + access(i)]));
   const priority = Object.fromEntries(ok.filter((i) => okStops[i - 1].priority).map((i) => [i, okStops[i - 1].priority!]));

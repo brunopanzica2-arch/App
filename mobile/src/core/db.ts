@@ -159,6 +159,8 @@ export interface Settings {
   geocodeDailyQuota?: number; // consultas públicas por dia (padrão 250)
   /** endereços aproximados (só a rua / interpolados): "include" = roteia sinalizando; "block" = só depois de confirmar */
   approxPolicy?: "include" | "block";
+  /** 2.9: a rota segue EXATAMENTE a ordem da lista importada (padrão ligado). Desligado = o motor reordena para encurtar o caminho. */
+  keepListOrder?: boolean;
   /** provedor de geocodificação em lote: instância própria/contratada compatível com a API de busca do Nominatim.
    *  Vazio = Nominatim PÚBLICO (só uso pontual; lote limitado). A chave NÃO entra no backup. */
   geocoder?: { baseUrl: string; apiKey?: string; minIntervalMs?: number; costPerQueryBRL?: number } | null;

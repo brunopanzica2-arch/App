@@ -184,13 +184,54 @@ export function splitMultiAddress(line: string): string[] {
   return parts.map((p) => clean(p.replace(/^\d{1,3}[).:]\s+/, "").replace(/[,;|\s]+$/g, ""))).filter(Boolean);
 }
 
+/**
+ * Formato "Rua X, números: 1, 2, 3" (cabeçalho de rua + números nas linhas seguintes ou na mesma linha) e
+ * "Rua X 197, 200" (um número colado e outros depois). Devolve uma linha "Rua X N" por número, NA ORDEM em que foram escritos.
+ */
+export function expandStreetNumberBlocks(lines: string[]): { lines: string[]; extra: number } {
+  const out: string[] = [];
+  let street: string | null = null;
+  let extra = 0;
+  const nums = (t: string) => { const m = t.match(/\d{1,6}[A-Za-z]?(?![\d])/g); return m ?? []; };
+  const onlyNumbers = (t: string) => /^[\s\d,;eE.\-–A-Za-z]*$/.test(t) && /\d/.test(t) && !/[A-Za-zÀ-ú]{3,}/.test(t.replace(/\b[eE]\b/g, ""));
+  for (const raw of lines) {
+    const l = raw.trim();
+    if (!l) { out.push(raw); continue; }
+    const head = l.match(/^(.*?)[,\s]*\bn[úu]meros?\b\s*[:\-–]?\s*(.*)$/i);
+    if (head && /[A-Za-zÀ-ú]{3,}/.test(head[1])) {
+      street = head[1].replace(/[,:;\s]+$/g, "").trim();
+      const n = nums(head[2]);
+      for (const x of n) out.push(`${street} ${x}`);
+      extra += Math.max(0, n.length - 1);
+      continue;
+    }
+    if (street && onlyNumbers(l)) {
+      const n = nums(l);
+      for (const x of n) out.push(`${street} ${x}`);
+      extra += Math.max(0, n.length - 1);
+      continue;
+    }
+    street = null; // linha comum: encerra o bloco
+    const multi = l.match(/^([A-Za-zÀ-ú][^\d]*?)\s+(\d{1,6}[A-Za-z]?)((?:\s*[,;]\s*\d{1,6}[A-Za-z]?)+)\s*[,;]?$/);
+    if (multi && SPLIT_TYPE.test(N(multi[1].trim().split(/\s+/)[0]))) {
+      const n = [multi[2], ...nums(multi[3])];
+      for (const x of n) out.push(`${multi[1].trim().replace(/[,;]+$/, "")} ${x}`);
+      extra += n.length - 1;
+      continue;
+    }
+    out.push(raw);
+  }
+  return { lines: out, extra };
+}
+
 /** Aplica `splitMultiAddress` ao texto inteiro, linha a linha. Não mexe em tabelas (CSV/TSV com cabeçalho de colunas conhecido). */
 export function explodeMultiAddressText(raw: string): { text: string; extra: number } {
   const lines = raw.replace(/^﻿/, "").split(/\r\n?|\n/);
   const head = stripAccents(lines.find((l) => l.trim()) ?? "").toLowerCase();
   const looksLikeTable = /(logradouro|endereco|street|numero|bairro|cep)/.test(head) && (head.match(/[;\t|]/g) ?? []).length >= 2;
   if (looksLikeTable) return { text: raw, extra: 0 };
-  let extra = 0;
-  const out = lines.flatMap((l) => { const p = splitMultiAddress(l); extra += p.length - 1; return p; });
+  const blocks = expandStreetNumberBlocks(lines);
+  let extra = blocks.extra;
+  const out = blocks.lines.flatMap((l) => { const p = splitMultiAddress(l); extra += p.length - 1; return p; });
   return extra > 0 ? { text: out.join("\n"), extra } : { text: raw, extra: 0 };
 }
