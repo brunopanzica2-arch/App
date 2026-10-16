@@ -1,0 +1,16 @@
+Avenida Costa, 222, Santos
+Avenida Costa, 228, Santos
+Avenida Costa, 258, Santos
+Avenida Costa, 259, Santos
+Avenida Costa, 302, Santos
+Avenida Costa, 315, Santos
+Rua Júlio Conceição, 510, Santos
+Rua Júlio Conceição, 365, Santos
+Avenida Conselheiro Rodrigues Alves, 452, Santos
+Rua Barão de Paranapiacaba, 233, Santos
+Rua Barão de Paranapiacaba, 203, Santos
+Rua Barão de Paranapiacaba, 185, Santos
+Rua Comendador Martins, 433, Santos
+Rua Comendador Martins, 425, Santos
+Rua Cunha Moreira, 197, Santos
+Rua Cunha Moreira, 200, Santos
